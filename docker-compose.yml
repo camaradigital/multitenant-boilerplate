@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # Serviço da Aplicação (Laravel/PHP)
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: cacsystem_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - cacsystem_network
+
+  # Servidor Web (Nginx)
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: cacsystem_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - app
+    networks:
+      - cacsystem_network
+
+  # Banco de Dados (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: cacsystem_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cac_central
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - cacsystem_db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - cacsystem_network
+
+  # Cache (Redis)
+  redis:
+    image: redis:alpine
+    container_name: cacsystem_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - cacsystem_network
+
+networks:
+  cacsystem_network:
+    driver: bridge
+
+volumes:
+  cacsystem_db_data:
+    driver: local
