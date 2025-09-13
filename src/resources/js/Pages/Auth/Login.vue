@@ -206,3 +206,4 @@ const statusClass = computed(() => {
     @apply dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400/50;
 }
 </style>
+

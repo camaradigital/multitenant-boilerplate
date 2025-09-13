@@ -2,11 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Central\Tenant; // Certifique-se que o seu modelo Tenant está correto.
 use Illuminate\Http\Request;
-use App\Models\CustomField;
-use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
+use Spatie\Multitenancy\Models\Tenant; // Usando o model padrão do Spatie para melhor portabilidade.
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -33,45 +31,47 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $currentTenant = Tenant::current();
+        // --- LÓGICA CORRIGIDA E SIMPLIFICADA ---
+        // Graças à nossa SwitchAuthConfigTask, $request->user() agora retorna
+        // o usuário correto (seja do tenant ou central) automaticamente.
+        $user = $request->user();
 
-        // --- CORREÇÃO 1: Carregar a relação 'roles' junto com o usuário ---
-        // Usamos '?->load()' para carregar de forma segura a relação de papéis.
-        // Isso garante que 'user->roles' estará sempre disponível no frontend.
-        $tenantUser = $request->user('tenant')?->load('roles');
+        // Garante que os papéis do usuário sejam sempre carregados, se ele existir.
+        $user?->load('roles');
 
-        Log::debug('Tenant current no Inertia middleware: ' . ($currentTenant ? 'ID ' . $currentTenant->id : 'null'));
+        return [
+            ...parent::share($request),
 
-        $parentData = parent::share($request);
+            'auth' => [
+                // Se um usuário estiver logado, compartilha seus dados.
+                // Caso contrário, compartilha 'null', como esperado pelo Inertia.
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    // Garante que só tentemos pegar permissões se o usuário for de um tenant.
+                    'permissions' => $user instanceof \App\Models\Tenant\User ? $user->getAllPermissions()->pluck('name') : [],
+                    'roles' => $user->roles,
+                ] : null,
+            ],
 
-        // Sobrescreve os dados do usuário para garantir que o frontend receba
-        // as informações corretas do usuário logado no tenant, incluindo suas permissões e papéis.
-        if ($tenantUser) {
-            $parentData['auth']['user'] = [
-                'id' => $tenantUser->id,
-                'name' => $tenantUser->name,
-                'email' => $tenantUser->email,
-                'permissions' => $tenantUser->getAllPermissions()->pluck('name'),
-                // --- CORREÇÃO 2: Incluir os papéis carregados no objeto do usuário ---
-                'roles' => $tenantUser->roles,
-            ];
-        }
+            'tenant' => ($currentTenant = Tenant::current()) ? $currentTenant->toArray() : null,
 
-        return array_merge($parentData, [
-            'tenant' => $currentTenant ? $currentTenant->toArray() : null,
             'theme' => [
                 'primary'   => $currentTenant?->cor_primaria ?? '#4F46E5',
                 'secondary' => $currentTenant?->cor_secundaria ?? '#D946EF',
             ],
+
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
-                'status' => fn () => $request->session()->get('status'),
+                'error'   => fn () => $request->session()->get('error'),
+                'status'  => fn () => $request->session()->get('status'),
             ],
+
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
-        ]);
+        ];
     }
 }

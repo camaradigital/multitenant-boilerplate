@@ -53,7 +53,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
             // Middlewares específicos para a lógica multi-tenant
-            \App\Http\Middleware\SetTenantAuthGuard::class, // Define o guarda de autenticação para 'tenant'.
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
@@ -62,7 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // Mantém os aliases necessários.
         $middleware->alias([
             'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-            'debug.permission' => \App\Http\Middleware\DebugPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

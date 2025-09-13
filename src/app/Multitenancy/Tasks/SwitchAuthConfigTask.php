@@ -23,6 +23,11 @@ class SwitchAuthConfigTask implements SwitchTenantTask
     protected ?string $originalFortifyGuard;
 
     /**
+     * @var string|null Armazena o guard padrão original do Auth.
+     */
+    protected ?string $originalAuthGuard;
+
+    /**
      * Guarda as configurações originais do landlord no momento da construção.
      */
     public function __construct()
@@ -30,6 +35,7 @@ class SwitchAuthConfigTask implements SwitchTenantTask
         $this->originalFortifyBroker = config('fortify.passwords');
         $this->originalAuthBroker = config('auth.defaults.passwords');
         $this->originalFortifyGuard = config('fortify.guard');
+        $this->originalAuthGuard = config('auth.defaults.guard');
     }
 
     /**
@@ -38,19 +44,25 @@ class SwitchAuthConfigTask implements SwitchTenantTask
      */
     public function makeCurrent(IsTenant $tenant): void
     {
-        config()->set('fortify.passwords', 'tenant_users');
-        config()->set('auth.defaults.passwords', 'tenant_users');
-        config()->set('fortify.guard', 'tenant');
+        config(['fortify.passwords' => 'tenant_users']);
+        config(['auth.defaults.passwords' => 'tenant_users']);
+        config(['fortify.guard' => 'tenant']);
+        config(['auth.defaults.guard' => 'tenant']);
     }
 
     /**
      * Executado quando o contexto do tenant é finalizado.
-     * Restaura ambas as configurações originais do landlord.
+     * Restaura todas as configurações originais do landlord.
      */
     public function forgetCurrent(): void
     {
-        config()->set('fortify.passwords', $this->originalFortifyBroker);
-        config()->set('auth.defaults.passwords', $this->originalAuthBroker);
-        config()->set('fortify.guard', $this->originalFortifyGuard);
+        config(['fortify.passwords' => $this->originalFortifyBroker]);
+        config(['auth.defaults.passwords' => $this->originalAuthBroker]);
+
+        // CORREÇÃO: Removidas as aspas simples ao redor da variável.
+        config(['fortify.guard' => $this->originalFortifyGuard]);
+
+        config(['auth.defaults.guard' => $this->originalAuthGuard]);
     }
 }
+
