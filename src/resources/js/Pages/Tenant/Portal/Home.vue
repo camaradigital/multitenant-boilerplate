@@ -1,133 +1,140 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
+import TenantPublicLayout from '@/Layouts/TenantPublicLayout.vue';
 import {
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
-  Dialog,
-  DialogPanel,
-  Disclosure,
-  DisclosureButton,
-  DisclosurePanel,
-  TransitionRoot,
-  TransitionChild,
+    Disclosure,
+    DisclosureButton,
+    DisclosurePanel,
 } from '@headlessui/vue';
 import {
-    ChevronDown,
-    Building,
-    Eye,
-    UserCircle,
-    LayoutDashboard,
-    LogOut,
-    LogIn,
-    UserPlus,
-    Grid,
-    Send,
-    MapPin,
-    Phone,
-    Mail,
-    ArrowUp,
-    Menu as MenuIcon,
-    X,
-    CheckCircle2,
-    AlertTriangle,
-    Info,
-    ChevronUp,
-    Server
+    LayoutDashboard, Grid, Send, ArrowUp, CheckCircle2, AlertTriangle, Info, ChevronUp, Server, LogIn, UserPlus, X, LoaderCircle, Search, Star, MessageCircleQuestion,
+    Gavel, Printer, FileText, BookUser, Home, Wrench,
+    Globe, Building2,
 } from 'lucide-vue-next';
 
 // --- PROPS & PAGE DATA ---
 const props = defineProps({
-    servicos: Array,
+    tiposDeServico: Array,
 });
 const page = usePage();
+
+// --- DADOS ESTÁTICOS ---
+const testimonials = ref([
+    { quote: "Consegui resolver minha pendência com a prefeitura sem sair de casa. O sistema é muito fácil de usar e o acompanhamento foi transparente.", author: "Maria S., Bairro Centro" },
+    { quote: "A assistência jurídica que solicitei pelo portal foi essencial. Fui atendido rapidamente por um profissional qualificado. Recomendo!", author: "João P., Morador local" },
+    { quote: "Finalmente um canal digital que funciona. Emiti os documentos que precisava em minutos. Parabéns à equipe da Câmara!", author: "Ana L., Cidadã" },
+]);
+
+const faqs = [
+    { question: 'Como posso solicitar um serviço?', answer: 'Primeiro, você precisa se cadastrar e fazer login. Depois, navegue pelas abas de serviço ou use a busca para encontrar o que precisa e clique em "Solicitar".' },
+    { question: 'Onde acompanho minhas solicitações?', answer: 'Após fazer login, acesse a área "Meu Painel". Lá você encontrará um histórico de todas as suas solicitações e o status atual de cada uma.' },
+    { question: 'Meus dados estão seguros?', answer: 'Sim. Nossa plataforma segue rigorosamente a Lei Geral de Proteção de Dados (LGPD), garantindo a segurança e a privacidade de todas as suas informações.' },
+];
 
 // --- TENANT & AUTH DATA ---
 const tenant = computed(() => page.props.tenant || {});
 const authUser = computed(() => page.props.auth?.user || null);
-const laravelVersion = computed(() => page.props.versions?.laravel || '');
-const canLogin = computed(() => page.props.canLogin);
 const canRegister = computed(() => page.props.canRegister);
-
-
-// --- DYNAMIC CONTENT ---
 const tenantName = computed(() => tenant.value?.name || 'Portal do Cidadão');
-const logoUrl = computed(() => tenant.value?.logotipo_url || '/images/logo-placeholder-dark.svg');
-const siteUrl = computed(() => tenant.value?.site_url);
-const transparencyUrl = computed(() => tenant.value?.transparency_url);
-const endereco = computed(() => {
-    if (!tenant.value?.endereco_logradouro) return null;
-    return `${tenant.value.endereco_logradouro}, ${tenant.value.endereco_numero || 's/n'}`;
-});
-const telefone = computed(() => tenant.value?.telefone);
-const emailContato = computed(() => tenant.value?.email_contato);
-
-// --- DYNAMIC STYLING ---
 const primaryColor = computed(() => tenant.value?.cor_primaria || '#1e3a8a');
-const secondaryColor = computed(() => tenant.value?.cor_secundaria || '#10b981');
 
+// --- LÓGICA DE ESTILO DINÂMICO ---
 const darken = (hex, percent) => {
     if (!hex || typeof hex !== 'string') return '#000000';
-    let f = parseInt(hex.slice(1), 16), t = percent < 0 ? 0 : 255, p = percent < 0 ? percent * -1 : percent, R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
-    return "#" + (0x1000000 + (Math.round((t - R) * p) + R) * 0x10000 + (Math.round((t - G) * p) + G) * 0x100 + (Math.round((t - B) * p) + B)).toString(16).slice(1);
+    let f=parseInt(hex.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent,R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+    return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
 };
+const hexToRgba = (hex, alpha) => {
+    if (!hex || typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
+    hex = hex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16); const g = parseInt(hex.substring(2, 4), 16); const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+};
+const primaryRGB = computed(() => {
+    const hex = primaryColor.value.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `${r},${g},${b}`;
+});
 
+// --- ALTERAÇÃO PRINCIPAL AQUI ---
+// Substituímos o gradiente pela imagem de fundo com uma sobreposição escura.
 const heroStyle = computed(() => ({
-  background: `linear-gradient(135deg, ${primaryColor.value}, ${darken(primaryColor.value, 20)})`
+  backgroundImage: `
+    linear-gradient(${hexToRgba(primaryColor.value, 0.9)}), /* Cor principal com 90% de opacidade */
+    linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), /* Camada para opacidade da imagem */
+    url('/background_home.jpg')
+  `,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
 }));
 
 const themeStyles = computed(() => `
     :root {
-      --primary: ${primaryColor.value};
-      --secondary: ${secondaryColor.value};
-      --btn-primary-hover: ${darken(primaryColor.value, -10)};
+        --primary: ${primaryColor.value};
+        --primary-dark: ${darken(primaryColor.value, -0.1)};
+        --primary-light: ${hexToRgba(primaryColor.value, 0.1)};
+        --primary-focus-ring: ${hexToRgba(primaryColor.value, 0.4)};
+        --primary-rgb: ${primaryRGB.value};
     }
 `);
 
-// --- UI STATE & LOGIC ---
-const mobileMenuOpen = ref(false);
+// --- LÓGICA DE ÍCONES DE SERVIÇO ---
+const serviceIcons = {
+    'consulta': Gavel, 'jurídico': Gavel, 'advocacia': Gavel, 'processual': Gavel,
+    'impressão': Printer, 'imprimir': Printer,
+    'documento': FileText, 'certidão': FileText,
+    'currículo': BookUser, 'cadastro': BookUser,
+    'obras': Wrench, 'manutenção': Wrench,
+    'iptu': Home, 'habitação': Home,
+};
+function getIconForService(serviceName) {
+    if (!serviceName) return Server;
+    const nameLower = serviceName.toLowerCase();
+    for (const key in serviceIcons) { if (nameLower.includes(key)) return serviceIcons[key]; }
+    return Server;
+}
+
+// --- LÓGICA DE FILTRO E UI ---
+const searchQuery = ref('');
+const activeTab = ref('Todos');
 const successMessage = ref(page.props.flash?.success);
 const errorMessage = ref(page.props.errors?.servico);
 
-const form = useForm({ servico_id: null });
+const allServices = computed(() => props.tiposDeServico.flatMap(tipo =>
+    tipo.servicos.map(servico => ({ ...servico, tipoNome: tipo.nome }))
+));
 
+const filteredServices = computed(() => {
+    let services = allServices.value;
+    if (activeTab.value !== 'Todos') {
+        services = services.filter(s => s.tipoNome === activeTab.value);
+    }
+    if (searchQuery.value.trim() !== '') {
+        const query = searchQuery.value.trim().toLowerCase();
+        services = services.filter(s =>
+            s.nome.toLowerCase().includes(query) ||
+            (s.descricao && s.descricao.toLowerCase().includes(query))
+        );
+    }
+    return services;
+});
+
+// FUNÇÃO DE SOLICITAÇÃO CORRIGIDA
 function solicitar(servicoId) {
     if (!authUser.value) {
         router.visit(route('login'));
         return;
     }
-    form.servico_id = servicoId;
-    form.post(route('tenant.solicitacoes.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            successMessage.value = 'Sua solicitação foi registrada com sucesso! Acompanhe o status no seu portal.';
-            errorMessage.value = null;
-        },
-        onError: (errors) => {
-            successMessage.value = null;
-            errorMessage.value = errors.servico || 'Ocorreu um erro ao solicitar o serviço. Por favor, tente novamente.';
-        }
-    });
+    // CORREÇÃO: Usando o nome da rota definido no seu arquivo de rotas
+    router.visit(route('portal.solicitacoes.create', { servico: servicoId }));
 }
 
 const showBackToTop = ref(false);
-onMounted(() => {
-    window.addEventListener('scroll', () => {
-        showBackToTop.value = window.scrollY > 400;
-    });
-});
-const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-const faqs = [
-    { question: 'Como posso solicitar um serviço?', answer: 'Primeiro, você precisa se cadastrar e fazer login na plataforma. Depois, basta escolher um dos serviços disponíveis na lista e clicar em "Solicitar".' },
-    { question: 'Onde acompanho minhas solicitações?', answer: 'Após fazer login, acesse a área "Meu Painel". Lá você encontrará um histórico de todas as suas solicitações e o status atual de cada uma.' },
-    { question: 'Os serviços têm algum custo?', answer: 'Todos os serviços oferecidos através desta plataforma são gratuitos para os cidadãos do município.' },
-    { question: 'Meus dados estão seguros?', answer: 'Sim. Nossa plataforma segue rigorosamente a Lei Geral de Proteção de Dados (LGPD), garantindo a segurança e a privacidade de todas as suas informações.' },
-];
+onMounted(() => { window.addEventListener('scroll', () => { showBackToTop.value = window.scrollY > 400; }); });
+const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); };
 </script>
 
 <template>
@@ -137,374 +144,216 @@ const faqs = [
         <component :is="'style'">{{ themeStyles }}</component>
     </Head>
 
-    <div class="flex flex-col min-h-screen font-sans bg-gray-50 text-gray-800">
-        <!-- Header -->
-        <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-40" role="navigation">
-            <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <a :href="route('portal.home')" class="flex items-center gap-3" aria-label="Página inicial">
-                        <img :src="logoUrl" :alt="`Logo ${tenantName}`" class="h-9 w-auto">
-                        <span class="font-semibold text-xl text-gray-800 hidden sm:inline">{{ tenantName }}</span>
-                    </a>
-                    <!-- Desktop Menu -->
-                    <div class="hidden md:flex items-center space-x-2">
-                        <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener noreferrer" class="nav-link">
-                            <Building :size="16" class="mr-1.5" /> Site da Câmara
-                        </a>
-                        <a v-if="transparencyUrl" :href="transparencyUrl" target="_blank" rel="noopener noreferrer" class="nav-link">
-                            <Eye :size="16" class="mr-1.5" /> Transparência
-                        </a>
-                        <!-- User Dropdown (Headless UI) -->
-                        <Menu as="div" class="relative">
-                            <MenuButton class="nav-link">
-                                <UserCircle :size="16" class="mr-1.5" /> Acesso <ChevronDown :size="16" class="ml-1" />
-                            </MenuButton>
-                            <transition enter-active-class="transition ease-out duration-100" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
-                                <MenuItems class="absolute right-0 mt-2 w-48 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    <div class="py-1">
-                                        <template v-if="authUser">
-                                            <MenuItem v-slot="{ active }">
-                                                <a :href="route('tenant.dashboard')" :class="[active ? 'bg-gray-100' : '', 'dropdown-item']">
-                                                    <LayoutDashboard :size="16" class="mr-2" /> Meu Painel
-                                                </a>
-                                            </MenuItem>
-                                            <div class="border-t border-gray-100 my-1"></div>
-                                            <MenuItem v-slot="{ active }">
-                                                <form @submit.prevent="router.post(route('logout'))" class="w-full">
-                                                    <button type="submit" :class="[active ? 'bg-gray-100' : '', 'dropdown-item w-full text-left']">
-                                                        <LogOut :size="16" class="mr-2" /> Sair
-                                                    </button>
-                                                </form>
-                                            </MenuItem>
-                                        </template>
-                                        <template v-else>
-                                            <MenuItem v-slot="{ active }">
-                                                <a :href="route('login')" :class="[active ? 'bg-gray-100' : '', 'dropdown-item']">
-                                                    <LogIn :size="16" class="mr-2" /> Entrar
-                                                </a>
-                                            </MenuItem>
-                                            <MenuItem v-if="canRegister" v-slot="{ active }">
-                                                <a :href="route('register')" :class="[active ? 'bg-gray-100' : '', 'dropdown-item']">
-                                                    <UserPlus :size="16" class="mr-2" /> Registrar
-                                                </a>
-                                            </MenuItem>
-                                        </template>
-                                    </div>
-                                </MenuItems>
-                            </transition>
-                        </Menu>
-                    </div>
-                    <!-- Mobile Menu Button -->
-                    <div class="md:hidden">
-                        <button @click="mobileMenuOpen = true" class="p-2 rounded-md text-gray-600 hover:bg-gray-100">
-                            <MenuIcon :size="24" />
-                        </button>
+    <TenantPublicLayout>
+        <section class="relative text-white text-center overflow-hidden pt-32 pb-24 md:pt-40 md:pb-32" :style="heroStyle">
+             <div class="relative container mx-auto px-6 z-10">
+                <h1 class="text-4xl md:text-5xl font-extrabold mb-4 animate-fade-in-down">{{ tenantName }}</h1>
+                <p class="text-lg md:text-xl max-w-2xl mx-auto mb-8 opacity-90 text-shadow animate-fade-in-up">Qual serviço você procura hoje?</p>
+
+                <div class="max-w-2xl mx-auto animate-fade-in-up" style="animation-delay: 0.3s;">
+                    <div class="relative">
+                        <input
+                            type="text"
+                            v-model="searchQuery"
+                            placeholder="Ex: Impressão de Documento, Consulta Jurídica..."
+                            class="w-full py-4 pl-12 pr-6 text-lg text-gray-800 rounded-full border-2 border-transparent focus:ring-4 focus:ring-white/50 focus:border-white/80 transition-shadow duration-300 shadow-lg"
+                            @keyup.enter="() => $refs.servicesSection.scrollIntoView({ behavior: 'smooth' })"
+                        />
+                        <Search class="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400"/>
                     </div>
                 </div>
-            </nav>
-        </header>
-
-        <!-- Mobile Menu (Headless UI Dialog) -->
-        <TransitionRoot as="template" :show="mobileMenuOpen">
-            <Dialog as="div" class="relative z-50 md:hidden" @close="mobileMenuOpen = false">
-                <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-                    <div class="fixed inset-0 bg-black bg-opacity-25" />
-                </TransitionChild>
-                <div class="fixed inset-0 z-50 flex justify-end">
-                    <TransitionChild as="template" enter="transition ease-in-out duration-300 transform" enter-from="translate-x-full" enter-to="translate-x-0" leave="transition ease-in-out duration-300 transform" leave-from="translate-x-0" leave-to="translate-x-full">
-                        <DialogPanel class="relative w-full max-w-xs bg-white p-6">
-                            <div class="flex items-center justify-between mb-8">
-                                <span class="font-semibold text-lg">{{ tenantName }}</span>
-                                <button @click="mobileMenuOpen = false" class="p-2 rounded-md text-gray-500 hover:bg-gray-100">
-                                    <X :size="24" />
-                                </button>
-                            </div>
-                            <div class="space-y-4">
-                                <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener noreferrer" class="mobile-nav-link">
-                                    <Building :size="18" class="mr-3" /> Site da Câmara
-                                </a>
-                                <a v-if="transparencyUrl" :href="transparencyUrl" target="_blank" rel="noopener noreferrer" class="mobile-nav-link">
-                                    <Eye :size="18" class="mr-3" /> Transparência
-                                </a>
-                                <div class="border-t border-gray-200 pt-4 mt-4 space-y-4">
-                                    <template v-if="authUser">
-                                        <a :href="route('tenant.dashboard')" class="mobile-nav-link"><LayoutDashboard :size="18" class="mr-3" /> Meu Painel</a>
-                                        <form @submit.prevent="router.post(route('logout'))">
-                                            <button type="submit" class="mobile-nav-link w-full text-left"><LogOut :size="18" class="mr-3" /> Sair</button>
-                                        </form>
-                                    </template>
-                                    <template v-else>
-                                        <a :href="route('login')" class="mobile-nav-link"><LogIn :size="18" class="mr-3" /> Entrar</a>
-                                        <a v-if="canRegister" :href="route('register')" class="mobile-nav-link"><UserPlus :size="18" class="mr-3" /> Registrar</a>
-                                    </template>
-                                </div>
-                            </div>
-                        </DialogPanel>
-                    </TransitionChild>
-                </div>
-            </Dialog>
-        </TransitionRoot>
-
-        <main role="main" class="flex-grow">
-            <!-- Hero Section -->
-            <section
-                class="text-white text-center relative overflow-hidden"
-                :style="heroStyle"
-                aria-labelledby="hero-title"
-            >
-                 <div class="absolute inset-0 bg-hero-pattern opacity-10 z-0"></div>
-                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
-                    <h1 id="hero-title" class="text-4xl md:text-5xl font-bold mb-5 leading-tight">
-                        {{ tenantName }} <br> Centro de Atendimento ao Cidadão
-                    </h1>
-                    <p class="text-lg md:text-xl max-w-2xl mx-auto mb-8 opacity-90">
-                        Acesse os serviços digitais da sua Câmara Municipal de forma simples e segura.
-                    </p>
-                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                        <a v-if="authUser" :href="route('tenant.dashboard')" class="btn btn-secondary">
-                            <LayoutDashboard :size="20" class="mr-2" /> Meu Painel
-                        </a>
-                        <template v-else>
-                            <a :href="route('login')" class="btn btn-secondary">
-                               <LogIn :size="20" class="mr-2" /> Entrar
-                            </a>
-                             <a v-if="canRegister" :href="route('register')" class="btn btn-primary-outline">
-                                <UserPlus :size="20" class="mr-2" /> Registrar
-                            </a>
-                        </template>
-                         <a href="#services" class="btn btn-light-outline">
-                            <Grid :size="20" class="mr-2" /> Ver Serviços
-                        </a>
-                    </div>
-                 </div>
-            </section>
-
-             <!-- Notifications -->
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-                 <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-4">
-                    <div v-if="successMessage" class="notification bg-green-50 border-green-200 text-green-800" role="alert">
-                        <CheckCircle2 class="text-green-500" />
-                        <span class="flex-grow">{{ successMessage }}</span>
-                        <button @click="successMessage = null"><X :size="18" /></button>
-                    </div>
-                </transition>
-                <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-4">
-                    <div v-if="errorMessage" class="notification bg-red-50 border-red-200 text-red-800" role="alert">
-                        <AlertTriangle class="text-red-500" />
-                        <span class="flex-grow">{{ errorMessage }}</span>
-                        <button @click="errorMessage = null"><X :size="18" /></button>
-                    </div>
-                </transition>
             </div>
+        </section>
 
-            <!-- How it Works Section -->
-            <section id="how-it-works" class="py-20" aria-labelledby="how-it-works-title">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                     <h2 id="how-it-works-title" class="section-title">Como Funciona</h2>
-                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                         <div class="step-card">
-                             <div class="step-icon-wrapper"><UserPlus :size="32" class="text-primary"/></div>
-                             <h3 class="step-title">1. Cadastre-se</h3>
-                             <p class="step-description">Crie sua conta em minutos para ter acesso a todos os serviços da plataforma.</p>
-                         </div>
-                         <div class="step-card">
-                             <div class="step-icon-wrapper"><Send :size="32" class="text-primary"/></div>
-                             <h3 class="step-title">2. Solicite</h3>
-                             <p class="step-description">Navegue pelos serviços disponíveis e faça sua solicitação com apenas alguns cliques.</p>
-                         </div>
-                         <div class="step-card">
-                             <div class="step-icon-wrapper"><LayoutDashboard :size="32" class="text-primary"/></div>
-                             <h3 class="step-title">3. Acompanhe</h3>
-                             <p class="step-description">Acesse seu painel pessoal para verificar o andamento de suas solicitações em tempo real.</p>
-                         </div>
-                     </div>
+        <div class="container mx-auto px-6 -mt-8 z-20 relative">
+             <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-4">
+                <div v-if="successMessage" class="flex items-center gap-4 p-4 rounded-lg border bg-green-50/80 backdrop-blur-sm border-green-200 text-green-800 shadow-lg" role="alert">
+                    <CheckCircle2 class="text-green-500 flex-shrink-0" :size="24" />
+                    <span class="flex-grow font-medium">{{ successMessage }}</span>
+                    <button @click="successMessage = null" class="p-1 rounded-full hover:bg-green-100 transition-colors"><X :size="20" class="text-green-600"/></button>
                 </div>
-            </section>
+            </transition>
+             <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-4">
+                <div v-if="errorMessage" class="flex items-center gap-4 p-4 mt-4 rounded-lg border bg-red-50/80 backdrop-blur-sm border-red-200 text-red-800 shadow-lg" role="alert">
+                    <AlertTriangle class="text-red-500 flex-shrink-0" :size="24" />
+                    <span class="flex-grow font-medium">{{ errorMessage }}</span>
+                    <button @click="errorMessage = null" class="p-1 rounded-full hover:bg-red-100 transition-colors"><X :size="20" class="text-red-600"/></button>
+                </div>
+            </transition>
+        </div>
 
-            <!-- Services Section -->
-            <section id="services" class="py-20 bg-gray-100" aria-labelledby="services-title">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 id="services-title" class="section-title">Serviços Disponíveis</h2>
-                    <div v-if="servicos && servicos.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div v-for="servico in servicos" :key="servico.id" class="service-card" role="article">
+        <section id="how-it-works" class="py-20 md:py-28 bg-white" aria-labelledby="how-it-works-title">
+             <div class="container mx-auto px-6">
+                 <div class="text-center max-w-2xl mx-auto">
+                    <h2 class="section-title">Tudo em 3 Passos Simples</h2>
+                    <p class="mb-16 text-lg text-gray-600">Projetamos uma experiência direta para que você resolva suas necessidades sem complicação.</p>
+                </div>
+                <div class="relative max-w-2xl mx-auto">
+                    <div class="absolute left-8 top-8 bottom-8 w-0.5 bg-slate-200 hidden md:block"></div>
+                    <div class="space-y-12">
+                        <div class="step-item">
+                             <div class="step-icon">1</div>
+                             <div class="step-content">
+                                <h3>Cadastre-se na Plataforma</h3>
+                                <p>Crie sua conta segura em poucos minutos fornecendo suas informações básicas.</p>
+                             </div>
+                        </div>
+                        <div class="step-item" style="animation-delay: 200ms;">
+                             <div class="step-icon">2</div>
+                             <div class="step-content">
+                                <h3>Escolha e Solicite o Serviço</h3>
+                                <p>Navegue em nosso catálogo digital e faça sua solicitação com apenas alguns cliques.</p>
+                             </div>
+                        </div>
+                        <div class="step-item" style="animation-delay: 400ms;">
+                             <div class="step-icon">3</div>
+                             <div class="step-content">
+                                <h3>Acompanhe em Tempo Real</h3>
+                                <p>Acesse seu painel para ver o andamento de suas solicitações a qualquer momento.</p>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" ref="servicesSection" class="py-20 md:py-28 bg-slate-50" aria-labelledby="services-title">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 id="services-title" class="section-title">Navegador de Serviços</h2>
+                    <p class="mb-12 text-lg text-gray-600">Filtre por categoria ou use a busca para encontrar o serviço que você precisa de forma rápida e fácil.</p>
+                </div>
+
+                <div class="flex justify-center flex-wrap gap-2 mb-10">
+                    <button @click="activeTab = 'Todos'" :class="[activeTab === 'Todos' ? 'tab-active' : 'tab-inactive']">Todos</button>
+                    <button v-for="tipo in tiposDeServico" :key="tipo.id" @click="activeTab = tipo.nome" :class="[activeTab === tipo.nome ? 'tab-active' : 'tab-inactive']">
+                        {{ tipo.nome }}
+                    </button>
+                </div>
+
+                <div class="space-y-4 max-w-4xl mx-auto">
+                    <transition-group name="list">
+                        <div v-for="servico in filteredServices" :key="servico.id" class="group bg-white p-4 sm:p-6 rounded-lg border border-slate-200 flex items-center gap-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-[rgba(var(--primary-rgb),0.5)]">
+                            <div class="service-card-icon-wrapper">
+                                <component :is="getIconForService(servico.nome)" class="h-7 w-7 text-[var(--primary)]" />
+                            </div>
                             <div class="flex-grow">
-                                <div class="service-icon-wrapper">
-                                    <component :is="servico.tipo_servico.icon || Server" class="text-4xl text-primary" />
-                                </div>
-                                <h3 class="text-xl font-semibold mt-4 mb-2 text-gray-900">{{ servico.nome }}</h3>
-                                <p class="text-gray-600 text-sm">{{ servico.descricao }}</p>
-                                <div v-if="servico.regras_limite" class="mt-4 text-xs text-amber-700 bg-amber-50 p-2 rounded-md flex items-center gap-2">
-                                    <Info :size="14" />
-                                    <span>Limite de {{ servico.regras_limite.limite }} por {{ servico.regras_limite.periodo }}.</span>
+                                <h3 class="service-card-title">{{ servico.nome }}</h3>
+                                <p class="service-card-description">{{ servico.descricao || 'Descrição não disponível.' }}</p>
+                                <div class="mt-3">
+                                    <div v-if="servico.permite_solicitacao_online" class="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                                        <Globe :size="14" />
+                                        Online e Presencial
+                                    </div>
+                                    <div v-else class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
+                                        <Building2 :size="14" />
+                                        Somente Presencial
+                                    </div>
                                 </div>
                             </div>
-                            <button @click="solicitar(servico.id)" class="btn btn-primary w-full mt-6" :disabled="form.processing">
-                                <span v-if="form.processing && form.servico_id === servico.id">Processando...</span>
-                                <span v-else>Solicitar Serviço</span>
+                            <button
+                                @click="servico.permite_solicitacao_online && solicitar(servico.id)"
+                                class="service-card-button"
+                                :disabled="!servico.permite_solicitacao_online"
+                                :title="!servico.permite_solicitacao_online ? 'Este serviço só pode ser solicitado presencialmente' : 'Iniciar solicitação'">
+                                <span v-if="servico.permite_solicitacao_online">Solicitar</span>
+                                <span v-else>Presencial</span>
                             </button>
                         </div>
-                    </div>
-                    <div v-else class="text-center py-10 text-gray-500">
-                        <Grid :size="48" class="mx-auto mb-4 opacity-50" />
-                        <p class="text-lg">Nenhum serviço disponível no momento.</p>
-                    </div>
+                    </transition-group>
+                    <p v-if="filteredServices.length === 0" class="text-center py-12 text-gray-500">
+                        Nenhum serviço encontrado com os filtros atuais.
+                    </p>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- FAQ Section -->
-            <section id="faq" class="py-20" aria-labelledby="faq-title">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
-                    <h2 id="faq-title" class="section-title">Perguntas Frequentes</h2>
-                    <div class="space-y-4">
-                        <Disclosure v-for="(faq, index) in faqs" :key="index" as="div" class="bg-white p-6 rounded-lg shadow-sm" v-slot="{ open }">
-                            <DisclosureButton class="flex justify-between items-center w-full text-left font-medium text-lg text-gray-900">
-                                <span>{{ faq.question }}</span>
-                                <ChevronUp :class="open ? '' : 'rotate-180 transform'" class="h-5 w-5 text-primary transition-transform" />
-                            </DisclosureButton>
-                            <transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-out" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                <DisclosurePanel class="mt-4 text-gray-600">
-                                    {{ faq.answer }}
-                                </DisclosurePanel>
-                            </transition>
-                        </Disclosure>
-                    </div>
+        <section class="py-20 md:py-28 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 class="section-title">A Voz do Cidadão</h2>
+                    <p class="mb-16 text-lg text-gray-600">Veja o que as pessoas estão dizendo sobre nossa plataforma de atendimento digital.</p>
                 </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer text-gray-300" role="contentinfo">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="text-center md:text-left">
-                        <h4 class="font-bold text-white text-lg mb-2">{{ tenantName }}</h4>
-                        <p v-if="endereco" class="footer-contact-item">
-                            <MapPin :size="16" class="mr-2 text-secondary" /> {{ endereco }}
-                        </p>
-                        <p v-if="telefone" class="footer-contact-item">
-                            <Phone :size="16" class="mr-2 text-secondary" /> {{ telefone }}
-                        </p>
-                        <p v-if="emailContato" class="footer-contact-item">
-                            <Mail :size="16" class="mr-2 text-secondary" /> {{ emailContato }}
-                        </p>
-                    </div>
-                    <div class="text-center md:text-right">
-                        <div class="mb-2">
-                            <a :href="page.props.tenant?.privacy_policy_url || '#'" class="footer-link mr-4">Política de Privacidade</a>
-                            <a :href="page.props.tenant?.terms_url || '#'" class="footer-link">Termos de Uso</a>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div v-for="(testimonial, index) in testimonials" :key="index" class="p-8 bg-slate-50 border border-slate-100 rounded-lg animate-fade-in-up" :style="{'animation-delay': `${index * 150}ms`}">
+                        <div class="flex items-center mb-4">
+                            <Star v-for="i in 5" :key="i" class="h-5 w-5 text-amber-400 fill-current" />
                         </div>
-                        <small class="block">© {{ new Date().getFullYear() }} {{ tenantName }}. Todos os direitos reservados.</small>
-                        <small class="block opacity-70" v-if="laravelVersion">Desenvolvido com Laravel v{{ laravelVersion }}</small>
+                        <p class="text-gray-600 italic mb-6">"{{ testimonial.quote }}"</p>
+                        <p class="font-bold text-gray-800">{{ testimonial.author }}</p>
                     </div>
                 </div>
             </div>
-        </footer>
+        </section>
 
-        <!-- Back to Top Button -->
-        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-2">
-            <button v-show="showBackToTop" @click="scrollToTop" id="back-to-top" title="Voltar ao topo" aria-label="Voltar ao topo">
-                <ArrowUp :size="24" />
-            </button>
-        </transition>
-    </div>
+        <section id="faq" class="py-20 md:py-28 bg-slate-50" aria-labelledby="faq-title">
+            <div class="container mx-auto px-6 max-w-4xl">
+                 <div class="text-center max-w-2xl mx-auto">
+                    <h2 id="faq-title" class="section-title">Dúvidas Frequentes</h2>
+                     <p class="mb-16 text-lg text-gray-600">Respostas rápidas para as perguntas mais comuns sobre nossa plataforma.</p>
+                </div>
+                <div class="space-y-4 bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+                    <Disclosure v-for="faq in faqs" :key="faq.question" as="div" v-slot="{ open }">
+                        <DisclosureButton class="faq-button">
+                            <span>{{ faq.question }}</span>
+                            <ChevronUp :class="open ? 'rotate-180' : ''" class="faq-chevron" />
+                        </DisclosureButton>
+                        <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="max-h-0 opacity-0" enter-to-class="max-h-96 opacity-100" leave-active-class="transition-all duration-200 ease-in" leave-from-class="max-h-96 opacity-100" leave-to-class="max-h-0 opacity-0">
+                            <DisclosurePanel class="px-5 pb-5 text-gray-600 leading-relaxed overflow-hidden">
+                                {{ faq.answer }}
+                            </DisclosurePanel>
+                        </transition>
+                    </Disclosure>
+                </div>
+            </div>
+        </section>
+
+    </TenantPublicLayout>
+
+    <button v-show="showBackToTop" @click="scrollToTop" class="btn-back-to-top" aria-label="Voltar ao topo">
+        <ArrowUp :size="24" />
+    </button>
 </template>
 
 <style>
-/* Estilos Globais e Variáveis de Tema */
 body {
     font-family: 'Inter', sans-serif;
+    @apply bg-slate-50 antialiased text-gray-700;
 }
-.bg-hero-pattern {
-    background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.05" fill-rule="evenodd"%3E%3Ccircle cx="30" cy="30" r="10"/%3E%3C/g%3E%3C/svg%3E');
-}
-.footer { background-color: #111827; }
-.text-primary { color: var(--primary); }
-.text-secondary { color: var(--secondary); }
-.bg-primary { background-color: var(--primary); }
+/* REMOVI O .bg-grid-pattern pois não está mais sendo usado, mas você pode manter se quiser */
+.text-shadow-lg { text-shadow: 0 2px 5px rgba(0,0,0,0.3); } /* Aumentei um pouco a sombra para melhor contraste */
+
+.section-title { @apply text-3xl md:text-4xl font-extrabold text-slate-800 relative pb-4; }
+.section-title::after { content: ''; @apply block w-20 h-1 bg-[var(--primary)] mx-auto mt-4 rounded-full; }
 
 /* Component Styles */
-.nav-link {
-    @apply flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors;
-}
-.nav-link:hover {
-    color: var(--primary);
-}
-.dropdown-item {
-    @apply flex items-center w-full px-4 py-2 text-sm text-left text-gray-700;
-}
-.mobile-nav-link {
-    @apply -ml-3 flex items-center rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-700 hover:bg-gray-100;
-}
-.btn {
-    @apply inline-flex items-center justify-center font-semibold py-2.5 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2;
-}
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--primary);
-    @apply text-white;
-}
-.btn-primary:hover {
-    background-color: var(--btn-primary-hover);
-    border-color: var(--btn-primary-hover);
-}
-.btn-primary:focus-visible {
-    --tw-ring-color: var(--primary);
-}
-.btn-secondary {
-    color: var(--primary);
-    @apply bg-white hover:bg-gray-100;
-}
-.btn-secondary:focus-visible {
-    --tw-ring-color: var(--primary);
-}
-.btn-primary-outline {
-    background-color: transparent;
-    border: 2px solid white;
-    @apply text-white hover:bg-white;
-}
-.btn-primary-outline:hover {
-    color: var(--primary);
-}
-.btn-light-outline {
-    background-color: transparent;
-    border: 2px solid rgba(255,255,255,0.5);
-    @apply text-white hover:bg-white hover:text-gray-800;
-}
-.section-title {
-    @apply text-3xl font-bold text-center mb-12 text-gray-800 relative;
-}
-.section-title::after {
-    content: '';
-    background-color: var(--primary);
-    @apply block w-16 h-1 mx-auto mt-4 rounded-full;
-}
-.step-card {
-    @apply p-6;
-}
-.step-icon-wrapper {
-    @apply w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4;
-}
-.step-title {
-    @apply text-lg font-semibold text-gray-900 mb-2;
-}
-.step-description {
-    @apply text-gray-600;
-}
-.service-card {
-    @apply bg-white rounded-lg p-6 text-center shadow-sm hover:shadow-xl hover:scale-105 transition-all duration-300 flex flex-col;
-}
-.service-icon-wrapper {
-    background-color: rgba(var(--primary-rgb), 0.1);
-    @apply w-16 h-16 rounded-full flex items-center justify-center mx-auto;
-}
-#back-to-top {
-    background-color: var(--primary);
-    @apply fixed bottom-5 right-5 w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg transition-opacity z-30;
-}
-#back-to-top:hover {
-    background-color: var(--btn-primary-hover);
-}
-.notification {
-    @apply flex items-center gap-4 p-4 rounded-lg border;
-}
+.step-item { @apply relative flex items-start md:pl-20 animate-fade-in-right; }
+.step-icon { @apply flex-shrink-0 w-16 h-16 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center z-10 text-2xl font-bold text-[var(--primary)]; }
+.step-content { @apply ml-6; }
+.step-content h3 { @apply text-xl font-bold text-slate-900 mb-2; }
+.step-content p { @apply text-slate-600; }
+
+.tab-active { @apply bg-[var(--primary)] text-white font-semibold px-4 py-2 rounded-full text-sm transition-all shadow; }
+.tab-inactive { @apply bg-white text-slate-600 font-semibold px-4 py-2 rounded-full text-sm transition-all border border-slate-200 hover:bg-slate-100; }
+
+.service-card-icon-wrapper { @apply flex-shrink-0 w-14 h-14 rounded-lg flex items-center justify-center bg-[var(--primary-light)] transition-all duration-300 group-hover:scale-110 group-hover:rotate-6; }
+.service-card-title { @apply font-bold text-slate-800 transition-colors duration-300 group-hover:text-[var(--primary)]; }
+.service-card-description { @apply text-sm text-slate-500; }
+.service-card-button { @apply ml-auto flex-shrink-0 h-10 w-24 flex items-center justify-center font-bold text-sm rounded-md shadow-sm transition-all duration-300 transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] bg-slate-100 text-slate-700 hover:bg-slate-200 group-hover:bg-[var(--primary)] group-hover:text-white disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed disabled:transform-none; }
+
+.faq-button { @apply flex justify-between items-center w-full p-5 text-left font-semibold text-lg text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 rounded-lg; }
+.faq-chevron { @apply h-5 w-5 text-slate-500 transform transition-transform duration-300; }
+
+.btn-back-to-top { @apply fixed bottom-6 right-6 w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-300 z-50 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] bg-[var(--primary)] hover:bg-[var(--primary-dark)]; }
+
+/* Animations */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+.animate-fade-in-up { animation: fadeInUp 0.7s ease-out forwards; }
+.animate-fade-in-down { animation: fadeInDown 0.7s ease-out forwards; }
+.animate-fade-in-right { animation: fadeInRight 0.7s ease-out forwards; }
+
+.list-enter-active, .list-leave-active { transition: all 0.5s ease; }
+.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(30px); }
 </style>

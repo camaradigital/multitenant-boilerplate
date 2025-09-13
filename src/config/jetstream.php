@@ -45,7 +45,6 @@ return [
     */
 
     'guard' => 'sanctum',
-
     /*
     |--------------------------------------------------------------------------
     | Features
@@ -63,6 +62,10 @@ return [
         // Features::api(),
         Features::teams(['invitations' => true]),
         Features::accountDeletion(),
+    ],
+
+    'models' => [
+        'team' => \App\Models\Tenant\Team::class,
     ],
 
     /*

@@ -2,23 +2,30 @@
 
 namespace App\Mail;
 
-use App\Models\Central\Tenant; // Adicionado
+use App\Models\Central\Tenant;
 use App\Models\Tenant\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class TenantWelcomeMail extends Mailable
+class TenantWelcomeMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public Tenant $tenant; // Adicionado
+    public Tenant $tenant;
     public User $user;
     public string $token;
 
-    // Construtor atualizado para receber o Tenant
+    /**
+     * Create a new message instance.
+     *
+     * @param Tenant $tenant
+     * @param User $user
+     * @param string $token
+     */
     public function __construct(Tenant $tenant, User $user, string $token)
     {
         $this->tenant = $tenant;
@@ -26,28 +33,49 @@ class TenantWelcomeMail extends Mailable
         $this->token = $token;
     }
 
+    /**
+     * Get the message envelope.
+     */
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Bem-vindo(a) ao Portal do Cidadão',
+            subject: 'Bem-vindo(a) ao Portal da sua Câmara Digital',
         );
     }
 
+    /**
+     * Get the message content definition.
+     */
     public function content(): Content
     {
-        // ---- LÓGICA DE URL CORRIGIDA ----
-        // 1. Gera o caminho relativo para o reset de senha
-        $path = route('password.reset', [
+        // Constrói a URL de redefinição de senha para o domínio do tenant
+        $domain = $this->tenant->subdomain . '.' . config('app.central_domain');
+        $scheme = config('app.env') === 'production' ? 'https' : 'http';
+
+        $url = $scheme . "://" . $domain . route('password.reset', [
             'token' => $this->token,
             'email' => $this->user->getEmailForPasswordReset(),
-        ], false); // O 'false' garante que a URL seja relativa (sem domínio)
-
-        // 2. Monta a URL final usando o domínio do tenant
-        $url = $this->tenant->getDomainUrl() . $path;
+        ], false);
 
         return new Content(
             view: 'emails.tenant.welcome',
-            with: ['url' => $url],
+            // Passa todos os dados necessários para o template
+            with: [
+                'url' => $url,
+                'userName' => $this->user->name,
+                'tenantName' => $this->tenant->name,
+            ]
         );
     }
+
+    /**
+     * Get the attachments for the message.
+     *
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     */
+    public function attachments(): array
+    {
+        return [];
+    }
 }
+

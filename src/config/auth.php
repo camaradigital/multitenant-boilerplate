@@ -60,22 +60,22 @@ return [
     */
 
     'passwords' => [
-        // Broker para os usuários centrais (landlord)
         'users' => [
             'provider' => 'users',
             'table' => 'password_reset_tokens',
-            'connection' => 'central',  // Adição opcional: Especifica a conexão central
+            'connection' => 'central',
             'expire' => 60,
             'throttle' => 60,
+            // A LINHA 'driver' FOI REMOVIDA
         ],
 
-        // Broker para os usuários dos tenants
         'tenant_users' => [
             'provider' => 'tenant_users',
             'table' => 'password_reset_tokens',
-            'connection' => 'tenant', // Usa a conexão de DB do tenant
+            'connection' => 'tenant',
             'expire' => 60,
             'throttle' => 60,
+            // A LINHA 'driver' FOI REMOVIDA
         ],
     ],
 

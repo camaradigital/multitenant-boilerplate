@@ -1,34 +1,28 @@
 version: '3.8'
 
 services:
-  # Serviço da Aplicação (Laravel/PHP)
-  app:
+
+  # Serviço Web unificado (Nginx + PHP-FPM)
+  web:
     build:
-      context: ./docker/php
+      # O contexto agora aponta para o novo diretório com o Dockerfile unificado.
+      context: ./docker/web
       dockerfile: Dockerfile
-    container_name: cacsystem_app
+    container_name: cacsystem_web
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
+      # Mapeia o código da sua aplicação para dentro do container.
       - ./src:/var/www/html
-    networks:
-      - cacsystem_network
-
-  # Servidor Web (Nginx)
-  nginx:
-    build:
-      context: ./docker/nginx
-      dockerfile: Dockerfile
-    container_name: cacsystem_nginx
-    restart: unless-stopped
     ports:
+      # Expõe a porta 80 do Nginx para a sua máquina.
       - "80:80"
-    volumes:
-      - ./src:/var/www/html
-    depends_on:
-      - app
     networks:
       - cacsystem_network
+    # A dependência agora é dos outros serviços, se necessário.
+    depends_on:
+      - db
+      - redis
 
   # Banco de Dados (MySQL)
   db:

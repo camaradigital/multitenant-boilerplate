@@ -1,13 +1,21 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { watch } from 'vue';
-import { Building2, Mail, Link as LinkIcon, UserPlus, FileText, MapPin, Home, Palette, Image as ImageIcon, Globe, Hash, Tag } from 'lucide-vue-next';
+import { watch, ref } from 'vue';
+import {
+    Building2, Mail, Link as LinkIcon, UserPlus, FileText,
+    MapPin, Home, Palette, Image as ImageIcon, Globe, Hash, Tag,
+    LoaderCircle, Search
+} from 'lucide-vue-next';
 
-// Formulário com todos os campos do seu código original
+// --- Estado e Formulário ---
+
+// Controla o estado de "carregando" da consulta de CNPJ para feedback visual
+const isFetchingCnpj = ref(false);
+
+// Formulário do Inertia com todos os campos necessários
 const form = useForm({
-    // CORRIGIDO de 'name' para 'nome'
-    nome: '',
+    name: '', // CORRIGIDO
     cnpj: '',
     subdomain: '',
     admin_email: '',
@@ -24,19 +32,57 @@ const form = useForm({
     cor_secundaria: '#FFFFFF',
 });
 
-// Máscara para CNPJ
-watch(() => form.cnpj, (newValue) => {
-    let v = newValue.replace(/\D/g, '');
-    v = v.replace(/^(\d{2})(\d)/, '$1.$2');
-    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-    v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
-    v = v.replace(/(\d{4})(\d)/, '$1-$2');
-    form.cnpj = v.substring(0, 18);
-});
 
-// Lógica para buscar endereço por CEP
-watch(() => form.endereco_cep, async (newValue) => {
-    const cep = newValue.replace(/\D/g, '');
+// --- Funções de Consulta ---
+
+/**
+ * Busca os dados do CNPJ no backend e preenche o formulário.
+ * É acionada pelo clique no botão "Buscar".
+ * @param {string} cnpjValue - O valor do CNPJ do formulário.
+ */
+const handleBuscaCnpj = async () => {
+    const cnpj = (form.cnpj || '').replace(/\D/g, ''); // Limpa o CNPJ
+
+    // Valida se o CNPJ está completo antes de buscar
+    if (cnpj.length !== 14) {
+        alert("Por favor, preencha o CNPJ completo com 14 dígitos.");
+        return;
+    }
+
+    isFetchingCnpj.value = true;
+    try {
+        // Chama a rota do backend Laravel
+        const response = await fetch(route('api.cnpj.consulta', { cnpj }));
+        const data = await response.json();
+
+        if (response.ok) {
+            // Preenche os campos do formulário com os dados recebidos
+            form.name = data.company?.name || ''; // CORRIGIDO
+            form.admin_email = (data.emails && data.emails.length > 0) ? data.emails[0].address : '';
+            form.endereco_cep = data.address?.zip || '';
+            form.endereco_logradouro = data.address?.street || '';
+            form.endereco_numero = data.address?.number || '';
+            form.endereco_complemento = data.address?.details || '';
+            form.endereco_bairro = data.address?.district || '';
+            form.endereco_cidade = data.address?.city || '';
+            form.endereco_estado = data.address?.state || '';
+        } else {
+            alert(data.error || "CNPJ não encontrado ou inválido.");
+        }
+    } catch (error) {
+        console.error("Falha na requisição para buscar CNPJ:", error);
+        alert("Ocorreu um erro de comunicação ao tentar consultar o CNPJ.");
+    } finally {
+        isFetchingCnpj.value = false;
+    }
+};
+
+/**
+ * Busca o endereço a partir do CEP usando a API ViaCEP.
+ * @param {string} cepValue - O valor do CEP digitado.
+ */
+const buscarCep = async (cepValue) => {
+    const cep = (cepValue || '').replace(/\D/g, '');
     if (cep.length === 8) {
         try {
             const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
@@ -51,7 +97,28 @@ watch(() => form.endereco_cep, async (newValue) => {
             console.error("Erro ao buscar CEP:", error);
         }
     }
+};
+
+
+// --- Observadores (Watchers) ---
+
+// Observa o campo CNPJ apenas para aplicar a máscara de formatação
+watch(() => form.cnpj, (newValue) => {
+    let v = (newValue || '').replace(/\D/g, '');
+    v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+    v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    form.cnpj = v.substring(0, 18);
 });
+
+// Observa o campo CEP para disparar a busca de endereço
+watch(() => form.endereco_cep, (newValue) => {
+    buscarCep(newValue);
+});
+
+
+// --- Submissão do Formulário ---
 
 const submit = () => {
     form.post(route('central.tenants.store'), {
@@ -83,26 +150,37 @@ const submit = () => {
                         <p class="form-subtitle">Preencha os dados para registrar uma nova instância.</p>
                     </div>
 
-                    <!-- SEÇÃO 1: DADOS PRINCIPAIS -->
                     <fieldset class="space-y-6">
                         <legend class="section-title">Dados Principais</legend>
-                        <div>
-                            <!-- CORRIGIDO de 'name' para 'nome' -->
-                            <label for="nome" class="form-label">Nome da Câmara</label>
-                            <div class="form-input-container">
-                                <Building2 class="form-input-icon" />
-                                <input id="nome" v-model="form.nome" type="text" class="form-input" required autofocus>
-                            </div>
-                            <div v-if="form.errors.nome" class="form-error">{{ form.errors.nome }}</div>
-                        </div>
+
                         <div>
                             <label for="cnpj" class="form-label">CNPJ</label>
-                            <div class="form-input-container">
-                                <FileText class="form-input-icon" />
-                                <input id="cnpj" v-model="form.cnpj" type="text" class="form-input" required placeholder="00.000.000/0000-00">
+                            <div class="flex items-center gap-x-2">
+                                <div class="form-input-container flex-grow">
+                                    <FileText class="form-input-icon" />
+                                    <input id="cnpj" v-model="form.cnpj" type="text" class="form-input" required autofocus placeholder="00.000.000/0000-00">
+                                </div>
+                                <button @click="handleBuscaCnpj" type="button" class="btn-secondary h-12 px-4" :disabled="isFetchingCnpj">
+                                    <LoaderCircle v-if="isFetchingCnpj" class="animate-spin h-5 w-5" />
+                                    <span v-else class="flex items-center gap-x-2">
+                                        <Search :size="16" />
+                                        Buscar
+                                    </span>
+                                </button>
                             </div>
                             <div v-if="form.errors.cnpj" class="form-error">{{ form.errors.cnpj }}</div>
                         </div>
+
+                        <div>
+                            <!-- CORRIGIDO AQUI (label for, id, v-model, e form.errors) -->
+                            <label for="name" class="form-label">Nome da Câmara</label>
+                            <div class="form-input-container">
+                                <Building2 class="form-input-icon" />
+                                <input id="name" v-model="form.name" type="text" class="form-input" required>
+                            </div>
+                            <div v-if="form.errors.name" class="form-error">{{ form.errors.name }}</div>
+                        </div>
+
                         <div>
                             <label for="subdomain" class="form-label">Subdomínio</label>
                             <div class="form-input-container">
@@ -112,6 +190,7 @@ const submit = () => {
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Ex: `camara-sp`. O acesso será `camara-sp.localhost`</p>
                             <div v-if="form.errors.subdomain" class="form-error">{{ form.errors.subdomain }}</div>
                         </div>
+
                         <div>
                             <label for="admin_email" class="form-label">E-mail do Administrador Local</label>
                             <div class="form-input-container">
@@ -122,7 +201,6 @@ const submit = () => {
                         </div>
                     </fieldset>
 
-                    <!-- SEÇÃO 2: ENDEREÇO -->
                     <fieldset class="space-y-6 mt-10">
                         <legend class="section-title">Endereço</legend>
                         <div>
@@ -171,13 +249,13 @@ const submit = () => {
                             <div class="md:col-span-2">
                                 <label for="endereco_cidade" class="form-label">Cidade</label>
                                 <div class="form-input-container">
-                                     <MapPin class="form-input-icon" />
+                                    <MapPin class="form-input-icon" />
                                     <input id="endereco_cidade" v-model="form.endereco_cidade" type="text" class="form-input">
                                 </div>
                                 <div v-if="form.errors.endereco_cidade" class="form-error">{{ form.errors.endereco_cidade }}</div>
                             </div>
                         </div>
-                         <div>
+                        <div>
                             <label for="endereco_estado" class="form-label">Estado (UF)</label>
                             <div class="form-input-container">
                                 <MapPin class="form-input-icon" />
@@ -187,7 +265,6 @@ const submit = () => {
                         </div>
                     </fieldset>
 
-                     <!-- SEÇÃO 3: PERSONALIZAÇÃO -->
                     <fieldset class="space-y-6 mt-10">
                         <legend class="section-title">Personalização do Portal</legend>
                         <div>
@@ -196,7 +273,7 @@ const submit = () => {
                                 <ImageIcon class="form-input-icon" />
                                 <input id="logotipo_url" v-model="form.logotipo_url" type="url" class="form-input" placeholder="https://exemplo.com/logo.png">
                             </div>
-                             <div v-if="form.errors.logotipo_url" class="form-error">{{ form.errors.logotipo_url }}</div>
+                            <div v-if="form.errors.logotipo_url" class="form-error">{{ form.errors.logotipo_url }}</div>
                         </div>
                         <div>
                             <label for="site_url" class="form-label">URL do Site Oficial</label>
@@ -214,7 +291,7 @@ const submit = () => {
                                 </div>
                                 <div v-if="form.errors.cor_primaria" class="form-error">{{ form.errors.cor_primaria }}</div>
                             </div>
-                             <div>
+                            <div>
                                 <label for="cor_secundaria" class="form-label">Cor Secundária</label>
                                 <div class="form-input-container">
                                     <input id="cor_secundaria" v-model="form.cor_secundaria" type="color" class="p-1 h-12 w-full block bg-gray-50 border border-gray-300 dark:bg-[#102523] dark:border-[#2a413d] cursor-pointer rounded-xl">
@@ -226,7 +303,7 @@ const submit = () => {
                 </div>
 
                 <div class="p-6 border-t-dynamic bg-gray-50 dark:bg-green-500/5 rounded-b-3xl flex justify-end">
-                    <button type="submit" class="btn-primary w-full sm:w-auto" :disabled="form.processing">
+                    <button type="submit" class="btn-primary w-full sm:w-auto" :disabled="form.processing || isFetchingCnpj">
                         <span v-if="form.processing" class="flex items-center">
                             <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -295,12 +372,20 @@ const submit = () => {
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
+/* ESTILO ADICIONADO PARA O BOTÃO "BUSCAR" */
+.btn-secondary {
+    @apply flex-shrink-0 flex items-center justify-center rounded-xl font-semibold text-sm transition-all;
+    @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+    @apply dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
 input[type="color"]::-webkit-color-swatch-wrapper {
     padding: 0;
 }
 input[type="color"]::-webkit-color-swatch {
     border: none;
-    border-radius: 0.65rem; /* para combinar com o rounded-xl dos outros inputs */
+    border-radius: 0.65rem;
 }
 input[type="color"]::-moz-color-swatch {
     border: none;

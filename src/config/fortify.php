@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'guard' => 'web',  // Padrão para central; será alternado dinamicamente para tenants
+    'guard' => 'web',
+
     /*
     |--------------------------------------------------------------------------
     | Fortify Password Broker
@@ -27,7 +28,7 @@ return [
     |
     */
 
-    'passwords' => 'users',  // Padrão para central; alternado para 'tenant_users' em tenants
+    'passwords' => 'users',
 
     /*
     |--------------------------------------------------------------------------
@@ -72,7 +73,8 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+        'home' => '/superadmin/dashboard', // <-- CORREÇÃO APLICADA AQUI
+
 
     /*
     |--------------------------------------------------------------------------
@@ -100,7 +102,10 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => [
+        'web',
+    ],
+
 
     /*
     |--------------------------------------------------------------------------
@@ -125,7 +130,7 @@ return [
     |
     | Here you may specify if the routes returning views should be disabled as
     | you may not need them when building your own application. This may be
-    | especially true if you're writing a custom single-page application.
+    * especially true if you're writing a custom single-page application.
     |
     */
 
@@ -143,16 +148,15 @@ return [
     */
 
     'features' => [
-        Features::registration(),
-        Features::resetPasswords(),
-        // Features::emailVerification(),
-        Features::updateProfileInformation(),
-        Features::updatePasswords(),
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-            // 'window' => 0,
-        ]),
-    ],
+    Features::registration(),
+    Features::resetPasswords(), // <-- GARANTA QUE ESTA LINHA ESTEJA ATIVA
+    Features::emailVerification(),
+    Features::updateProfileInformation(),
+    Features::updatePasswords(),
+    Features::twoFactorAuthentication([
+        'confirm' => true,
+        'confirmPassword' => true,
+    ]),
+],
 
 ];

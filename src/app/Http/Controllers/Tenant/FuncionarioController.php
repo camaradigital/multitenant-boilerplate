@@ -3,83 +3,95 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
+use App\Http\Requests\Tenant\FuncionarioRequest; // Importar o Form Request
+use App\Models\Tenant\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Redirect;
+use App\Models\Tenant\Role;
 
 class FuncionarioController extends Controller
 {
+    use AuthorizesRequests;
+
+    /**
+     * Exibe a lista de funcionários.
+     */
     public function index()
     {
-        // Busca usuários que têm o papel 'Funcionario' ou 'Admin Tenant'
-        $funcionarios = User::role(['Funcionario', 'Admin Tenant'])->latest()->get();
+        $this->authorize('gerenciar funcionarios');
 
-        return Inertia::render('Tenant/Funcionarios/Index', [
-            'funcionarios' => $funcionarios,
+        return inertia('Tenant/Funcionarios/Index', [
+            'funcionarios' => User::whereHas('roles', fn ($q) => $q->where('name', '!=', 'Cidadao'))
+                ->with('roles:id,name')
+                ->latest()
+                ->paginate(10),
+            'rolesDisponiveis' => Role::where('guard_name', 'tenant')
+                ->where('name', '!=', 'Cidadao')
+                ->get(['id', 'name']),
         ]);
     }
 
-    public function create()
+    /**
+     * Salva um novo funcionário.
+     */
+    public function store(FuncionarioRequest $request)
     {
-        return Inertia::render('Tenant/Funcionarios/Create');
-    }
+        $this->authorize('gerenciar funcionarios');
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validatedData = $request->validated();
 
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
+            'is_active' => $validatedData['is_active'],
         ]);
 
-        $user->assignRole('Funcionario');
+        $user->assignRole($validatedData['roles']);
 
-        return redirect()->route('funcionarios.index')->with('success', 'Funcionário criado com sucesso.');
+        return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário criado com sucesso.');
     }
 
-    public function edit(User $funcionario)
+    /**
+     * Atualiza um funcionário existente.
+     */
+    public function update(FuncionarioRequest $request, User $funcionario)
     {
-        return Inertia::render('Tenant/Funcionarios/Edit', [
-            'funcionario' => $funcionario,
-        ]);
-    }
+        $this->authorize('gerenciar funcionarios');
 
-    public function update(Request $request, User $funcionario)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($funcionario->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validatedData = $request->validated();
 
-        $funcionario->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-        ]);
+        $dataToUpdate = [
+            'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'is_active' => $validatedData['is_active'],
+        ];
 
-        if (!empty($validated['password'])) {
-            $funcionario->update(['password' => Hash::make($validated['password'])]);
+        if (!empty($validatedData['password'])) {
+            $dataToUpdate['password'] = Hash::make($validatedData['password']);
         }
 
-        return redirect()->route('funcionarios.index')->with('success', 'Funcionário atualizado com sucesso.');
+        $funcionario->update($dataToUpdate);
+        $funcionario->syncRoles($validatedData['roles']);
+
+        return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário atualizado com sucesso.');
     }
 
+    /**
+     * Remove um funcionário.
+     */
     public function destroy(User $funcionario)
     {
-        // Impede que um usuário exclua a si mesmo
+        $this->authorize('gerenciar funcionarios');
+
         if ($funcionario->id === auth()->id()) {
-            return redirect()->route('funcionarios.index')->withErrors(['general' => 'Você não pode excluir seu próprio usuário.']);
+            return Redirect::back()->with('error', 'Você não pode excluir sua própria conta.');
         }
+
         $funcionario->delete();
-        return redirect()->route('funcionarios.index')->with('success', 'Funcionário excluído com sucesso.');
+
+        return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário excluído com sucesso.');
     }
 }
+

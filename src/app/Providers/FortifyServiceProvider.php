@@ -2,27 +2,40 @@
 
 namespace App\Providers;
 
-// Imports do seu arquivo original
+// Imports para a lógica de autenticação multi-tenant
+use App\Models\User as CentralUser;
+use App\Models\Tenant\User as TenantUser;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Spatie\Multitenancy\Models\Tenant;
+
+// Imports para as customizações de Login e Logout
+use App\Actions\Fortify\Tenant\AttemptToAuthenticate;
+use App\Http\Responses\CustomLogoutResponse;
+use App\Http\Responses\TenantLoginResponse;
+use App\Http\Responses\TenantRegisterResponse;
+use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
+use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
+
+// Imports Padrão e outras Ações Customizadas do Fortify
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Actions\Fortify\Tenant\ResetUserPassword as TenantResetUserPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Fortify;
 
-// --- NOSSAS ADIÇÕES ---
-use App\Actions\Fortify\Tenant\AttemptToAuthenticate; // Adicionado para o login do tenant
-use App\Actions\Fortify\Tenant\ResetUserPassword;
-use App\Auth\Passwords\CustomDatabaseTokenRepository;
-use App\Models\Central\Tenant;
-use Illuminate\Auth\Passwords\PasswordBroker;
-use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
+// --- ADICIONADO ---
+// Importe a classe Inertia para renderizar a view com dados.
+use Inertia\Inertia;
+// Importe a classe Carbon para manipulação de datas.
+use Carbon\Carbon;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -31,47 +44,30 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Adiciona o binding para a ação de autenticação customizada do tenant.
-        // Isso garante que, quando o Fortify tentar autenticar, ele usará nossa lógica
-        // que força o uso do 'tenant' guard.
         $this->app->singleton(
             AttemptToAuthenticateContract::class,
             AttemptToAuthenticate::class
         );
 
-        // Sobrescreve como o 'PasswordBroker' é criado no container de serviços.
-        $this->app->singleton('auth.password.broker', function ($app) {
-            // Se estivermos em um contexto de tenant...
-            if (Tenant::checkCurrent()) {
-                Log::info("[DEBUG] FortifyServiceProvider: Criando PasswordBroker CUSTOMIZADO para TENANT.");
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\ProfileInformationUpdatedResponse::class,
+            \App\Http\Responses\ProfileUpdateResponse::class
+        );
 
-                $configKey = 'auth.passwords.tenant_users';
-                if (! $app['config']->has($configKey)) {
-                    Log::error("[DEBUG] Configuração de senha para tenants não encontrada: {$configKey}");
-                    throw new \RuntimeException("Configuração de senha para tenants ausente.");
-                }
-                $config = $app['config'][$configKey];
+        $this->app->singleton(
+            LoginResponseContract::class,
+            TenantLoginResponse::class
+        );
 
-                // Usa nosso repositório de tokens customizado para podermos logar
-                $tokens = new CustomDatabaseTokenRepository(
-                    DB::connection($config['connection']), // Usa a conexão 'tenant'
-                    $app['hash'],
-                    $config['table'],
-                    $app['config']['app.key'],
-                    $config['expire'],
-                    $config['throttle'] ?? 0
-                );
+        $this->app->singleton(
+            LogoutResponseContract::class,
+            CustomLogoutResponse::class
+        );
 
-                $users = $app['auth']->createUserProvider($config['provider']);
-
-                // Retorna um PasswordBroker totalmente novo e configurado corretamente
-                return new PasswordBroker($tokens, $users);
-            }
-
-            // ... caso contrário, apenas retorna o broker padrão do Laravel para o landlord.
-            Log::info("[DEBUG] FortifyServiceProvider: Usando PasswordBroker padrão do LANDLORD.");
-            return $app['auth.password']->broker('users'); // Especifica 'users' para clareza
-        });
+        $this->app->singleton(
+            RegisterResponseContract::class,
+            TenantRegisterResponse::class
+        );
     }
 
     /**
@@ -79,16 +75,85 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Mantém suas configurações existentes
+        Fortify::authenticateUsing(function (Request $request) {
+            if ($tenant = Tenant::current()) {
+                $user = TenantUser::where('email', $request->email)->first();
+                if ($user && Hash::check($request->password, $user->password)) {
+                    return $user;
+                }
+            } else {
+                $user = CentralUser::where('email', $request->email)->first();
+                if ($user && Hash::check($request->password, $user->password)) {
+                    return $user;
+                }
+            }
+            return null;
+        });
+
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
-        Fortify::redirectUserForTwoFactorAuthenticationUsing(RedirectIfTwoFactorAuthenticatable::class);
-        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
+        Fortify::resetUserPasswordsUsing(TenantResetUserPassword::class);
 
-        // Mantém seus Rate Limiters
+        Fortify::loginView(fn () => inertia('Auth/Login'));
+
+        Fortify::registerView(function () {
+            $currentTenant = Tenant::current();
+            $processedTenantData = null;
+
+            if ($currentTenant) {
+                $freshTenant = Tenant::find($currentTenant->id);
+                if ($freshTenant) {
+                    $addressParts = array_filter([
+                        $freshTenant->endereco_logradouro,
+                        $freshTenant->endereco_numero,
+                        $freshTenant->endereco_bairro,
+                        $freshTenant->endereco_cidade,
+                        $freshTenant->endereco_estado
+                    ]);
+                    $address = implode(', ', $addressParts);
+                    $date = Carbon::now()->locale('pt_BR')->translatedFormat('d \\de F \\de Y');
+
+                    // Mapeia os placeholders para os valores reais do tenant
+                    $replacements = [
+                        '[Nome da Câmara Municipal]'       => $freshTenant->name,
+                        '[CNPJ da Câmara]'                => $freshTenant->cnpj,
+                        '[Endereço Completo da Câmara]'   => $address,
+                        '[Cidade]'                        => $freshTenant->endereco_cidade,
+                        '[dia] de [mês] de [ano]'         => $date,
+                        // O placeholder [Nome Completo do Cidadão] agora é ignorado aqui
+                    ];
+
+                    // Substitui os placeholders nos textos
+                    $processedTerms = str_replace(array_keys($replacements), array_values($replacements), $freshTenant->terms_of_service ?? '');
+                    $processedPolicy = str_replace(array_keys($replacements), array_values($replacements), $freshTenant->privacy_policy ?? '');
+
+                    $processedTenantData = [
+                        'name' => $freshTenant->name,
+                        'terms_of_service' => $processedTerms,
+                        'privacy_policy' => $processedPolicy,
+                    ];
+                }
+            }
+            return Inertia::render('Auth/Register', [
+                'tenant' => $processedTenantData,
+            ]);
+        });
+
+        // --- ROTAS DE VISUALIZAÇÃO REMOVIDAS ---
+        // As rotas de redefinição de senha e verificação de e-mail agora são
+        // definidas diretamente em routes/tenant.php para garantir que
+        // elas operem dentro do contexto do middleware do tenant.
+        //
+        // Fortify::requestPasswordResetLinkView(fn () => inertia('Auth/ForgotPassword'));
+        // Fortify::resetPasswordView(fn (Request $request) => inertia('Auth/ResetPassword', ['email' => $request->email, 'token' => $request->route('token')]));
+        // Fortify::verifyEmailView(fn () => inertia('Auth/VerifyEmail'));
+
+        Fortify::twoFactorChallengeView(fn () => inertia('Auth/TwoFactorChallenge'));
+        Fortify::confirmPasswordView(fn () => inertia('Auth/ConfirmPassword'));
+
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
             return Limit::perMinute(5)->by($throttleKey);
         });
 

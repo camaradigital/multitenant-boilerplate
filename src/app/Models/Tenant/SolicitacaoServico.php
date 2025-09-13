@@ -4,46 +4,115 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection; // Importação do Trait
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Tenant\Documento;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany; // Adicionado
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class SolicitacaoServico extends Model
 {
-    // CORREÇÃO: Adicionado o trait que instrui o modelo a usar a conexão 'tenant'
-    use HasFactory, UsesTenantConnection;
+    use HasFactory, LogsActivity, UsesTenantConnection;
 
-    /**
-     * O nome da tabela associada ao modelo.
-     *
-     * @var string
-     */
     protected $table = 'solicitacoes_servico';
 
     /**
      * Os atributos que podem ser atribuídos em massa.
-     *
-     * @var array
+     * Garante que todos os campos do formulário possam ser guardados.
      */
     protected $fillable = [
         'user_id',
         'servico_id',
-        'status',
-        'observacoes_atendente',
-        'observacoes_cidadao',
+        'atendente_id',
+        'status_id',
+        'status', // Mantido por compatibilidade, mas o ideal é usar status_id
+        'observacoes',
+        'finalizado_em',
     ];
 
     /**
-     * Relacionamento com o usuário (cidadão).
+     * The attributes that should be cast.
+     *
+     * @var array
      */
-    public function user()
+    protected $casts = [
+        'finalizado_em' => 'datetime',
+    ];
+
+    /**
+     * Configura como as atividades deste modelo devem ser logadas.
+     */
+    public function getActivitylogOptions(): LogOptions
     {
-        return $this->belongsTo(User::class);
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "A solicitação foi {$eventName}");
+    }
+
+    // --- RELACIONAMENTOS ---
+
+    /**
+     * O cidadão que solicitou o serviço.
+     */
+    public function cidadao(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
-     * Relacionamento com o serviço solicitado.
+     * O funcionário que atendeu à solicitação.
      */
-    public function servico()
+    public function atendente(): BelongsTo
     {
-        return $this->belongsTo(Servico::class);
+        return $this->belongsTo(User::class, 'atendente_id');
+    }
+
+    /**
+     * O serviço que foi solicitado.
+     */
+    public function servico(): BelongsTo
+    {
+        return $this->belongsTo(Servico::class, 'servico_id');
+    }
+
+    /**
+     * O status atual da solicitação.
+     */
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(StatusSolicitacao::class, 'status_id');
+    }
+
+    /**
+     * Os documentos anexados a esta solicitação.
+     */
+    public function documentos(): HasMany
+    {
+        // Assumindo que a chave estrangeira em sua tabela de documentos é 'solicitacao_servico_id'
+        return $this->hasMany(Documento::class, 'solicitacao_servico_id');
+    }
+
+    /**
+     * A pesquisa de satisfação associada a esta solicitação.
+     */
+    public function pesquisa_satisfacao(): HasOne
+    {
+        return $this->hasOne(PesquisaSatisfacao::class, 'solicitacao_servico_id', 'id');
+    }
+
+    /**
+     * Alias para o relacionamento de logs de atividade (histórico).
+     * O controller usa 'historicos', enquanto o trait Spatie/Activitylog fornece 'activities'.
+     * Esta função cria um alias para compatibilidade e correção do erro.
+     */
+    public function historicos(): MorphMany
+    {
+        // O trait LogsActivity fornece o método activities()
+        return $this->activities();
     }
 }

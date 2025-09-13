@@ -1,49 +1,48 @@
 <?php
 
-namespace App\Mail;
+namespace App\Mail\Central;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Attachment;
+use Illuminate\Queue\SerializesModels;
 
 class CampaignMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $customBody;
-    public $attachmentPath;
-    public $attachmentName;
+    public string $leadName;
+    public string $body;
+    public string $ctaUrl;
+    public string $ctaText;
+    public string $unsubscribeUrl;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct($customBody, $attachmentPath = null, $attachmentName = null)
+    public function __construct(
+        array $data,
+        public ?string $attachmentPath = null,
+        public ?string $attachmentName = null
+    )
     {
-        $this->customBody = $customBody;
-        $this->attachmentPath = $attachmentPath;
-        $this->attachmentName = $attachmentName;
+        $this->leadName       = $data['leadName'];
+        $this->body           = $data['body'];
+        $this->ctaUrl         = $data['ctaUrl'];
+        $this->ctaText        = $data['ctaText'];
+        $this->unsubscribeUrl = $data['unsubscribeUrl'];
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
-        // O assunto será definido no controller
-        return new Envelope();
+        return new Envelope(
+            subject: 'Uma Novidade Para a Gestão da Sua Câmara',
+        );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.campaign', // Usaremos uma view para o corpo do e-mail
+            markdown: 'emails.central.campaign',
         );
     }
 
@@ -54,12 +53,18 @@ class CampaignMail extends Mailable
      */
     public function attachments(): array
     {
-        if ($this->attachmentPath) {
-            return [
-                Attachment::fromPath($this->attachmentPath)
-                    ->as($this->attachmentName),
-            ];
+        if (!$this->attachmentPath) {
+            return [];
         }
-        return [];
+
+        // AQUI ESTÁ A CORREÇÃO:
+        // Em vez de 'fromPath', usamos 'fromStorage'.
+        // Isso instrui o Laravel a buscar o arquivo no disco de storage padrão
+        // usando o caminho relativo (ex: 'attachments/arquivo.pdf').
+        // Isso resolve problemas de permissão e de caminho absoluto.
+        return [
+            Attachment::fromStorage($this->attachmentPath)
+                ->as($this->attachmentName),
+        ];
     }
 }

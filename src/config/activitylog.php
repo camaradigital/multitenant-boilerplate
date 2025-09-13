@@ -19,14 +19,16 @@ return [
 
     /**
      * O driver de autenticação padrão a ser usado para registrar o causador.
+     * CORREÇÃO: Alinhado com o guard 'tenant' que definimos em config/auth.php.
      */
-    'default_auth_driver' => 'web',
+    'default_auth_driver' => 'tenant',
 
     /**
      * O modelo a ser usado para o log de atividades.
-     * Deve ser uma classe que estende \Spatie\Activitylog\Models\Activity.
+     * Sua configuração está correta, apontando para um model personalizado.
      */
-    'activity_model' => \App\Models\Tenant\ActivityLog::class,
+    'activity_model' => \Spatie\Activitylog\Models\Activity::class,
+
 
     /**
      * O nome da tabela a ser usada para o log de atividades.
@@ -35,9 +37,7 @@ return [
 
     /**
      * O nome da conexão do banco de dados a ser usada.
-     * Deixe como `null` para usar a conexão de banco de dados padrão.
+     * Sua configuração está correta, forçando o uso da conexão do tenant.
      */
-    // CORREÇÃO: Força o pacote a usar a conexão 'tenant', que é gerenciada
-    // dinamicamente pelo pacote de multitenancy. Isso resolve o erro.
     'database_connection' => 'tenant',
 ];

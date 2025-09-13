@@ -3,7 +3,7 @@ namespace App\Services\Tenant;
 
 use App\Models\Tenant\LogUsoServico;
 use App\Models\Tenant\Servico;
-use App\Models\User;
+use App\Models\Tenant\User; // <-- CORREÇÃO
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 

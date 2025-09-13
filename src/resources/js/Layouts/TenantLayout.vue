@@ -1,91 +1,125 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import Banner from '@/Components/Banner.vue';
+import Sidebar from '@/Components/Sidebar.vue';
+import ThemeToggle from '@/Components/ThemeToggle.vue';
+import { Menu, Search, Bell } from 'lucide-vue-next';
 
+// --- Props ---
 defineProps({
     title: String,
 });
 
+// --- Lógica Principal ---
 const page = usePage();
-const showingNavigationDropdown = ref(false);
 
 const logout = () => {
     router.post(route('logout'));
 };
 
-// **NOVO**: Propriedade computada para aplicar as cores do tenant dinamicamente
-const computedTenantStyle = computed(() => {
+// Propriedade computada para criar as variáveis CSS a partir dos dados do tema
+// que vêm do middleware HandleInertiaRequests.php
+const themeStyles = computed(() => {
+    const theme = page.props.theme;
     return {
-        '--cor-primaria': page.props.tenant?.cor_primaria || '#FFFFFF',
-        '--cor-secundaria': page.props.tenant?.cor_secundaria || '#1F2937', // Cor de texto padrão
+        '--color-primary': theme?.primary || '#4F46E5',   // Cor primária com fallback
+        '--color-secondary': theme?.secondary || '#D946EF', // Cor secundária com fallback
     };
 });
+
+// Permissões e Debug (mantidos)
+const userPermissions = computed(() => page.props.auth.user?.permissions || []);
+const authDebug = computed(() => page.props.auth?.debug || {});
+
+// --- Lógica para Sidebar Responsiva ---
+const isMobile = ref(window.innerWidth < 1024);
+const isSidebarOpenOnMobile = ref(false);
+
+function updateMobileStatus() {
+    isMobile.value = window.innerWidth < 1024;
+    if (!isMobile.value) {
+        isSidebarOpenOnMobile.value = false;
+    }
+}
+
+function toggleMobileSidebar() {
+    isSidebarOpenOnMobile.value = !isSidebarOpenOnMobile.value;
+}
+
+onMounted(() => window.addEventListener('resize', updateMobileStatus));
+onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
+
 </script>
 
 <template>
-    <div :style="computedTenantStyle">
+    <div :style="themeStyles">
         <Head :title="title" />
-
         <Banner />
 
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            <nav class="border-b border-gray-100 dark:border-gray-700" :style="{ backgroundColor: 'var(--cor-primaria)' }">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between h-16">
-                        <div class="flex">
-                            <div class="shrink-0 flex items-center">
-                                <Link :href="route('portal.home')">
-                                    <img v-if="page.props.tenant?.logotipo_url" :src="page.props.tenant.logotipo_url" :alt="page.props.tenant.name" class="block h-9 w-auto">
-                                    <h1 v-else class="font-bold" :style="{ color: 'var(--cor-secundaria)' }">
-                                        {{ page.props.tenant?.name || 'Portal do Cidadão' }}
-                                    </h1>
-                                </Link>
-                            </div>
+        <div class="min-h-screen bg-slate-50 dark:bg-[#0A1E1C]">
+            <div class="flex h-screen">
 
-                            <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink :href="route('portal.home')" :active="route().current('portal.home')" :style="{ color: 'var(--cor-secundaria)' }">
-                                    Portal
-                                </NavLink>
+                <div class="hidden lg:block lg:w-64 lg:flex-shrink-0">
+                    <Sidebar />
+                </div>
 
-                                <NavLink :href="route('solicitacoes.index')" :active="route().current('solicitacoes.index') && $page.props.auth.user.permissions.includes('solicitar servicos')" :style="{ color: 'var(--cor-secundaria)' }">
-                                    Minhas Solicitações
-                                </NavLink>
+                <div v-if="isMobile">
+                    <div
+                        v-if="isSidebarOpenOnMobile"
+                        @click="toggleMobileSidebar"
+                        class="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm"
+                        aria-hidden="true"
+                    ></div>
+                    <div :class="['fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out', isSidebarOpenOnMobile ? 'translate-x-0' : '-translate-x-full']">
+                        <Sidebar @close="toggleMobileSidebar" />
+                    </div>
+                </div>
 
-                                <template v-if="$page.props.auth.user.permissions.includes('gerenciar servicos')">
-                                    <NavLink :href="route('solicitacoes.index')" :active="route().current('solicitacoes.index')" :style="{ color: 'var(--cor-secundaria)' }">
-                                        Gerenciar Solicitações
-                                    </NavLink>
-                                    <NavLink :href="route('funcionarios.index')" :active="route().current('funcionarios.index')" :style="{ color: 'var(--cor-secundaria)' }">
-                                        Funcionários
-                                    </NavLink>
-                                    <NavLink :href="route('servicos.index')" :active="route().current('servicos.index')" :style="{ color: 'var(--cor-secundaria)' }">
-                                        Serviços
-                                    </NavLink>
-                                    <NavLink :href="route('tipos-servico.index')" :active="route().current('tipos-servico.index')" :style="{ color: 'var(--cor-secundaria)' }">
-                                        Tipos de Serviço
-                                    </NavLink>
-                                    <NavLink :href="route('parametros.index')" :active="route().current('parametros.index')" :style="{ color: 'var(--cor-secundaria)' }">
-                                        Parâmetros
-                                    </NavLink>
-                                </template>
+                <div class="flex flex-1 flex-col overflow-hidden">
+
+                    <header class="main-header">
+                        <div class="flex items-center gap-4">
+                            <button @click="toggleMobileSidebar" class="header-icon-btn lg:hidden" aria-label="Abrir menu">
+                                <Menu class="h-6 w-6"/>
+                            </button>
+                            <div v-if="$slots.header" class="hidden lg:block">
+                                <slot name="header" />
                             </div>
                         </div>
 
-                        <div class="hidden sm:flex sm:items-center sm:ms-6">
-                            <div class="ms-3 relative">
+                        <div class="flex items-center gap-2 sm:gap-4">
+                            <div class="hidden md:block">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <Search class="h-5 w-5 text-gray-400" />
+                                    </span>
+                                    <input type="text" placeholder="Buscar..." class="w-48 lg:w-64 rounded-md border-gray-300 bg-gray-100 py-2 pl-10 pr-4 text-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] dark:border-gray-700/50 dark:bg-gray-800/50 dark:text-gray-300">
+                                </div>
+                            </div>
+
+                            <button class="header-icon-btn">
+                                <Bell class="h-6 w-6" />
+                            </button>
+
+                            <ThemeToggle />
+
+                            <div class="relative">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
-                                        <button class="flex items-center text-sm font-medium hover:opacity-80 transition" :style="{ color: 'var(--cor-secundaria)' }">
-                                            <div>{{ $page.props.auth.user.name }}</div>
-                                            <div class="ms-1"><svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></div>
+                                        <button class="flex items-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-gray-900">
+                                            <span :style="{ backgroundColor: 'var(--color-primary)' }" class="inline-flex items-center justify-center h-9 w-9 rounded-full text-sm font-semibold text-white">
+                                                {{ $page.props.auth.user.name.charAt(0) }}
+                                            </span>
                                         </button>
                                     </template>
+
                                     <template #content>
+                                        <div class="block px-4 py-2 text-xs text-gray-400">
+                                            Gerenciar Conta
+                                        </div>
                                         <DropdownLink :href="route('profile.show')"> Perfil </DropdownLink>
                                         <div class="border-t border-gray-200 dark:border-gray-600" />
                                         <form @submit.prevent="logout">
@@ -95,28 +129,27 @@ const computedTenantStyle = computed(() => {
                                 </Dropdown>
                             </div>
                         </div>
+                    </header>
 
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400" @click="showingNavigationDropdown = ! showingNavigationDropdown">
-                                <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path :class="{'hidden': showingNavigationDropdown, 'inline-flex': ! showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /><path :class="{'hidden': ! showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-                    </div>
+                    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-[var(--color-primary)] scrollbar-track-slate-200 hover:scrollbar-thumb-slate-500 dark:scrollbar-track-slate-800 dark:hover:scrollbar-thumb-slate-400">
+                        <slot />
+                    </main>
+
                 </div>
-
-                <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
-                    </div>
-            </nav>
-
-            <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
-
-            <main>
-                <slot />
-            </main>
+            </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.main-header {
+    @apply flex h-16 shrink-0 items-center justify-between border-b px-4 sm:px-6 lg:px-8;
+    @apply bg-white/70 dark:bg-[#0D2C2A]/50 border-gray-200 dark:border-gray-800;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.header-icon-btn {
+    @apply rounded-full p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white transition-colors duration-200;
+}
+</style>

@@ -1,3 +1,0 @@
-
-RESETAR BANCO COMPLETO
-docker-compose run --rm app php artisan migrate:fresh --seed

@@ -179,24 +179,20 @@ return [
     'cache' => [
 
         /*
-         * By default all permissions are cached for 24 hours to speed up performance.
-         * When permissions or roles are updated the cache is flushed automatically.
+         * O tempo de expiração do cache. Por padrão, é de 24 horas (1440 minutos).
          */
-
         'expiration_time' => \DateInterval::createFromDateString('24 hours'),
 
         /*
-         * The cache key used to store all permissions.
+         * A chave de cache que será usada para armazenar as permissões.
          */
-
         'key' => 'spatie.permission.cache',
 
         /*
-         * You may optionally indicate a specific cache driver to use for permission and
-         * role caching using any of the `store` drivers listed in the cache.php config
-         * file. Using 'default' here means to use the `default` set in cache.php.
+         * A loja de cache que será usada.
+         * Por padrão, é a loja de cache padrão do seu aplicativo.
          */
+        'store' => 'default', // <-- ALTERE 'default' PARA 'file' AQUI
 
-        'store' => 'default',
     ],
 ];

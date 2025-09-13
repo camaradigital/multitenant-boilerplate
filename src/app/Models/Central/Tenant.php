@@ -28,11 +28,23 @@ class Tenant extends BaseTenant
         'site_url',
         'cor_primaria',
         'cor_secundaria',
+        'permite_cadastro_cidade_externa',
+        'limite_renda_juridico',
+        'exigir_renda_juridico',
+        'publicar_achados_e_perdidos',
+        'publicar_pessoas_desaparecidas',
+        'publicar_memoria_legislativa',
         'data',
     ];
 
-    protected $casts = [
+        protected $casts = [
         'data' => 'array',
+        'permite_cadastro_cidade_externa' => 'boolean',
+        'exigir_renda_juridico' => 'boolean', // <-- Adicione esta linha
+        'limite_renda_juridico' => 'decimal:2', // APAGUE SE DE ERRO
+        'publicar_achados_e_perdidos' => 'boolean',
+        'publicar_pessoas_desaparecidas' => 'boolean',
+        'publicar_memoria_legislativa' => 'boolean',
     ];
 
     /**
@@ -45,8 +57,8 @@ class Tenant extends BaseTenant
     }
 
     public function getDomainUrl(): string
-{
-    // Monta a URL completa: http://<subdomínio>.<domínio_central>
-    return 'http://' . $this->subdomain . '.' . config('app.central_domain');
-}
+    {
+        // Monta a URL completa: http://<subdomínio>.<domínio_central>
+        return 'http://' . $this->subdomain . '.' . config('app.central_domain');
+    }
 }

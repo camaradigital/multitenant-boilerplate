@@ -20,8 +20,8 @@ const page = usePage();
 
 // Verifica se o usuário tem a permissão para ver o link
 const canManagePermissions = computed(() => {
-    // Usando o array de permissões que você tinha no código original
-    return page.props.auth.user.permissions?.includes('gerenciar permissoes centrais') ?? false;
+    // CORREÇÃO: Adicionado '?' depois de 'user'
+    return page.props.auth.user?.permissions?.includes('gerenciar permissoes centrais') ?? false;
 });
 
 const showingNavigationDropdown = ref(false);
@@ -209,9 +209,9 @@ const logout = () => {
                 </div>
             </header>
 
-            <main>
-                <slot />
-            </main>
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-emerald-500 scrollbar-track-emerald-900/50 hover:scrollbar-thumb-emerald-400">
+    <slot />
+</main>
         </div>
     </div>
 </template>

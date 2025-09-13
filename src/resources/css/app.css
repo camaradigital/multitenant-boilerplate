@@ -5,3 +5,39 @@
 [x-cloak] {
     display: none;
 }
+
+.form-label {
+    @apply block mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-200; /* Alterado de dark:text-gray-300 para dark:text-gray-200 */
+}
+
+/* 2. Inputs com o estilo base correto (sem alterações, apenas para referência) */
+.form-input {
+    @apply block w-full text-sm rounded-xl transition-all h-12 py-3.5 px-4;
+    @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400;
+    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
+    @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500;
+    @apply dark:focus:ring-green-500 dark:focus:border-green-500;
+}
+
+/*
+   3. A CORREÇÃO MÁGICA PARA O AUTOFILL DO NAVEGADOR
+   Este trecho força os campos preenchidos automaticamente a usar as nossas cores.
+*/
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+    -webkit-text-fill-color: #e5e7eb !important; /* Cor do texto (cinza claro) */
+    -webkit-box-shadow: 0 0 0px 1000px #102523 inset !important; /* Força o fundo para a cor escura do seu input */
+    transition: background-color 5000s ease-in-out 0s; /* Animação longa para "enganar" a transição do navegador */
+    caret-color: #e5e7eb; /* Cor do cursor de digitação */
+}
+
+/* Estilos de erro, sem alterações */
+.form-error {
+    @apply text-sm text-red-600 dark:text-red-400 mt-2;
+}

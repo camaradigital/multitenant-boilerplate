@@ -3,44 +3,62 @@
 namespace Database\Seeders\Tenant;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
+use Spatie\Permission\Models\Permission;
 
 class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reseta o cache de papéis e permissões
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $tenantConnection = config('multitenancy.tenant_database_connection_name');
 
-        // --- CRIAÇÃO DE PERMISSÕES ---
-        // Gestão de Serviços
-        Permission::create(['name' => 'gerenciar servicos']);
-        Permission::create(['name' => 'solicitar servicos']);
+        // 1. Busca todos as permissões da conexão do tenant
+        $allPermissions = Permission::on($tenantConnection)->get()->keyBy('name');
 
-        // Gestão de Usuários
-        Permission::create(['name' => 'gerenciar funcionarios']);
-        Permission::create(['name' => 'ver cidadaos']);
+        // 2. Cria os papéis (ou os busca se já existirem)
+        $roleCidadao = Role::on($tenantConnection)->firstOrCreate(['name' => 'Cidadao', 'guard_name' => 'tenant']);
+        $roleFuncionario = Role::on($tenantConnection)->firstOrCreate(['name' => 'Funcionario', 'guard_name' => 'tenant']);
+        $roleAdmin = Role::on($tenantConnection)->firstOrCreate(['name' => 'Admin Tenant', 'guard_name' => 'tenant']);
 
-        // Gestão do Sistema (NOVA PERMISSÃO)
-        Permission::create(['name' => 'gerenciar parametros']);
-        Permission::create(['name' => 'ver relatorios']);
+        // 3. Define e atribui as permissões para cada papel
 
+        // Papel: Cidadao
+        // Permite ver o portal de acesso rápido e criar solicitações.
+        $this->assignPermissions($roleCidadao, $allPermissions, [
+            'ver portal',
+            'criar solicitacoes',
+        ]);
 
-        // --- CRIAÇÃO DE PAPÉIS E ATRIBUIÇÃO DE PERMISSÕES ---
+        // Papel: Funcionario
+        // Permissões operacionais do dia a dia, mas sem acesso aos parâmetros do sistema.
+        $this->assignPermissions($roleFuncionario, $allPermissions, [
+            'ver solicitacoes',
+            'criar solicitacoes',
+            'gerenciar solicitacoes',
+            'gerenciar cidadaos',
+            'gerenciar servicos',
+            'gerenciar entidades',
+            'gerenciar memoria',
+            'gerenciar achados e perdidos',
+            'visualizar relatorios',
+        ]);
 
-        // Papel do Cidadão (Munícipe)
-        $roleCidadao = Role::create(['name' => 'Cidadao']);
-        $roleCidadao->givePermissionTo('solicitar servicos');
+        // Papel: Admin Tenant
+        // Sincroniza TODAS as permissões disponíveis para este tenant.
+        $roleAdmin->syncPermissions($allPermissions->values());
+    }
 
-        // Papel do Funcionário (Atendente)
-        $roleFuncionario = Role::create(['name' => 'Funcionario']);
-        $roleFuncionario->givePermissionTo(['solicitar servicos', 'ver cidadaos']);
-
-        // Papel do Administrador do Tenant
-        $roleAdmin = Role::create(['name' => 'Admin Tenant']);
-        // O Admin pode tudo
-        $roleAdmin->givePermissionTo(Permission::all());
+    /**
+     * Função auxiliar para filtrar e atribuir permissões de forma segura.
+     *
+     * @param Role $role
+     * @param Collection $allPermissions
+     * @param array $permissionNames
+     */
+    private function assignPermissions(Role $role, Collection $allPermissions, array $permissionNames): void
+    {
+        $permissionsToAssign = $allPermissions->whereIn('name', $permissionNames)->values();
+        $role->syncPermissions($permissionsToAssign);
     }
 }

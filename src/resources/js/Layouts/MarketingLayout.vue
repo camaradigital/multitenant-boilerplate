@@ -13,7 +13,7 @@ defineProps({
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
                 <div>
                     <Link :href="route('marketing.home')" class="text-xl font-bold">
-                        CACSystem
+                        Câmara Digital
                     </Link>
                 </div>
                 <div>
@@ -30,7 +30,7 @@ defineProps({
 
         <footer class="bg-gray-800 text-white mt-12 py-6">
             <div class="container mx-auto px-6 text-center">
-                <p>&copy; 2025 CACSystem. Todos os direitos reservados.</p>
+                <p>&copy; 2025 Câmara Digital. Todos os direitos reservados.</p>
             </div>
         </footer>
     </div>

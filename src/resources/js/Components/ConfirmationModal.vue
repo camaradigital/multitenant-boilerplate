@@ -1,57 +1,37 @@
 <script setup>
-import Modal from './Modal.vue';
+import { computed } from 'vue';
+import { AlertTriangle } from 'lucide-vue-next';
 
-const emit = defineEmits(['close']);
-
-defineProps({
-    show: {
-        type: Boolean,
-        default: false,
-    },
-    maxWidth: {
-        type: String,
-        default: '2xl',
-    },
-    closeable: {
-        type: Boolean,
-        default: true,
-    },
+const props = defineProps({
+    show: { type: Boolean, default: false },
+    title: { type: String, default: 'Confirmar Ação' },
+    message: { type: String, default: 'Você tem certeza que deseja continuar?' },
 });
 
-const close = () => {
-    emit('close');
-};
+const emit = defineEmits(['confirm', 'close']);
+
 </script>
 
 <template>
-    <Modal
-        :show="show"
-        :max-width="maxWidth"
-        :closeable="closeable"
-        @close="close"
-    >
-        <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-                <div class="mx-auto shrink-0 flex items-center justify-center size-12 rounded-full bg-red-100 sm:mx-0 sm:size-10">
-                    <svg class="size-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                    </svg>
-                </div>
+    <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm" @click.self="$emit('close')">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4 p-6 text-center">
+            <AlertTriangle class="mx-auto h-16 w-16 text-amber-500 dark:text-yellow-400 mb-4" />
 
-                <div class="mt-3 text-center sm:mt-0 sm:ms-4 sm:text-start">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        <slot name="title" />
-                    </h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ title }}</h3>
 
-                    <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                        <slot name="content" />
-                    </div>
-                </div>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ message }}</p>
+
+            <div class="mt-6 flex justify-center gap-4">
+                <button type="button" @click="$emit('close')" class="btn btn-secondary w-full sm:w-auto">Cancelar</button>
+                <button type="button" @click="$emit('confirm')" class="btn btn-danger w-full sm:w-auto">Confirmar Exclusão</button>
             </div>
         </div>
-
-        <div class="flex flex-row justify-end px-6 py-4 bg-gray-100 dark:bg-gray-800 text-end">
-            <slot name="footer" />
-        </div>
-    </Modal>
+    </div>
 </template>
+
+<style scoped>
+/* Adicione esta nova classe aos seus estilos ou use classes do Tailwind diretamente */
+.btn-danger { @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500; }
+.btn { @apply flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2; }
+.btn-secondary { @apply bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600; }
+</style>

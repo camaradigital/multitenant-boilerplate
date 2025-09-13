@@ -7,25 +7,50 @@ use Spatie\Multitenancy\Tasks\SwitchTenantTask;
 
 class SwitchAuthConfigTask implements SwitchTenantTask
 {
-    public function makeCurrent(IsTenant $tenant): void
+    /**
+     * @var string|null Armazena o broker original do Fortify.
+     */
+    protected ?string $originalFortifyBroker;
+
+    /**
+     * @var string|null Armazena o broker padrão original do Auth.
+     */
+    protected ?string $originalAuthBroker;
+
+    /**
+     * @var string|null Armazena o guard original do Fortify.
+     */
+    protected ?string $originalFortifyGuard;
+
+    /**
+     * Guarda as configurações originais do landlord no momento da construção.
+     */
+    public function __construct()
     {
-        // Switch to the tenant's configuration
-        config([
-            'auth.defaults.guard' => 'tenant',
-            'auth.defaults.passwords' => 'tenant_users',
-            'fortify.guard' => 'tenant',
-            'fortify.passwords' => 'tenant_users',
-        ]);
+        $this->originalFortifyBroker = config('fortify.passwords');
+        $this->originalAuthBroker = config('auth.defaults.passwords');
+        $this->originalFortifyGuard = config('fortify.guard');
     }
 
-    public function forgetCurrent(): void // <- This method was renamed
+    /**
+     * Executado quando um tenant se torna o atual.
+     * Altera a configuração do Fortify E a configuração padrão do Auth.
+     */
+    public function makeCurrent(IsTenant $tenant): void
     {
-        // Revert to the central/landlord configuration
-        config([
-            'auth.defaults.guard' => 'web',
-            'auth.defaults.passwords' => 'users',
-            'fortify.guard' => 'web',
-            'fortify.passwords' => 'users',
-        ]);
+        config()->set('fortify.passwords', 'tenant_users');
+        config()->set('auth.defaults.passwords', 'tenant_users');
+        config()->set('fortify.guard', 'tenant');
+    }
+
+    /**
+     * Executado quando o contexto do tenant é finalizado.
+     * Restaura ambas as configurações originais do landlord.
+     */
+    public function forgetCurrent(): void
+    {
+        config()->set('fortify.passwords', $this->originalFortifyBroker);
+        config()->set('auth.defaults.passwords', $this->originalAuthBroker);
+        config()->set('fortify.guard', $this->originalFortifyGuard);
     }
 }

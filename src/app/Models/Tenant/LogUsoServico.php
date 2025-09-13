@@ -5,11 +5,13 @@ namespace App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection; // Importação do Trait
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class LogUsoServico extends Model
 {
     // CORREÇÃO: Adicionado o trait que instrui o modelo a usar a conexão 'tenant'
-    use HasFactory, UsesTenantConnection;
+    use HasFactory, LogsActivity, UsesTenantConnection;
 
     /**
      * O nome da tabela associada ao modelo.
@@ -28,6 +30,17 @@ class LogUsoServico extends Model
         'servico_id',
         'solicitacao_servico_id'
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            // Loga todas as alterações nos campos que estão no array $fillable.
+            ->logFillable()
+            // Registra apenas os campos que realmente mudaram.
+            ->logOnlyDirty()
+            // Evita a criação de logs de atividade vazios se nada for alterado.
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * Relacionamento com o usuário que utilizou o serviço.

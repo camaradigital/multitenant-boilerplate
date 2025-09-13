@@ -47,6 +47,16 @@ return [
             'report' => false,
         ],
 
+        // CONFIGURAÇÃO CORRIGIDA
+        'tenant_private' => [
+            'driver' => 'local',
+            // O pacote spatie/laravel-multitenancy substituirá {tenant_id}
+            // pelo ID do tenant atual durante a execução.
+            'root' => storage_path('app/tenants/{tenant_id}/private'),
+            'visibility' => 'private', // Garante que os arquivos não sejam publicamente acessíveis
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

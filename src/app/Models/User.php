@@ -8,21 +8,35 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
-use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection; // Importante!
 
 class User extends Authenticatable
 {
+    // Adiciona todos os traits, incluindo os do Jetstream e os da nossa solução.
     use HasApiTokens;
-
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
     use HasProfilePhoto;
-    use HasTeams;
     use Notifiable;
     use TwoFactorAuthenticatable;
     use HasRoles;
+    use UsesLandlordConnection; // Chave da solução multi-tenancy
+
+    /**
+     * O nome da conexão para o modelo.
+     * Isso força este modelo a SEMPRE usar a conexão 'central', resolvendo o erro.
+     *
+     * @var string
+     */
+    protected $connection = 'central';
+
+    /**
+     * O nome do guard para o trait 'HasRoles'.
+     * Isso garante que as verificações de permissão para este modelo usem o guard 'web'.
+     */
+    protected $guard_name = 'web';
 
     /**
      * The attributes that are mass assignable.
