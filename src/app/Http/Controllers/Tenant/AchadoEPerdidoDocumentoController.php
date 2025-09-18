@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Redirect;
 
 class AchadoEPerdidoDocumentoController extends Controller
 {
+    /**
+     * Construtor para aplicar a policy de autorização ao resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(AchadoEPerdidoDocumento::class, 'achadosEPerdidosDocumento');
+    }
+
     public function index()
     {
         return inertia('Tenant/AchadosEPerdidos/Documentos/Index', [
@@ -65,6 +73,7 @@ class AchadoEPerdidoDocumentoController extends Controller
     public function destroy(AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
     {
         $achadosEPerdidosDocumento->delete();
+
         return Redirect::route('admin.achados-e-perdidos-documentos.index')->with('success', 'Registro excluído com sucesso.');
     }
 }

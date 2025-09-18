@@ -10,7 +10,7 @@ import {
     TransitionRoot,
     TransitionChild,
 } from '@headlessui/vue';
-import { Plus, Pencil, Trash2, UserSearch, X, AlertCircle, Loader2 } from 'lucide-vue-next';
+import { Plus, Pencil, Trash2, UserSearch, X, AlertCircle, Loader2, FileDown } from 'lucide-vue-next';
 
 const props = defineProps({
     pessoas: Object, // Objeto de paginação
@@ -141,12 +141,13 @@ const statusClass = computed(() => (status) => {
                                 <p class="role-name">{{ pessoa.nome_completo }}, {{ pessoa.idade }} anos</p>
                                 <p class="form-subtitle">Desapareceu em {{ new Date(pessoa.data_desaparecimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) }} em {{ pessoa.local_desaparecimento }}</p>
                                 <div class="mt-3 flex flex-wrap gap-2">
-                                   <span :class="statusClass(pessoa.status)" class="badge-base">
+                                    <span :class="statusClass(pessoa.status)" class="badge-base">
                                         {{ pessoa.status }}
-                                   </span>
+                                    </span>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2 ml-4">
+                                <a :href="route('admin.pessoas-desaparecidas.downloadBoletim', pessoa.id)" class="table-action-btn hover:text-sky-600" title="Baixar Boletim de Ocorrência"><FileDown class="w-5 h-5" /></a>
                                 <button @click="openEditModal(pessoa)" class="table-action-btn hover:text-amber-600" title="Moderar Status"><Pencil class="w-5 h-5" /></button>
                                 <button @click="openDeleteModal(pessoa)" class="table-action-btn hover:text-red-600" title="Excluir"><Trash2 class="w-5 h-5" /></button>
                             </div>

@@ -165,6 +165,7 @@ Route::middleware([
             Route::middleware('can:gerenciar achados e perdidos')->group(function () {
                 Route::resource('achados-e-perdidos-documentos', AchadoEPerdidoDocumentoController::class)->except(['show', 'create', 'edit'])->parameters(['achados-e-perdidos-documentos' => 'achadosEPerdidosDocumento']);
                 Route::resource('pessoas-desaparecidas', PessoaDesaparecidaController::class)->except(['show', 'create', 'edit'])->parameters(['pessoas-desaparecidas' => 'pessoaDesaparecida']);
+                Route::get('pessoas-desaparecidas/{pessoaDesaparecida}/boletim', [PessoaDesaparecidaController::class, 'downloadBoletim'])->name('pessoas-desaparecidas.downloadBoletim');
             });
 
             // MÓDULO DE ENTIDADES E CONVÉNIOS

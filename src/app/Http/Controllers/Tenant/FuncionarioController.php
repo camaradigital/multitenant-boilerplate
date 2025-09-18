@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\FuncionarioRequest; // Importar o Form Request
+use App\Http\Requests\Tenant\FuncionarioRequest;
 use App\Models\Tenant\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Hash;
@@ -19,7 +19,7 @@ class FuncionarioController extends Controller
      */
     public function index()
     {
-        $this->authorize('gerenciar funcionarios');
+        $this->authorize('viewAnyFuncionario', User::class);
 
         return inertia('Tenant/Funcionarios/Index', [
             'funcionarios' => User::whereHas('roles', fn ($q) => $q->where('name', '!=', 'Cidadao'))
@@ -37,7 +37,7 @@ class FuncionarioController extends Controller
      */
     public function store(FuncionarioRequest $request)
     {
-        $this->authorize('gerenciar funcionarios');
+        $this->authorize('createFuncionario', User::class);
 
         $validatedData = $request->validated();
 
@@ -58,7 +58,7 @@ class FuncionarioController extends Controller
      */
     public function update(FuncionarioRequest $request, User $funcionario)
     {
-        $this->authorize('gerenciar funcionarios');
+        $this->authorize('updateFuncionario', $funcionario);
 
         $validatedData = $request->validated();
 
@@ -83,15 +83,12 @@ class FuncionarioController extends Controller
      */
     public function destroy(User $funcionario)
     {
-        $this->authorize('gerenciar funcionarios');
+        $this->authorize('deleteFuncionario', $funcionario);
 
-        if ($funcionario->id === auth()->id()) {
-            return Redirect::back()->with('error', 'Você não pode excluir sua própria conta.');
-        }
+        // A lógica que impedia a auto-exclusão foi movida para a UserPolicy.
 
         $funcionario->delete();
 
         return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário excluído com sucesso.');
     }
 }
-

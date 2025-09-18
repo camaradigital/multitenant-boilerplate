@@ -29,10 +29,10 @@ class DocumentoPolicy
 
     /**
      * Determine whether the user can delete the document.
-     * A regra principal: o usuário pode deletar SOMENTE se ele mesmo fez o upload do arquivo.
+     * A regra principal: o usuário pode deletar SOMENTE se ele mesmo fez o upload do arquivo, exceto Admin
      */
     public function delete(User $user, Documento $documento): bool
     {
-        return $user->id === $documento->user_id;
+        return $documento->user_id === $user->id || $user->hasRole('Admin Tenant');
     }
 }

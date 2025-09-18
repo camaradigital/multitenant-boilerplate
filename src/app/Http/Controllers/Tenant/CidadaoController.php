@@ -11,20 +11,20 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
 use Spatie\Multitenancy\Models\Tenant;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // 1. Importar o trait
-use Illuminate\Http\JsonResponse; // 1. Importar a classe JsonResponse correta
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Illuminate\Http\RedirectResponse;
 
 class CidadaoController extends Controller
 {
-
-    use AuthorizesRequests; // 2. Usar o trait na classe
+    use AuthorizesRequests;
 
     public function index()
     {
+        $this->authorize('viewAnyCidadao', User::class);
+
         return inertia('Tenant/Cidadaos/Index', [
             'cidadaos' => User::role('Cidadao')->latest()->paginate(10),
             'customFields' => CustomField::all(),
@@ -34,6 +34,8 @@ class CidadaoController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('createCidadao', User::class);
+
         $customRules = $this->getCustomFieldRules();
 
         $request->validate(array_merge([
@@ -72,8 +74,6 @@ class CidadaoController extends Controller
 
         $user->assignRole('Cidadao');
 
-        // --- AQUI ESTÁ A CORREÇÃO ---
-        // A função broker espera o NOME do broker (uma string), e não o array de configuração.
         $token = Password::broker('tenant_users')->createToken($user);
         $user->notify(new SetInitialPassword($token));
 
@@ -82,11 +82,8 @@ class CidadaoController extends Controller
 
     public function show(User $cidadao)
     {
-        // Garante que o usuário tem permissão para ver os detalhes
-        $this->authorize('gerenciar cidadaos');
+        $this->authorize('viewCidadao', $cidadao);
 
-        // Carrega o cidadão com seu histórico completo de solicitações,
-        // ordenado do mais recente para o mais antigo, e com os detalhes de cada serviço.
         $cidadao->load(['solicitacoes' => function ($query) {
             $query->with(['servico', 'status', 'atendente'])->latest();
         }]);
@@ -98,6 +95,8 @@ class CidadaoController extends Controller
 
     public function update(Request $request, User $cidadao)
     {
+        $this->authorize('updateCidadao', $cidadao);
+
         $customRules = $this->getCustomFieldRules();
 
         $request->validate(array_merge([
@@ -126,7 +125,9 @@ class CidadaoController extends Controller
 
     public function destroy(User $cidadao)
     {
-        if ($cidadao->solicitacoesFeitas()->exists()) {
+        $this->authorize('deleteCidadao', $cidadao);
+
+        if ($cidadao->solicitacoes()->exists()) {
             return Redirect::back()->with('error', 'Não é possível excluir. Este cidadão já possui solicitações de serviço.');
         }
         $cidadao->delete();
@@ -155,9 +156,9 @@ class CidadaoController extends Controller
     /**
      * Anonimiza os dados de um cidadão para conformidade com a LGPD.
      */
-    public function anonymize(User $cidadao): \Illuminate\Http\RedirectResponse
+    public function anonymize(User $cidadao): RedirectResponse
     {
-        $this->authorize('gerenciar cidadaos');
+        $this->authorize('anonymizeCidadao', $cidadao);
 
         $cidadao->update([
             'name' => 'Usuário Anônimo #' . $cidadao->id,
@@ -167,7 +168,6 @@ class CidadaoController extends Controller
             'is_active' => false,
         ]);
 
-        // Remove os papéis para desassociar permissões
         $cidadao->syncRoles([]);
 
         return redirect()->route('admin.cidadaos.index')->with('success', 'Dados do cidadão anonimizados com sucesso.');
@@ -178,9 +178,8 @@ class CidadaoController extends Controller
      */
     public function exportData(User $cidadao): JsonResponse
     {
-        $this->authorize('gerenciar cidadaos');
+        $this->authorize('exportDataCidadao', $cidadao);
 
-        // Carrega o cidadão com todo o seu histórico relacionado
         $cidadao->load([
             'solicitacoes.servico',
             'solicitacoes.status',
@@ -190,10 +189,10 @@ class CidadaoController extends Controller
 
         $fileName = 'dados_cidadao_' . $cidadao->id . '_' . now()->format('Y-m-d') . '.json';
 
-        // Retorna uma resposta JSON que força o download no navegador
         return response()->json($cidadao, 200, [
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
             'Content-Type' => 'application/json',
         ]);
     }
 }
+

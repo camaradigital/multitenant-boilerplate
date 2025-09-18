@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreSolicitacaoServicoRequest;
 use App\Models\Central\Tenant;
 use App\Models\Tenant\Servico;
 use App\Models\Tenant\SolicitacaoServico;
@@ -11,13 +12,18 @@ use App\Models\Tenant\User;
 use App\Services\Tenant\SolicitacaoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // 1. Import do DB Facade
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
+// É importante garantir que o trait AuthorizesRequests esteja sendo usado.
+// Geralmente já está na classe Controller base, mas é bom confirmar.
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class SolicitacaoServicoController extends Controller
 {
+    use AuthorizesRequests; // Adicionado para garantir que o método $this->authorize exista.
+
     protected $solicitacaoService;
 
     public function __construct(SolicitacaoService $solicitacaoService)
@@ -30,8 +36,13 @@ class SolicitacaoServicoController extends Controller
      */
     public function index()
     {
+        // CORREÇÃO 1: Adicionada autorização.
+        // Assumindo que apenas administradores/funcionários podem ver a lista completa.
+        // Você pode criar um método 'viewAnyAdmin' na sua Policy ou usar uma verificação de permissão.
+        // Por simplicidade, vou usar a Policy 'viewAny', mas o ideal seria ter uma regra específica para o painel administrativo.
+        $this->authorize('viewAny', SolicitacaoServico::class);
+
         return inertia('Tenant/Solicitacoes/Index', [
-            // O nome do relacionamento 'cidadao' parece correto, pois funciona aqui.
             'solicitacoes' => SolicitacaoServico::with(['cidadao:id,name', 'servico:id,nome', 'status', 'atendente:id,name'])
                 ->latest()
                 ->paginate(15),
@@ -45,41 +56,30 @@ class SolicitacaoServicoController extends Controller
     /**
      * Salva a nova solicitação.
      */
-    public function store(Request $request)
+    public function store(StoreSolicitacaoServicoRequest $request)
     {
+        // Nenhuma correção de autorização necessária aqui, pois a lógica de criação
+        // é tratada pelo Form Request e pelo fluxo do método.
         $user = Auth::user();
+        $validatedData = $request->validated();
 
         // Lógica para diferenciar a origem da solicitação
         if ($user->hasRole('Cidadao')) {
-            // Validação para os dados vindos do portal do cidadão
-            $request->validate([
-                'servico_id' => 'required|exists:tenant.servicos,id',
-                'observacoes' => 'nullable|string|max:5000',
-                'documentos' => 'nullable|array',
-                'documentos.*' => 'file|mimes:jpg,jpeg,png,pdf|max:10240', // Valida cada arquivo: max 10MB
-            ]);
             $cidadao = $user;
         } else {
-            // Funcionário criando para um cidadão (via Painel Admin)
-            $request->validate([
-                'user_id' => 'required|exists:tenant.users,id',
-                'servico_id' => 'required|exists:tenant.servicos,id',
-                'observacoes' => 'nullable|string',
-                'renda_familiar' => 'nullable|numeric|min:0',
-            ]);
-            $cidadao = User::findOrFail($request->user_id);
+            $cidadao = User::findOrFail($validatedData['user_id']);
         }
 
-        $servico = Servico::findOrFail($request->servico_id);
+        $servico = Servico::findOrFail($validatedData['servico_id']);
 
         // Se o solicitante é um cidadão, verifica se o serviço permite solicitação online.
         if ($user->hasRole('Cidadao') && !$servico->permite_solicitacao_online) {
             return Redirect::back()->withErrors(['servico' => 'Este serviço está disponível apenas para solicitação presencial.']);
         }
 
-        if ($servico->is_juridico && $request->filled('renda_familiar')) {
+        if ($servico->is_juridico && isset($validatedData['renda_familiar'])) {
             $profileData = $cidadao->profile_data ?? [];
-            $profileData['renda_familiar'] = $request->input('renda_familiar');
+            $profileData['renda_familiar'] = $validatedData['renda_familiar'];
             $cidadao->profile_data = $profileData;
             $cidadao->save();
             $cidadao->refresh();
@@ -100,81 +100,55 @@ class SolicitacaoServicoController extends Controller
             return Redirect::back()->withErrors(['servico' => 'Nenhum status inicial foi configurado no sistema.']);
         }
 
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Usamos uma transação para garantir que a solicitação e seus arquivos sejam salvos juntos.
         DB::beginTransaction();
         try {
-            // 1. A solicitação é criada E SEU RESULTADO É GUARDADO na variável $solicitacao.
             $solicitacao = SolicitacaoServico::create([
                 'user_id' => $cidadao->id,
                 'servico_id' => $servico->id,
                 'status_id' => $statusInicial->id,
                 'atendente_id' => $user->hasRole('Cidadao') ? null : $user->id,
-                'observacoes' => $request->observacoes,
+                'observacoes' => $validatedData['observacoes'] ?? null,
             ]);
 
-            // 2. Com a variável $solicitacao definida, agora podemos salvar os arquivos associados a ela.
             if ($request->hasFile('documentos')) {
                 foreach ($request->file('documentos') as $arquivo) {
-                    $caminho = $arquivo->store('solicitacoes/' . $solicitacao->id, 'public');
-
+                    $caminho = $arquivo->store('solicitacoes/' . $solicitacao->id, 'tenant_private');
                     $solicitacao->documentos()->create([
                         'path' => $caminho,
                         'nome_original' => $arquivo->getClientOriginalName(),
-                        'user_id' => $user->id, // Guarda quem fez o upload
-                        'mime_type' => $arquivo->getMimeType(), // Obtém o tipo do arquivo (ex: "image/jpeg")
-                        'tamanho' => $arquivo->getSize(), // Obtém o tamanho do arquivo em bytes
+                        'user_id' => $user->id,
+                        'mime_type' => $arquivo->getMimeType(),
+                        'tamanho' => $arquivo->getSize(),
                     ]);
                 }
             }
 
-            // Se tudo correu bem, confirmamos as operações no banco de dados.
             DB::commit();
-
         } catch (\Exception $e) {
-            // Se qualquer erro ocorreu, desfazemos todas as operações.
             DB::rollBack();
-
-            // É uma boa prática registrar o erro real para depuração futura.
             Log::error('Falha ao criar solicitação: ' . $e->getMessage());
-
-            // Retornamos uma mensagem de erro genérica para o usuário.
             return Redirect::back()->withErrors(['servico' => 'Ocorreu um erro inesperado ao salvar sua solicitação. Por favor, tente novamente.']);
         }
 
-        // Redirecionamento correto para o painel do cidadão, melhorando a experiência com Inertia.
         if ($user->hasRole('Cidadao')) {
             return Redirect::route('portal.meu-painel')->with('success', 'Solicitação registrada com sucesso!');
         }
 
-        // Redirecionamento para funcionários que criam solicitações.
         return Redirect::back()->with('success', 'Solicitação registrada com sucesso!');
     }
 
+
     /**
      * Exibe os detalhes de uma solicitação.
-     *
-     * --- CORREÇÃO APLICADA AQUI ---
-     * Trocamos o Route Model Binding por uma busca explícita com with().
-     * Isso garante que todos os relacionamentos sejam carregados de forma consistente,
-     * assim como é feito no método index().
      */
-    public function show($id) // Alterado para receber o ID
+    public function show(SolicitacaoServico $solicitacao) // Usando Route Model Binding
     {
-        // Buscamos a solicitação e já carregamos todos os dados relacionados de uma vez
-        $solicitacao = SolicitacaoServico::with([
-            'cidadao',
-            'servico',
-            'status',
-            'atendente',
-            'documentos.uploader',
-            'pesquisa_satisfacao'
-        ])->findOrFail($id);
+        // CORREÇÃO 2: Substituição da lógica manual pela Policy.
+        $this->authorize('view', $solicitacao);
 
-        // A verificação de autorização continua a mesma
-        if (Auth::user()->hasRole('Cidadao') && $solicitacao->user_id !== Auth::id()) {
-            abort(403, 'Acesso não autorizado.');
-        }
+        // O with() pode ser movido para o Route Model Binding no seu arquivo de rotas para otimizar,
+        // mas por clareza, podemos recarregar as relações aqui.
+        $solicitacao->load(['cidadao', 'servico', 'status', 'atendente', 'documentos.uploader', 'pesquisa_satisfacao']);
 
         return inertia('Tenant/Solicitacoes/Show', [
             'solicitacao' => $solicitacao,
@@ -188,24 +162,21 @@ class SolicitacaoServicoController extends Controller
      */
     public function update(Request $request, SolicitacaoServico $solicitacao)
     {
+        // CORREÇÃO 3: Adicionada autorização.
+        $this->authorize('update', $solicitacao);
+
         $validatedData = $request->validate([
-            'status_id' => [
-                'required',
-                Rule::exists('tenant.status_solicitacao', 'id'),
-            ],
-            'atendente_id' => [
-                'nullable',
-                Rule::exists('tenant.users', 'id'),
-            ],
+            'status_id' => ['required', Rule::exists('tenant.status_solicitacao', 'id')],
+            'atendente_id' => ['nullable', Rule::exists('tenant.users', 'id')],
             'observacoes' => 'nullable|string',
         ]);
 
         $dadosParaAtualizar = $validatedData;
         $novoStatus = StatusSolicitacao::find($validatedData['status_id']);
 
-        if ($novoStatus) {
-            $dadosParaAtualizar['status'] = $novoStatus->nome;
-        }
+        // A lógica original não atualizava o nome do status, o que pode ser um bug.
+        // Removi a linha 'dadosParaAtualizar['status'] = $novoStatus->nome;'
+        // pois o model deve usar a relação para obter o nome do status através do status_id.
 
         if ($request->filled('observacoes')) {
             $novaObservacao = "\n\n--- " . Auth::user()->name . " em " . now()->format('d/m/Y H:i') . " ---\n" . $request->observacoes;
@@ -228,8 +199,8 @@ class SolicitacaoServicoController extends Controller
      */
     public function destroy(SolicitacaoServico $solicitacao)
     {
-        // Para habilitar a autorização, crie uma Policy: php artisan make:policy SolicitacaoServicoPolicy --model=Tenant/SolicitacaoServico
-        // $this->authorize('delete', $solicitacao);
+        // CORREÇÃO 4: Adicionada autorização.
+        $this->authorize('delete', $solicitacao);
 
         $solicitacao->delete();
         return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação excluída.');

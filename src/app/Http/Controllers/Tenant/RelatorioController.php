@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\RelatorioAtendimentoRequest;
+use App\Http\Requests\Tenant\RelatorioCidadaosRequest;
 use App\Models\Central\Tenant;
+use App\Models\Tenant\Relatorio; // Classe "conceitual" para a policy
 use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Services\Tenant\RelatorioService;
 use App\Exports\Tenant\SolicitacoesExport;
+use App\Exports\Tenant\CidadaosExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -22,23 +26,26 @@ class RelatorioController extends Controller
         $this->relatorioService = $relatorioService;
     }
 
-    public function atendimentos(Request $request)
+    /**
+     * Obtém dados comuns para as views de relatórios.
+     * @return array
+     */
+    private function getCommonViewData(): array
     {
-        // CORREÇÃO: Adiciona a conexão 'tenant' às regras de validação 'exists'.
-        $filters = $request->validate([
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'tipo_servico_id' => 'nullable|integer|exists:tenant.tipos_servico,id',
-            'funcionario_id' => 'nullable|integer|exists:tenant.users,id',
-            'status' => 'nullable|string|max:50',
-        ]);
-
         $tiposServico = TipoServico::orderBy('nome')->get(['id', 'nome']);
 
-        // CORREÇÃO: Remove 'Super Admin' e usa 'Funcionario' conforme a estrutura de papéis do tenant.
         $funcionarios = User::whereHas('roles', function ($query) {
             $query->whereIn('name', ['Funcionario', 'Admin Tenant']);
         })->orderBy('name')->get(['id', 'name']);
+
+        return compact('tiposServico', 'funcionarios');
+    }
+
+    public function atendimentos(RelatorioAtendimentoRequest $request)
+    {
+        $this->authorize('viewAtendimentos', Relatorio::class);
+
+        $filters = $request->validated();
 
         $solicitacoes = $this->relatorioService
             ->gerarRelatorioAtendimentosQuery($filters)
@@ -47,48 +54,31 @@ class RelatorioController extends Controller
 
         $estatisticas = $this->relatorioService->calcularEstatisticasAtendimentos($filters);
 
-        return Inertia::render('Tenant/Relatorios/Atendimentos', [
-            'solicitacoes' => $solicitacoes,
-            'tiposServico' => $tiposServico,
-            'funcionarios' => $funcionarios,
-            'filtros' => $filters,
-            'estatisticas' => $estatisticas,
-        ]);
+        return Inertia::render('Tenant/Relatorios/Atendimentos', array_merge(
+            $this->getCommonViewData(),
+            [
+                'solicitacoes' => $solicitacoes,
+                'filtros' => $filters,
+                'estatisticas' => $estatisticas,
+            ]
+        ));
     }
 
-    /**
-     * Exporta o relatório de atendimentos para XLSX.
-     *
-     * @param Request $request
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function exportarAtendimentos(Request $request)
+    public function exportarAtendimentos(RelatorioAtendimentoRequest $request)
     {
-         $filters = $request->validate([
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'tipo_servico_id' => 'nullable|integer|exists:tenant.tipos_servico,id',
-            'funcionario_id' => 'nullable|integer|exists:tenant.users,id',
-            'status' => 'nullable|string|max:50',
-        ]);
+        $this->authorize('viewAtendimentos', Relatorio::class);
 
+        $filters = $request->validated();
         $fileName = 'relatorio_atendimentos_' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(new SolicitacoesExport($filters), $fileName);
     }
 
-    /**
-     * Exporta o relatório de atendimentos para PDF.
-     */
-    public function exportarAtendimentosPDF(Request $request)
+    public function exportarAtendimentosPDF(RelatorioAtendimentoRequest $request)
     {
-        $filters = $request->validate([
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'tipo_servico_id' => 'nullable|integer|exists:tenant.tipos_servico,id',
-            'funcionario_id' => 'nullable|integer|exists:tenant.users,id',
-            'status' => 'nullable|string|max:50',
-        ]);
+        $this->authorize('viewAtendimentos', Relatorio::class);
+
+        $filters = $request->validated();
 
         $solicitacoes = $this->relatorioService
             ->gerarRelatorioAtendimentosQuery($filters)
@@ -107,22 +97,11 @@ class RelatorioController extends Controller
         return $pdf->stream('relatorio_atendimentos_' . now()->format('Y-m-d') . '.pdf');
     }
 
-    public function satisfacao(Request $request)
+    public function satisfacao(RelatorioAtendimentoRequest $request)
     {
-        // CORREÇÃO: Adiciona a conexão 'tenant' às regras de validação 'exists'.
-        $filters = $request->validate([
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'tipo_servico_id' => 'nullable|integer|exists:tenant.tipos_servico,id',
-            'funcionario_id' => 'nullable|integer|exists:tenant.users,id',
-        ]);
+        $this->authorize('viewSatisfacao', Relatorio::class);
 
-        $tiposServico = TipoServico::orderBy('nome')->get(['id', 'nome']);
-
-        // CORREÇÃO: Remove 'Super Admin' e usa 'Funcionario' conforme a estrutura de papéis do tenant.
-        $funcionarios = User::whereHas('roles', function ($query) {
-            $query->whereIn('name', ['Funcionario', 'Admin Tenant']);
-        })->orderBy('name')->get(['id', 'name']);
+        $filters = $request->validated();
 
         $pesquisas = $this->relatorioService
             ->gerarRelatorioSatisfacaoQuery($filters)
@@ -131,30 +110,21 @@ class RelatorioController extends Controller
 
         $estatisticas = $this->relatorioService->calcularEstatisticasSatisfacao($filters);
 
-        return Inertia::render('Tenant/Relatorios/Satisfacao', [
-            'pesquisas' => $pesquisas,
-            'tiposServico' => $tiposServico,
-            'funcionarios' => $funcionarios,
-            'filtros' => $filters,
-            'estatisticas' => $estatisticas,
-        ]);
+        return Inertia::render('Tenant/Relatorios/Satisfacao', array_merge(
+            $this->getCommonViewData(),
+            [
+                'pesquisas' => $pesquisas,
+                'filtros' => $filters,
+                'estatisticas' => $estatisticas,
+            ]
+        ));
     }
 
-    /**
-     * Exibe a página do relatório de cidadãos.
-     *
-     * @param Request $request
-     * @return \Inertia\Response
-     */
-
-    public function cidadaos(Request $request)
+    public function cidadaos(RelatorioCidadaosRequest $request)
     {
-        $filters = $request->validate([
-            'busca' => 'nullable|string|max:255',
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'status' => 'nullable|boolean',
-        ]);
+        $this->authorize('viewCidadaos', Relatorio::class);
+
+        $filters = $request->validated();
 
         $cidadaos = $this->relatorioService
             ->gerarRelatorioCidadaosQuery($filters)
@@ -167,33 +137,21 @@ class RelatorioController extends Controller
         ]);
     }
 
-    /**
-     * Exporta o relatório de cidadãos para XLSX.
-     */
-    public function exportarCidadaos(Request $request)
+    public function exportarCidadaos(RelatorioCidadaosRequest $request)
     {
-        $filters = $request->validate([
-            'busca' => 'nullable|string|max:255',
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'status' => 'nullable|boolean',
-        ]);
+        $this->authorize('viewCidadaos', Relatorio::class);
 
+        $filters = $request->validated();
         $fileName = 'relatorio_cidadaos_' . now()->format('Y-m-d_His') . '.xlsx';
+
         return Excel::download(new CidadaosExport($filters), $fileName);
     }
 
-    /**
-     * Exporta o relatório de cidadãos para PDF com detalhes das solicitações.
-     */
-    public function exportarCidadaosPDF(Request $request)
+    public function exportarCidadaosPDF(RelatorioCidadaosRequest $request)
     {
-        $filters = $request->validate([
-            'busca' => 'nullable|string|max:255',
-            'data_inicio' => 'nullable|date_format:Y-m-d',
-            'data_fim' => 'nullable|date_format:Y-m-d|after_or_equal:data_inicio',
-            'status' => 'nullable|boolean',
-        ]);
+        $this->authorize('viewCidadaos', Relatorio::class);
+
+        $filters = $request->validated();
 
         $cidadaos = $this->relatorioService
             ->gerarRelatorioCidadaosQuery($filters)
@@ -207,4 +165,3 @@ class RelatorioController extends Controller
         return $pdf->stream('relatorio_cidadaos_' . now()->format('Y-m-d') . '.pdf');
     }
 }
-

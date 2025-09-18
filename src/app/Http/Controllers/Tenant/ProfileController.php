@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Contracts\Encryption\DecryptException; // Adicionado para o catch
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log; // Adicionado para o log
 use Illuminate\Validation\ValidationException;
 use App\Models\Tenant\User;
-use App\Models\Tenant\SolicitacaoServico; // Importe o modelo de solicitações
+use App\Models\Tenant\SolicitacaoServico;
+use Inertia\Inertia; // Supondo que você use Inertia.js
 
 class ProfileController extends Controller
 {
@@ -19,6 +22,8 @@ class ProfileController extends Controller
     public function show()
     {
         $user = Auth::user();
+        $this->authorize('viewProfile', $user); // <-- ALTERADO
+
         $profileData = [];
 
         if ($user && $user->profile_data) {
@@ -26,7 +31,7 @@ class ProfileController extends Controller
                 $profileData = json_decode(decrypt($user->profile_data), true);
             } catch (DecryptException $e) {
                 // Loga o erro e define os dados como vazios para evitar falhas no front-end
-                \Log::error("Erro ao descriptografar profile_data para o usuário {$user->id}: " . $e->getMessage());
+                Log::error("Erro ao descriptografar profile_data para o usuário {$user->id}: " . $e->getMessage());
                 $profileData = [];
             }
         }
@@ -56,6 +61,7 @@ class ProfileController extends Controller
     public function exportData(Request $request): JsonResponse
     {
         $user = $request->user();
+        $this->authorize('exportProfileData', $user); // <-- ALTERADO
 
         // Carrega o usuário com todo o seu histórico relacionado
         $user->load([
@@ -80,11 +86,7 @@ class ProfileController extends Controller
     public function anonymizeAccount(Request $request): RedirectResponse
     {
         $user = $request->user();
-
-        // Medida de segurança: não permitir que funcionários se anonimizem por esta rota.
-        if (!$user->hasRole('Cidadao')) {
-            return Redirect::back()->with('error', 'Esta funcionalidade está disponível apenas para cidadãos.');
-        }
+        $this->authorize('anonymizeProfile', $user); // <-- ALTERADO
 
         $user->update([
             'name' => 'Usuário Anônimo #' . $user->id,
@@ -114,17 +116,17 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        // Certifica-se de que o usuário está autenticado
-        $user = Auth::user();
+        $user = $request->user();
+        $this->authorize('deleteProfile', $user); // <-- ALTERADO
 
         // Validação da senha para confirmar a exclusão
-        if (!Hash::check($request->password, $request->user()->password)) {
+        if (!Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => __('This password does not match our records.'),
             ]);
         }
 
-        // --- LÓGICA ADICIONADA: VERIFICAR HISTÓRICO DE ATIVIDADES ---
+        // --- LÓGICA DE NEGÓCIO (permanece no controller) ---
         $hasSolicitacoes = SolicitacaoServico::where('user_id', $user->id)->exists();
 
         if ($hasSolicitacoes) {

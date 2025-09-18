@@ -14,19 +14,24 @@ use Illuminate\Support\Facades\Storage;
 class DocumentoController extends Controller
 {
     use AuthorizesRequests;
+
     /**
      * Salva um novo documento.
      */
     public function store(Request $request, SolicitacaoServico $solicitacao)
     {
+
+        // 1. Autorização via Policy (mais limpo e centralizado)
+        $this->authorize('create', [Documento::class, $solicitacao]);
+
         $request->validate([
             'documento' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120', // 5MB max
         ]);
 
         $file = $request->file('documento');
 
-        // Salva o arquivo no disco privado do tenant
-        $path = $file->store('/', 'tenant_private');
+        // 2. CORREÇÃO FINAL: Salva no disco correto E em uma pasta organizada.
+        $path = $file->store("solicitacoes/{$solicitacao->id}", 'tenant_private');
 
         $solicitacao->documentos()->create([
             'user_id' => Auth::id(),
@@ -44,14 +49,8 @@ class DocumentoController extends Controller
      */
     public function download(Documento $documento)
     {
-        $user = Auth::user();
-        $solicitacao = $documento->solicitacao;
-
-        // Autorização: Permite o download se o usuário for o dono da solicitação
-        // ou se for um funcionário/admin.
-        if ($user->id !== $solicitacao->user_id && !$user->hasRole(['Admin Tenant', 'Funcionario'])) {
-            abort(403, 'Ação não autorizada.');
-        }
+        // 1. Autorização via Policy (substitui o bloco 'if')
+        $this->authorize('view', $documento);
 
         // Retorna o arquivo para download com o nome original
         return Storage::disk('tenant_private')->download($documento->path, $documento->nome_original);
@@ -61,18 +60,16 @@ class DocumentoController extends Controller
      * Exclui um documento.
      */
     public function destroy(Documento $documento)
-{
-    // Esta linha chama o método 'delete' da sua DocumentoPolicy.
-    // Se a policy retornar 'false', o Laravel automaticamente
-    // lançará uma exceção de autorização (403 Forbidden).
-    $this->authorize('delete', $documento);
+    {
+        // 1. Autorização via Policy (já estava correto)
+        $this->authorize('delete', $documento);
 
-    // Deleta o arquivo do disco
-    Storage::disk('tenant_private')->delete($documento->path);
+        // Deleta o arquivo do disco
+        Storage::disk('tenant_private')->delete($documento->path);
 
-    // Deleta o registro do banco de dados
-    $documento->delete();
+        // Deleta o registro do banco de dados
+        $documento->delete();
 
-    return Redirect::back()->with('success', 'Documento excluído com sucesso.');
-}
+        return Redirect::back()->with('success', 'Documento excluído com sucesso.');
+    }
 }

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+// Models
 use App\Models\Tenant\PesquisaSatisfacao;
-use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\Servico;
+use App\Models\Tenant\SolicitacaoServico;
+// Facades e Classes
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -28,9 +30,9 @@ class MeuPainelController extends Controller
             $busca = $request->input('busca');
             $query->where(function ($q) use ($busca) {
                 $q->where('id', 'like', "%{$busca}%")
-                  ->orWhereHas('servico', function ($q_servico) use ($busca) {
-                      $q_servico->where('nome', 'like', "%{$busca}%");
-                  });
+                    ->orWhereHas('servico', function ($q_servico) use ($busca) {
+                        $q_servico->where('nome', 'like', "%{$busca}%");
+                    });
             });
         }
         if ($request->filled('status') && $request->input('status') !== 'todos') {
@@ -62,21 +64,28 @@ class MeuPainelController extends Controller
             return $solicitacao;
         });
 
+        // 2. CORREÇÃO: Faltava retornar a view do Inertia com os dados.
+        return Inertia::render('Tenant/PortalPessoal/Index', [
+            'solicitacoes' => $solicitacoesPaginadas,
+            'filtros' => $request->only('busca', 'status'),
+        ]);
     }
 
     /**
      * Exibe a página para o cidadão criar uma nova solicitação de serviço.
-     * Este método foi movido do PortalController para cá.
      *
      * @return \Inertia\Response
      */
     public function create()
     {
+        // 1. AUTORIZAÇÃO: Verifica se o usuário pode criar uma solicitação.
+        $this->authorize('create', SolicitacaoServico::class);
+
         // Busca apenas os serviços que estão ATIVOS e permitem solicitação ONLINE.
         $servicosDisponiveis = Servico::where('is_active', true)
-                                     ->where('permite_solicitacao_online', true)
-                                     ->with('tipoServico:id,nome')
-                                     ->get(['id', 'nome', 'descricao', 'tipo_servico_id']);
+                                        ->where('permite_solicitacao_online', true)
+                                        ->with('tipoServico:id,nome')
+                                        ->get(['id', 'nome', 'descricao', 'tipo_servico_id']);
 
         return Inertia::render('Tenant/PortalPessoal/Create', [
             'servicos' => $servicosDisponiveis,
@@ -84,29 +93,37 @@ class MeuPainelController extends Controller
     }
 
     /**
-     * NOTA: A rota para avaliar aponta para o PesquisaSatisfacaoController.
-     * Este método não é ativamente utilizado, mas é mantido aqui.
+     * Permite que um usuário avalie uma solicitação de serviço.
      */
     public function avaliar(Request $request, SolicitacaoServico $solicitacao)
     {
+        // 1. AUTORIZAÇÃO: Usa o método 'avaliar' da Policy para verificar a permissão.
+        $this->authorize('avaliar', $solicitacao);
+
         $request->validate([
             'nota' => 'required|integer|min:1|max:5',
             'comentario' => 'nullable|string|max:1000',
         ]);
-        if ($solicitacao->user_id !== auth()->id()) {
-            abort(403, 'Acesso não autorizado.');
-        }
+
+        // 2. REMOVIDO: A verificação de propriedade foi movida para a Policy.
+        // if ($solicitacao->user_id !== auth()->id()) {
+        //     abort(403, 'Acesso não autorizado.');
+        // }
+
+        // Validações de regra de negócio permanecem no controller.
         if (!$solicitacao->status->is_final) {
             return redirect()->back()->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
         }
         if ($solicitacao->pesquisa_satisfacao()->exists()) {
             return redirect()->back()->withErrors(['geral' => 'Esta solicitação já foi avaliada.']);
         }
+
         $solicitacao->pesquisa_satisfacao()->create([
             'user_id' => auth()->id(),
             'nota' => $request->input('nota'),
             'comentario' => $request->input('comentario'),
         ]);
+
         return redirect()->back()->with('success', 'Avaliação enviada com sucesso!');
     }
 }

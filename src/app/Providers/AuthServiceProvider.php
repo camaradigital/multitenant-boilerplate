@@ -2,9 +2,21 @@
 
 namespace App\Providers;
 
-use App\Models\Tenant\Documento; // 1. Importe o seu modelo
-use App\Policies\Tenant\DocumentoPolicy; // 2. Importe a sua policy
+// Models
+use App\Models\Tenant\User;
+use App\Models\Tenant\Documento;
+use App\Models\Tenant\SolicitacaoServico;
+use App\Models\Tenant\PessoaDesaparecida;
+
+// Policies
+use App\Policies\Tenant\DashboardPolicy;
+use App\Policies\Tenant\DocumentoPolicy;
+use App\Policies\Tenant\SolicitacaoServicoPolicy;
+use App\Policies\Tenant\UserPolicy;
+use App\Policies\Tenant\PessoaDesaparecidaPolicy;
+
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -14,8 +26,12 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
-        Documento::class => DocumentoPolicy::class, // 3. Adicione esta linha
+        Documento::class => DocumentoPolicy::class,
+        SolicitacaoServico::class => SolicitacaoServicoPolicy::class,
+        User::class => UserPolicy::class,
+        PessoaDesaparecida::class => PessoaDesaparecidaPolicy::class,
+        \App\Models\Tenant\Relatorio::class => \App\Policies\Tenant\RelatorioPolicy::class,
+        \App\Models\Tenant\AchadoEPerdidoDocumento::class => \App\Policies\Tenant\AchadoEPerdidoDocumentoPolicy::class,
     ];
 
     /**
@@ -25,6 +41,8 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Define as permissões para visualizar os diferentes dashboards
+        Gate::define('view-cidadao-dashboard', [DashboardPolicy::class, 'viewCidadaoDashboard']);
+        Gate::define('view-admin-dashboard', [DashboardPolicy::class, 'viewAdminDashboard']);
     }
 }
