@@ -68,8 +68,9 @@ class AchadoEPerdidoDocumentoPolicy
      * @param  \App\Models\Tenant\AchadoEPerdidoDocumento  $achadosEPerdidosDocumento
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function destroy(User $user, AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
+    public function delete(User $user, AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
     {
-            return $user->can('gerenciar achados e perdidos');
+        return $user->can('gerenciar achados e perdidos');
     }
+
 }
