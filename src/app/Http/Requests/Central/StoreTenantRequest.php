@@ -48,7 +48,7 @@ class StoreTenantRequest extends FormRequest
             'endereco_bairro' => 'nullable|string|max:255',
             'endereco_cidade' => 'nullable|string|max:255',
             'endereco_estado' => 'nullable|string|max:2',
-            'logotipo_url' => 'nullable|url|max:255',
+            'logotipo' => ['nullable', 'image', 'mimes:jpeg,png,svg', 'max:2048'], // 2MB Max
             'site_url' => 'nullable|url|max:255',
             'cor_primaria' => 'nullable|string|size:7',
             'cor_secundaria' => 'nullable|string|size:7',

@@ -8,6 +8,7 @@ use App\Http\Requests\Central\UpdateTenantRequest;
 use App\Models\Central\Tenant;
 use App\Services\Central\TenantManagerService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage; // Importe a classe Storage
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +19,6 @@ class TenantController extends Controller
      */
     public function __construct()
     {
-        // Garante que as políticas de autorização sejam aplicadas a todos os métodos do resource.
         $this->authorizeResource(Tenant::class, 'tenant');
     }
 
@@ -49,23 +49,27 @@ class TenantController extends Controller
      */
     public function store(StoreTenantRequest $request, TenantManagerService $tenantManager): RedirectResponse
     {
-        // A validação agora é feita pelo StoreTenantRequest.
-        // Pegamos apenas os dados validados.
         $validatedData = $request->validated();
 
-        // Defina os valores padrão para as configurações específicas do tenant
+        // --- INÍCIO DA MODIFICAÇÃO ---
+        // Verifica se um arquivo de logotipo foi enviado
+        if ($request->hasFile('logotipo')) {
+            // Salva o arquivo em 'public/tenants/logos' e armazena o caminho
+            $path = $request->file('logotipo')->store('tenants/logos', 'public');
+            // Atribui o caminho do arquivo para a coluna 'logotipo_url' do banco
+            $validatedData['logotipo_url'] = $path;
+        }
+        // --- FIM DA MODIFICAÇÃO ---
+
         $tenantDefaults = [
             'permite_cadastro_cidade_externa' => false,
             'limite_renda_juridico' => 0,
         ];
 
-        // Junte os dados validados do formulário com os valores padrão
         $tenantData = array_merge($validatedData, $tenantDefaults);
 
         try {
-            // Crie o tenant com o conjunto completo de dados
             $tenantManager->create($tenantData);
-
         } catch (\Exception $e) {
             return back()->withErrors(['general' => 'Falha ao criar o tenant: ' . $e->getMessage()]);
         }
@@ -102,9 +106,23 @@ class TenantController extends Controller
      */
     public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
     {
-        // A validação agora é feita pelo UpdateTenantRequest.
-        // O método validated() retorna os dados validados.
-        $tenant->update($request->validated());
+        $validatedData = $request->validated();
+
+        // --- INÍCIO DA MODIFICAÇÃO ---
+        // Verifica se um novo arquivo de logotipo foi enviado
+        if ($request->hasFile('logotipo')) {
+            // 1. Deleta o logotipo antigo, se ele existir
+            if ($tenant->logotipo_url) {
+                Storage::disk('public')->delete($tenant->logotipo_url);
+            }
+
+            // 2. Salva o novo logotipo e atualiza o caminho
+            $path = $request->file('logotipo')->store('tenants/logos', 'public');
+            $validatedData['logotipo_url'] = $path;
+        }
+        // --- FIM DA MODIFICAÇÃO ---
+
+        $tenant->update($validatedData);
 
         return redirect()->route('central.tenants.index')->with('success', 'Câmara atualizada com sucesso!');
     }
@@ -114,6 +132,13 @@ class TenantController extends Controller
      */
     public function destroy(Tenant $tenant): RedirectResponse
     {
+        // --- INÍCIO DA MODIFICAÇÃO ---
+        // Deleta o arquivo de logotipo associado ao tenant, se existir
+        if ($tenant->logotipo_url) {
+            Storage::disk('public')->delete($tenant->logotipo_url);
+        }
+        // --- FIM DA MODIFICAÇÃO ---
+
         // Adicione aqui a lógica para deletar o banco de dados do tenant se necessário
         // Ex: DB::statement('DROP DATABASE ' . $tenant->database_name);
 

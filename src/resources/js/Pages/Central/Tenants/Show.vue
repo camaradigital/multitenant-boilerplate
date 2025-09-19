@@ -11,7 +11,10 @@ const props = defineProps({
 // Função para formatar datas
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    const date = new Date(dateString);
+    // Adiciona verificação para datas inválidas
+    if (isNaN(date)) return 'Data inválida';
+    return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -106,29 +109,31 @@ const deleteTenant = () => {
                     </div>
 
                      <!-- SEÇÃO 3: PERSONALIZAÇÃO -->
-                    <div class="space-y-6 mt-10" v-if="tenant.logotipo_url || tenant.site_url">
+                    <div class="space-y-6 mt-10">
                         <h3 class="section-title">Personalização do Portal</h3>
                         <div class="detail-grid">
                             <div class="detail-item col-span-full">
                                 <span class="detail-label"><ImageIcon class="detail-icon" />Logotipo</span>
-                                <img v-if="tenant.logotipo_url" :src="tenant.logotipo_url" alt="Logotipo" class="mt-2 max-h-20 rounded-lg bg-gray-200 p-2">
+                                <!-- CORREÇÃO: Adicionado /storage/ ao caminho da imagem -->
+                                <img v-if="tenant.logotipo_url" :src="`/storage/${tenant.logotipo_url}`" alt="Logotipo" class="mt-2 max-h-20 rounded-lg bg-gray-200 dark:bg-gray-700 p-2 object-contain self-start">
                                 <span v-else class="detail-value">Não informado</span>
                             </div>
                             <div class="detail-item col-span-full">
                                 <span class="detail-label"><Globe class="detail-icon" />Site Oficial</span>
-                                <a :href="tenant.site_url" target="_blank" class="detail-value link-hover">{{ tenant.site_url }}</a>
+                                <a v-if="tenant.site_url" :href="tenant.site_url" target="_blank" class="detail-value link-hover">{{ tenant.site_url }}</a>
+                                <span v-else class="detail-value">Não informado</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label"><Palette class="detail-icon" />Cor Primária</span>
                                 <div class="flex items-center">
-                                    <div class="w-6 h-6 rounded-full border border-gray-300" :style="{ backgroundColor: tenant.cor_primaria }"></div>
+                                    <div class="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600" :style="{ backgroundColor: tenant.cor_primaria }"></div>
                                     <span class="detail-value ml-2">{{ tenant.cor_primaria }}</span>
                                 </div>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label"><Palette class="detail-icon" />Cor Secundária</span>
                                 <div class="flex items-center">
-                                    <div class="w-6 h-6 rounded-full border border-gray-300" :style="{ backgroundColor: tenant.cor_secundaria }"></div>
+                                    <div class="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600" :style="{ backgroundColor: tenant.cor_secundaria }"></div>
                                     <span class="detail-value ml-2">{{ tenant.cor_secundaria }}</span>
                                 </div>
                             </div>
@@ -189,7 +194,7 @@ const deleteTenant = () => {
 }
 
 .detail-value {
-    @apply text-base text-gray-800 dark:text-gray-200 mt-1 font-mono;
+    @apply text-base text-gray-800 dark:text-gray-200 mt-1 font-mono break-words;
 }
 
 .link-hover {

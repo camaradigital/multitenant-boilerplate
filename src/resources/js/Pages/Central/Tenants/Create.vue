@@ -12,6 +12,7 @@ import {
 
 // Controla o estado de "carregando" da consulta de CNPJ para feedback visual
 const isFetchingCnpj = ref(false);
+const logoPreview = ref(null); // <-- ADICIONE ESTA LINHA
 
 // Formulário do Inertia com todos os campos necessários
 const form = useForm({
@@ -26,12 +27,19 @@ const form = useForm({
     endereco_bairro: '',
     endereco_cidade: '',
     endereco_estado: '',
-    logotipo_url: '',
+    logotipo: null,
     site_url: '',
     cor_primaria: '#000000',
     cor_secundaria: '#FFFFFF',
 });
 
+const updateLogoPreview = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    form.logotipo = file; // Atribui o arquivo ao formulário
+    logoPreview.value = URL.createObjectURL(file); // Cria a URL de preview
+};
 
 // --- Funções de Consulta ---
 
@@ -268,12 +276,25 @@ const submit = () => {
                     <fieldset class="space-y-6 mt-10">
                         <legend class="section-title">Personalização do Portal</legend>
                         <div>
-                            <label for="logotipo_url" class="form-label">URL do Logotipo</label>
-                            <div class="form-input-container">
-                                <ImageIcon class="form-input-icon" />
-                                <input id="logotipo_url" v-model="form.logotipo_url" type="url" class="form-input" placeholder="https://exemplo.com/logo.png">
+                            <label for="logotipo" class="form-label">Logotipo</label>
+
+                            <div v-if="logoPreview" class="my-4">
+                                <img :src="logoPreview" alt="Pré-visualização do logotipo" class="h-20 w-auto rounded-lg border border-gray-300 dark:border-gray-600 p-1">
                             </div>
-                            <div v-if="form.errors.logotipo_url" class="form-error">{{ form.errors.logotipo_url }}</div>
+
+                            <label for="logotipo" class="btn-secondary h-12 px-4 cursor-pointer w-full sm:w-auto">
+                                <ImageIcon :size="16" class="mr-2" />
+                                {{ logoPreview ? 'Trocar Arquivo' : 'Selecionar Arquivo' }}
+                            </label>
+                            <input
+                                id="logotipo"
+                                type="file"
+                                class="hidden"
+                                @change="updateLogoPreview"
+                                accept="image/png, image/jpeg, image/svg+xml"
+                            >
+
+                            <div v-if="form.errors.logotipo" class="form-error">{{ form.errors.logotipo }}</div>
                         </div>
                         <div>
                             <label for="site_url" class="form-label">URL do Site Oficial</label>

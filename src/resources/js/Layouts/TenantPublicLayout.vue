@@ -36,7 +36,15 @@ const authUser = computed(() => page.props.auth?.user || null);
 const canRegister = computed(() => page.props.canRegister);
 
 const tenantName = computed(() => tenant.value?.name || 'Portal');
-const logoUrl = computed(() => tenant.value?.logotipo_url || '/images/logo-placeholder-dark.svg');
+const logoUrl = computed(() => {
+    if (tenant.value?.logotipo_url) {
+        if (tenant.value.logotipo_url.startsWith('http')) {
+            return tenant.value.logotipo_url;
+        }
+        return `/storage/${tenant.value.logotipo_url}`;
+    }
+    return '/images/logo-placeholder-dark.svg';
+});
 const siteUrl = computed(() => tenant.value?.site_url);
 const transparencyUrl = computed(() => tenant.value?.transparency_url);
 const endereco = computed(() => {
@@ -91,7 +99,7 @@ const scrollToTop = () => {
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-full">
                     <div class="flex items-center gap-6">
                         <Link :href="route('portal.home')" class="flex items-center gap-3" aria-label="Página inicial">
-                            <img :src="logoUrl" :alt="`Logo ${tenantName}`" class="h-10 w-auto">
+                            <img :src="logoUrl" :alt="`Logo ${tenantName}`" class="h-14 w-auto">
                         </Link>
                         <div class="hidden lg:flex items-center space-x-1">
                             <Link v-if="tenant.publicar_vagas_emprego" :href="route('portal.vagas.index')" class="nav-link">

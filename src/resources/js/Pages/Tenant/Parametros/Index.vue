@@ -1,12 +1,15 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { SlidersHorizontal } from 'lucide-vue-next';
+import { SlidersHorizontal, Image as ImageIcon } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
     tenant: Object,
 });
+
+// Referência para a pré-visualização do logotipo
+const logoPreview = ref(props.tenant.logotipo_url ? `/storage/${props.tenant.logotipo_url}` : null);
 
 const form = useForm({
     _method: 'PUT',
@@ -14,7 +17,7 @@ const form = useForm({
     site_url: props.tenant.site_url,
     cor_primaria: props.tenant.cor_primaria || '#4ade80',
     cor_secundaria: props.tenant.cor_secundaria || '#15803d',
-    logotipo_url: props.tenant.logotipo_url,
+    logotipo: null, // Alterado de logotipo_url para logotipo, para o upload
     permite_cadastro_cidade_externa: props.tenant.permite_cadastro_cidade_externa,
     limite_renda_juridico: props.tenant.limite_renda_juridico,
     exigir_renda_juridico: props.tenant.exigir_renda_juridico,
@@ -26,9 +29,20 @@ const form = useForm({
     privacy_policy: props.tenant.privacy_policy || '',
 });
 
+// Função para atualizar o preview do logotipo quando um novo arquivo é selecionado
+const updateLogoPreview = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    form.logotipo = file;
+    logoPreview.value = URL.createObjectURL(file);
+};
+
 watch(() => props.tenant, (newTenantValues) => {
     form.defaults(newTenantValues);
     form.reset();
+    // Atualiza o preview se os props do tenant mudarem
+    logoPreview.value = newTenantValues.logotipo_url ? `/storage/${newTenantValues.logotipo_url}` : null;
 }, { deep: true });
 
 const activeTab = ref('identidade');
@@ -85,11 +99,29 @@ const submit = () => {
                                     <input id="name" v-model="form.name" type="text" class="form-input" required />
                                     <div v-if="form.errors.name" class="form-error">{{ form.errors.name }}</div>
                                 </div>
+
+                                <!-- Campo de Upload do Logotipo -->
                                 <div>
-                                    <label for="logotipo_url" class="form-label">URL do Logotipo</label>
-                                    <input id="logotipo_url" v-model="form.logotipo_url" type="url" class="form-input" placeholder="https://..." />
-                                    <div v-if="form.errors.logotipo_url" class="form-error">{{ form.errors.logotipo_url }}</div>
+                                    <label for="logotipo" class="form-label">Logotipo</label>
+                                    <!-- Área de Pré-visualização -->
+                                    <div v-if="logoPreview" class="my-4">
+                                        <img :src="logoPreview" alt="Pré-visualização do logotipo" class="h-20 w-auto rounded-lg border border-gray-300 dark:border-gray-600 p-1">
+                                    </div>
+                                    <!-- Botão de Upload Estilizado -->
+                                    <label for="logotipo" class="btn-secondary h-12 px-4 cursor-pointer inline-flex items-center">
+                                        <ImageIcon :size="16" class="mr-2" />
+                                        {{ logoPreview ? 'Trocar Arquivo' : 'Selecionar Arquivo' }}
+                                    </label>
+                                    <input
+                                        id="logotipo"
+                                        type="file"
+                                        class="hidden"
+                                        @change="updateLogoPreview"
+                                        accept="image/png, image/jpeg, image/svg+xml"
+                                    >
+                                    <div v-if="form.errors.logotipo" class="form-error">{{ form.errors.logotipo }}</div>
                                 </div>
+
                                 <div>
                                     <label for="site_url" class="form-label">URL do Site Oficial</label>
                                     <input id="site_url" v-model="form.site_url" type="url" class="form-input" placeholder="https://..." />
@@ -176,20 +208,20 @@ const submit = () => {
                                 <div>
                                     <label for="terms_of_service" class="form-label">Termos de Serviço</label>
                                     <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo dos Termos de Serviço. Pode usar HTML para formatação (ex: &lt;h2&gt;, &lt;p&gt;, &lt;strong&gt;).</p>
-                                    <textarea v-model="form.terms_of_service" id="terms_of_service" rows="15" class="form-input font-mono"></textarea>
+                                    <textarea v-model="form.terms_of_service" id="terms_of_service" rows="15" class="form-input font-mono !p-4"></textarea>
                                     <div v-if="form.errors.terms_of_service" class="form-error">{{ form.errors.terms_of_service }}</div>
                                 </div>
                                 <div>
                                     <label for="privacy_policy" class="form-label">Política de Privacidade</label>
                                      <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo da Política de Privacidade. Pode usar HTML para formatação.</p>
-                                    <textarea v-model="form.privacy_policy" id="privacy_policy" rows="15" class="form-input font-mono"></textarea>
+                                    <textarea v-model="form.privacy_policy" id="privacy_policy" rows="15" class="form-input font-mono !p-4"></textarea>
                                     <div v-if="form.errors.privacy_policy" class="form-error">{{ form.errors.privacy_policy }}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end rounded-b-2xl">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end rounded-b-2xl mt-8">
                         <button type="submit" class="btn-primary" :disabled="form.processing">
                             Salvar Alterações
                         </button>
@@ -208,9 +240,10 @@ const submit = () => {
 .header-title { @apply text-2xl font-bold text-gray-900 dark:text-white; }
 .form-subtitle { @apply text-sm mt-1 text-gray-500 dark:text-gray-400; }
 .btn-primary { @apply flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2; @apply focus:ring-offset-white dark:focus:ring-offset-gray-800 bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400; @apply disabled:opacity-50; }
+.btn-secondary { @apply flex-shrink-0 flex items-center justify-center rounded-xl font-semibold text-sm transition-all; @apply bg-gray-200 text-gray-700 hover:bg-gray-300; @apply dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600; @apply disabled:opacity-50 disabled:cursor-not-allowed; }
 .form-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2; }
 .form-input { @apply block w-full text-sm rounded-xl transition-all; @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400; @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500; @apply dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400; @apply dark:focus:ring-green-500 dark:focus:border-green-500; }
-textarea.form-input { @apply h-auto p-4 leading-relaxed; }
+textarea.form-input { @apply h-auto leading-relaxed; }
 .form-error { @apply text-sm text-red-600 dark:text-red-400 mt-1; }
 .form-checkbox { @apply h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 dark:border-gray-600; }
 .section-title { @apply text-lg font-bold text-gray-800 dark:text-white mb-4; }
@@ -230,4 +263,3 @@ textarea.form-input { @apply h-auto p-4 leading-relaxed; }
     @apply whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm;
 }
 </style>
-

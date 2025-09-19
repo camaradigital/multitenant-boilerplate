@@ -5,7 +5,7 @@ import { ref, watch } from 'vue';
 import {
     Building2, Mail, Link as LinkIcon, Pencil, FileText,
     MapPin, Home, Palette, Image as ImageIcon, Globe, Hash, Tag, Trash2,
-    LoaderCircle, Search // Ícones adicionados
+    LoaderCircle, Search
 } from 'lucide-vue-next';
 
 // --- Props e Estado ---
@@ -18,10 +18,14 @@ const props = defineProps({
 // Controla o estado de "carregando" da consulta de CNPJ
 const isFetchingCnpj = ref(false);
 
+// Inicializa a pré-visualização com a URL do logotipo existente, se houver
+const logoPreview = ref(props.tenant.logotipo_url ? `/storage/${props.tenant.logotipo_url}` : null);
+
+
 // Inicializa o formulário com os dados do tenant existente
 const form = useForm({
     _method: 'PUT', // Informa ao Laravel que é uma requisição de atualização
-    name: props.tenant.name, // CORRIGIDO: de 'nome' para 'name'
+    name: props.tenant.name,
     cnpj: props.tenant.cnpj,
     subdomain: props.tenant.subdomain,
     admin_email: props.tenant.admin_email,
@@ -32,11 +36,25 @@ const form = useForm({
     endereco_bairro: props.tenant.endereco_bairro,
     endereco_cidade: props.tenant.endereco_cidade,
     endereco_estado: props.tenant.endereco_estado,
-    logotipo_url: props.tenant.logotipo_url,
+    logotipo: null, // Alterado para null para lidar com o upload de arquivo
     site_url: props.tenant.site_url,
     cor_primaria: props.tenant.cor_primaria || '#000000',
     cor_secundaria: props.tenant.cor_secundaria || '#FFFFFF',
 });
+
+// --- Funções Auxiliares ---
+
+/**
+ * Atualiza o formulário com o arquivo de logo selecionado
+ * e gera uma pré-visualização da imagem.
+ */
+const updateLogoPreview = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    form.logotipo = file; // Atribui o novo arquivo ao formulário
+    logoPreview.value = URL.createObjectURL(file); // Cria a URL de preview para o novo arquivo
+};
 
 
 // --- Funções de Consulta ---
@@ -121,13 +139,15 @@ watch(() => form.endereco_cep, (newValue) => {
 
 // Função para submeter a atualização
 const updateTenant = () => {
-    form.put(route('central.tenants.update', props.tenant.id)); // Envia PUT
+    // É preciso usar form.post para enviar arquivos, mesmo sendo uma atualização.
+    // O `_method: 'PUT'` no formulário garante que o Laravel trate como uma requisição PUT.
+    form.post(route('central.tenants.update', props.tenant.id), {
+        onError: () => console.log(form.errors)
+    });
 };
 
 // Função para deletar o tenant
 const deleteTenant = () => {
-    // AVISO: O uso de confirm() bloqueia a interface.
-    // O ideal é substituir por um modal de confirmação customizado.
     if (confirm('Tem certeza que deseja excluir esta câmara? Esta ação é irreversível e irá apagar o banco de dados associado.')) {
         useForm({}).delete(route('central.tenants.destroy', props.tenant.id));
     }
@@ -276,14 +296,33 @@ const deleteTenant = () => {
                     <!-- SEÇÃO 3: PERSONALIZAÇÃO -->
                     <fieldset class="space-y-6 mt-10">
                         <legend class="section-title">Personalização do Portal</legend>
+
                         <div>
-                            <label for="logotipo_url" class="form-label">URL do Logotipo</label>
-                            <div class="form-input-container">
-                                <ImageIcon class="form-input-icon" />
-                                <input id="logotipo_url" v-model="form.logotipo_url" type="url" class="form-input" placeholder="https://exemplo.com/logo.png">
+                            <label for="logotipo" class="form-label">Logotipo</label>
+
+                            <!-- Área de Pré-visualização -->
+                            <div v-if="logoPreview" class="my-4">
+                                <img :src="logoPreview" alt="Pré-visualização do logotipo" class="h-20 w-auto rounded-lg border border-gray-300 dark:border-gray-600 p-1">
                             </div>
-                            <div v-if="form.errors.logotipo_url" class="form-error">{{ form.errors.logotipo_url }}</div>
+
+                            <!-- Input de Arquivo Estilizado -->
+                            <label for="logotipo" class="btn-secondary h-12 px-4 cursor-pointer inline-flex items-center">
+                                <ImageIcon :size="16" class="mr-2" />
+                                {{ logoPreview ? 'Trocar Arquivo' : 'Selecionar Arquivo' }}
+                            </label>
+                            <input
+                                id="logotipo"
+                                type="file"
+                                class="hidden"
+                                @change="updateLogoPreview"
+                                accept="image/png, image/jpeg, image/svg+xml"
+                            >
+
+                            <!-- Mensagem de Erro -->
+                            <div v-if="form.errors.logotipo" class="form-error">{{ form.errors.logotipo }}</div>
                         </div>
+
+
                         <div>
                             <label for="site_url" class="form-label">URL do Site Oficial</label>
                             <div class="form-input-container">
