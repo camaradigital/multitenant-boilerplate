@@ -1,7 +1,7 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { SlidersHorizontal, FileText } from 'lucide-vue-next'; // Ícone adicionado
+import { SlidersHorizontal } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
@@ -9,7 +9,7 @@ const props = defineProps({
 });
 
 const form = useForm({
-    _method: 'PUT', // Necessário para o método update no Laravel
+    _method: 'PUT',
     name: props.tenant.name,
     site_url: props.tenant.site_url,
     cor_primaria: props.tenant.cor_primaria || '#4ade80',
@@ -21,7 +21,7 @@ const form = useForm({
     publicar_achados_e_perdidos: props.tenant.publicar_achados_e_perdidos,
     publicar_pessoas_desaparecidas: props.tenant.publicar_pessoas_desaparecidas,
     publicar_memoria_legislativa: props.tenant.publicar_memoria_legislativa,
-    // --- CAMPOS ADICIONADOS PARA A NOVA ABA ---
+    publicar_vagas_emprego: props.tenant.publicar_vagas_emprego,
     terms_of_service: props.tenant.terms_of_service || '',
     privacy_policy: props.tenant.privacy_policy || '',
 });
@@ -31,19 +31,16 @@ watch(() => props.tenant, (newTenantValues) => {
     form.reset();
 }, { deep: true });
 
-// Lógica para controle das abas
 const activeTab = ref('identidade');
 
 const tabs = [
     { id: 'identidade', name: 'Identidade Visual' },
     { id: 'regras', name: 'Regras de Negócio' },
     { id: 'visibilidade', name: 'Visibilidade do Portal' },
-    // --- NOVA ABA ADICIONADA ---
     { id: 'legal', name: 'Documentos Legais' },
 ];
 
 const submit = () => {
-    // Usamos 'post' por causa do _method: 'PUT'
     form.post(route('admin.parametros.update'), {
         preserveScroll: true,
     });
@@ -165,9 +162,15 @@ const submit = () => {
                                     </div>
                                     <input id="publicar_memoria" v-model="form.publicar_memoria_legislativa" type="checkbox" class="form-checkbox ml-4">
                                 </div>
+                                <div class="flex items-start">
+                                    <div class="flex-1">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Publicar Vagas de Emprego</h3>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Se ativado, o link para "Vagas de Emprego" aparecerá no portal público.</p>
+                                    </div>
+                                    <input id="publicar_vagas" v-model="form.publicar_vagas_emprego" type="checkbox" class="form-checkbox ml-4">
+                                </div>
                             </div>
 
-                            <!-- --- NOVA ABA DE DOCUMENTOS LEGAIS --- -->
                              <div v-show="activeTab === 'legal'" class="space-y-6">
                                 <div class="section-title">Documentos Legais (LGPD)</div>
                                 <div>

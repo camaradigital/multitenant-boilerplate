@@ -3,17 +3,25 @@
 namespace App\Providers;
 
 // Models
-use App\Models\Tenant\User;
+use App\Models\Tenant\AchadoEPerdidoDocumento;
+use App\Models\Tenant\Candidatura;
 use App\Models\Tenant\Documento;
-use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\PessoaDesaparecida;
+use App\Models\Tenant\Relatorio;
+use App\Models\Tenant\SolicitacaoServico;
+use App\Models\Tenant\User;
+use App\Models\Tenant\Vaga;
 
 // Policies
+use App\Policies\Tenant\AchadoEPerdidoDocumentoPolicy;
+use App\Policies\Tenant\CandidaturaPolicy;
 use App\Policies\Tenant\DashboardPolicy;
 use App\Policies\Tenant\DocumentoPolicy;
+use App\Policies\Tenant\PessoaDesaparecidaPolicy;
+use App\Policies\Tenant\RelatorioPolicy;
 use App\Policies\Tenant\SolicitacaoServicoPolicy;
 use App\Policies\Tenant\UserPolicy;
-use App\Policies\Tenant\PessoaDesaparecidaPolicy;
+use App\Policies\Tenant\VagaPolicy;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +36,8 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Documento::class => DocumentoPolicy::class,
         SolicitacaoServico::class => SolicitacaoServicoPolicy::class,
+        Vaga::class => VagaPolicy::class,
+        Candidatura::class => CandidaturaPolicy::class,
         User::class => UserPolicy::class,
         PessoaDesaparecida::class => PessoaDesaparecidaPolicy::class,
         \App\Models\Tenant\Relatorio::class => \App\Policies\Tenant\RelatorioPolicy::class,

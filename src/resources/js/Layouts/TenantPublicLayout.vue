@@ -14,7 +14,8 @@ import {
 import {
     ChevronDown, Building, Eye, LogOut, LogIn, UserPlus, MapPin, Phone, Mail, ArrowUp, X, FileBadge, UserSearch,
     Menu as MenuIcon,
-    Landmark as Archive, // Renomeado para consistência
+    Landmark as Archive,
+    Briefcase, // Ícone adicionado
 } from 'lucide-vue-next';
 
 defineProps({
@@ -40,10 +41,18 @@ const siteUrl = computed(() => tenant.value?.site_url);
 const transparencyUrl = computed(() => tenant.value?.transparency_url);
 const endereco = computed(() => {
     if (!tenant.value?.endereco_logradouro) return null;
-    return `${tenant.value.endereco_logradouro}, ${tenant.value.endereco_numero || 's/n'}`;
+    // Constrói o endereço completo com todos os dados do banco
+    const logradouro = tenant.value.endereco_logradouro;
+    const numero = tenant.value.endereco_numero || 's/n';
+    const bairro = tenant.value.endereco_bairro;
+    const cidade = tenant.value.endereco_cidade;
+    const estado = tenant.value.endereco_estado;
+    const cep = tenant.value.endereco_cep;
+    return `${logradouro}, ${numero} - ${bairro}, ${cidade}/${estado} - CEP: ${cep}`;
 });
 const telefone = computed(() => tenant.value?.telefone);
-const emailContato = computed(() => tenant.value?.email_contato);
+// Corrigido para buscar 'admin_email' conforme o banco de dados
+const emailContato = computed(() => tenant.value?.admin_email);
 
 // --- ESTILO DINÂMICO ---
 const computedTenantStyle = computed(() => {
@@ -83,10 +92,11 @@ const scrollToTop = () => {
                     <div class="flex items-center gap-6">
                         <Link :href="route('portal.home')" class="flex items-center gap-3" aria-label="Página inicial">
                             <img :src="logoUrl" :alt="`Logo ${tenantName}`" class="h-10 w-auto">
-                            <span class="font-bold text-lg text-gray-800 dark:text-gray-200 hidden sm:inline">{{ tenantName }}</span>
                         </Link>
                         <div class="hidden lg:flex items-center space-x-1">
-                            <!-- CORREÇÃO: Links agora são condicionais -->
+                            <Link v-if="tenant.publicar_vagas_emprego" :href="route('portal.vagas.index')" class="nav-link">
+                                <Briefcase :size="16" class="mr-2" /> Vagas de Emprego
+                            </Link>
                             <Link v-if="tenant.publicar_memoria_legislativa" :href="route('portal.memoria-legislativa')" class="nav-link">
                                 <Archive :size="16" class="mr-2" /> Memória Legislativa
                             </Link>
@@ -164,6 +174,7 @@ const scrollToTop = () => {
                                     </button>
                                 </div>
                                 <div class="space-y-4">
+                                    <Link v-if="tenant.publicar_vagas_emprego" :href="route('portal.vagas.index')" class="mobile-nav-link"><Briefcase :size="20" class="mr-4" /> Vagas de Emprego</Link>
                                     <Link v-if="tenant.publicar_memoria_legislativa" :href="route('portal.memoria-legislativa')" class="mobile-nav-link"><Archive :size="20" class="mr-4" /> Memória Legislativa</Link>
                                     <Link v-if="tenant.publicar_achados_e_perdidos" :href="route('portal.achados-e-perdidos')" class="mobile-nav-link"><FileBadge :size="20" class="mr-4" /> Documentos Perdidos</Link>
                                     <Link v-if="tenant.publicar_pessoas_desaparecidas" :href="route('portal.pessoas-desaparecidas')" class="mobile-nav-link"><UserSearch :size="20" class="mr-4" /> Pessoas Desaparecidas</Link>
@@ -192,23 +203,23 @@ const scrollToTop = () => {
                 <slot />
             </main>
 
-            <footer class="footer bg-[#064e3b] text-gray-300" role="contentinfo">
+            <footer class="footer text-gray-300" :style="{ backgroundColor: 'var(--cor-primaria)' }" role="contentinfo">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                     <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                         <div class="text-center md:text-left">
-                             <h4 class="font-bold text-white text-xl mb-4"></h4>
-                             <p v-if="endereco" class="footer-contact-item"><MapPin :size="18" class="mr-3 text-emerald-500" /> {{ endereco }}</p>
-                             <p v-if="telefone" class="footer-contact-item"><Phone :size="18" class="mr-3 text-emerald-500" /> {{ telefone }}</p>
-                             <p v-if="emailContato" class="footer-contact-item"><Mail :size="18" class="mr-3 text-emerald-500" /> {{ emailContato }}</p>
-                         </div>
-                         <div class="text-center md:text-right">
-                             <div class="mb-4 space-x-6">
-                                 <a :href="page.props.tenant?.privacy_policy_url || '#'" class="footer-link">Política de Privacidade</a>
-                                 <a :href="page.props.tenant?.terms_url || '#'" class="footer-link">Termos de Uso</a>
-                             </div>
-                             <small class="block text-sm">© {{ new Date().getFullYear() }} {{ tenantName }}. Todos os direitos reservados.</small>
-                         </div>
-                     </div>
+                       <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                           <div class="text-center md:text-left">
+                               <h4 class="font-bold text-white text-xl mb-4">{{ tenantName }}</h4>
+                               <p v-if="endereco" class="footer-contact-item"><MapPin :size="18" class="mr-3 text-emerald-500" /> {{ endereco }}</p>
+                               <p v-if="telefone" class="footer-contact-item"><Phone :size="18" class="mr-3 text-emerald-500" /> {{ telefone }}</p>
+                               <p v-if="emailContato" class="footer-contact-item"><Mail :size="18" class="mr-3 text-emerald-500" /> {{ emailContato }}</p>
+                           </div>
+                           <div class="text-center md:text-right">
+                               <div class="mb-4 space-x-6">
+                                   <a :href="page.props.tenant?.privacy_policy_url || '#'" class="footer-link">Política de Privacidade</a>
+                                   <a :href="page.props.tenant?.terms_url || '#'" class="footer-link">Termos de Uso</a>
+                               </div>
+                               <small class="block text-sm">© {{ new Date().getFullYear() }} {{ tenantName }}. Todos os direitos reservados.</small>
+                           </div>
+                       </div>
                 </div>
             </footer>
 

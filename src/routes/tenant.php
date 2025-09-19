@@ -12,6 +12,9 @@ use App\Http\Controllers\Tenant\EntidadeController;
 use App\Http\Controllers\Tenant\FuncionarioController;
 use App\Http\Controllers\Tenant\LegislaturaController;
 use App\Http\Controllers\Tenant\MandatoController;
+use App\Http\Controllers\Tenant\VagaController;
+use App\Http\Controllers\Tenant\CandidaturaController;
+use App\Http\Controllers\Tenant\EmpresaController;
 use App\Http\Controllers\Tenant\MemoriaLegislativaController;
 use App\Http\Controllers\Tenant\MeuPainelController;
 use App\Http\Controllers\Tenant\ParametroController;
@@ -57,6 +60,8 @@ Route::middleware([
     Route::get('/documentos-perdidos', [PortalController::class, 'achadosEPerdidos'])->name('portal.achados-e-perdidos');
     Route::get('/pessoas-desaparecidas', [PortalController::class, 'pessoasDesaparecidas'])->name('portal.pessoas-desaparecidas');
     Route::get('/memoria-legislativa', [MemoriaLegislativaController::class, 'show'])->name('portal.memoria-legislativa');
+    Route::get('/vagas', [VagaController::class, 'indexPublic'])->name('portal.vagas.index');
+    Route::get('/vagas/{vaga}', [VagaController::class, 'showPublic'])->name('portal.vagas.show');
 
     // --- Rota para a página de registro ---
     Route::get('/register', function () {
@@ -116,6 +121,10 @@ Route::middleware([
 
         // --- ROTAS DO CIDADÃO ---
         Route::get('/meu-painel', [MeuPainelController::class, 'index'])->name('portal.meu-painel');
+        // Rotas para Candidaturas
+        Route::get('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'create'])->name('candidaturas.create');
+        Route::post('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'store'])->name('candidaturas.store');
+        // Rotas para Solicitações
         Route::get('/solicitacoes/criar', [MeuPainelController::class, 'create'])->name('portal.solicitacoes.create');
         Route::get('/minhas-solicitacoes/{solicitacao}', [SolicitacaoServicoController::class, 'show'])->name('portal.solicitacoes.show');
         Route::post('/solicitacoes', [SolicitacaoServicoController::class, 'store'])->name('portal.solicitacoes.store');
@@ -166,6 +175,14 @@ Route::middleware([
                 Route::resource('achados-e-perdidos-documentos', AchadoEPerdidoDocumentoController::class)->except(['show', 'create', 'edit'])->parameters(['achados-e-perdidos-documentos' => 'achadosEPerdidosDocumento']);
                 Route::resource('pessoas-desaparecidas', PessoaDesaparecidaController::class)->except(['show', 'create', 'edit'])->parameters(['pessoas-desaparecidas' => 'pessoaDesaparecida']);
                 Route::get('pessoas-desaparecidas/{pessoaDesaparecida}/boletim', [PessoaDesaparecidaController::class, 'downloadBoletim'])->name('pessoas-desaparecidas.downloadBoletim');
+            });
+
+            // Rotas para Vagas de Emprego
+            Route::middleware('can:gerenciar vagas de emprego')->group(function () {
+                Route::resource('empresas', EmpresaController::class);
+                Route::resource('vagas', VagaController::class);
+                Route::get('vagas/{vaga}/candidaturas', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'index'])->name('vagas.candidaturas.index');
+                Route::get('candidaturas/{candidatura}/curriculo', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'downloadCurriculo'])->name('candidaturas.downloadCurriculo');
             });
 
             // MÓDULO DE ENTIDADES E CONVÉNIOS

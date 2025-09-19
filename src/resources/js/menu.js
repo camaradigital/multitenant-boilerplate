@@ -19,9 +19,11 @@ import {
     Landmark,
     CalendarDays,
     UserSquare,
-    // --- Ícones adicionados para o novo menu ---
     BarChart3,
     Star,
+    // --- Ícones para o novo módulo ---
+    Briefcase,
+    Building2,
 } from 'lucide-vue-next';
 
 /**
@@ -49,6 +51,7 @@ const publicNav = [
             { name: 'Documentos Perdidos', href: route('portal.achados-e-perdidos'), current: 'portal.achados-e-perdidos', icon: FileBadge, permission: null },
             { name: 'Pessoas Desaparecidas', href: route('portal.pessoas-desaparecidas'), current: 'portal.pessoas-desaparecidas', icon: UserSearch, permission: null },
             { name: 'Memória Legislativa', href: route('portal.memoria-legislativa'), current: 'portal.memoria-legislativa', icon: Landmark, permission: null },
+            { name: 'Vagas de Emprego', href: route('portal.vagas.index'), current: 'portal.vagas.*', icon: Briefcase, permission: null },
         ]
     }
 ];
@@ -71,6 +74,21 @@ const managementNav = [
             { name: 'Convênios', href: route('admin.convenios.index'), current: 'admin.convenios.*', icon: Handshake, permission: 'gerenciar entidades' },
         ]
     },
+];
+
+/**
+ * @description Rotas para o novo módulo de Vagas de Emprego.
+ */
+const jobsNav = [
+    {
+        name: 'Vagas de Emprego',
+        icon: Briefcase,
+        permission: 'gerenciar vagas de emprego',
+        children: [
+            { name: 'Vagas', href: route('admin.vagas.index'), current: 'admin.vagas.*', icon: FileText, permission: 'gerenciar vagas de emprego' },
+            { name: 'Empresas', href: route('admin.empresas.index'), current: 'admin.empresas.*', icon: Building2, permission: 'gerenciar vagas de emprego' },
+        ]
+    }
 ];
 
 /**
@@ -143,6 +161,7 @@ export const navigation = [
     ...coreNav,
     ...publicNav,
     ...managementNav,
+    ...jobsNav,
     ...memoriaLegislativaNav,
     ...lostAndFoundNav,
     ...reportsNav,

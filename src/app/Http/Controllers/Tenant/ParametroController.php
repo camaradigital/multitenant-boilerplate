@@ -7,19 +7,22 @@ use App\Models\Central\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Inertia\Inertia;
 
 class ParametroController extends Controller
 {
     use AuthorizesRequests;
 
+    /**
+     * Exibe a página de parâmetros do tenant.
+     */
     public function index()
     {
         $this->authorize('gerenciar parametros');
 
         $tenant = Tenant::current();
 
-        // CORREÇÃO: Garante que os campos de documentos legais sejam enviados para o frontend.
-        return inertia('Tenant/Parametros/Index', [
+        return Inertia::render('Tenant/Parametros/Index', [
             'tenant' => $tenant->only(
                 'id',
                 'name',
@@ -33,12 +36,16 @@ class ParametroController extends Controller
                 'publicar_achados_e_perdidos',
                 'publicar_pessoas_desaparecidas',
                 'publicar_memoria_legislativa',
-                'terms_of_service', // Campo adicionado
-                'privacy_policy'    // Campo adicionado
+                'publicar_vagas_emprego',
+                'terms_of_service',
+                'privacy_policy'
             )
         ]);
     }
 
+    /**
+     * Atualiza os parâmetros do tenant.
+     */
     public function update(Request $request)
     {
         $this->authorize('gerenciar parametros');
@@ -55,6 +62,7 @@ class ParametroController extends Controller
             'publicar_achados_e_perdidos' => 'required|boolean',
             'publicar_pessoas_desaparecidas' => 'required|boolean',
             'publicar_memoria_legislativa' => 'required|boolean',
+            'publicar_vagas_emprego' => 'required|boolean',
             'terms_of_service' => 'nullable|string',
             'privacy_policy' => 'nullable|string',
         ]);
@@ -72,11 +80,16 @@ class ParametroController extends Controller
         $tenant->publicar_achados_e_perdidos = $validated['publicar_achados_e_perdidos'];
         $tenant->publicar_pessoas_desaparecidas = $validated['publicar_pessoas_desaparecidas'];
         $tenant->publicar_memoria_legislativa = $validated['publicar_memoria_legislativa'];
+        $tenant->publicar_vagas_emprego = $validated['publicar_vagas_emprego'];
         $tenant->terms_of_service = $validated['terms_of_service'];
         $tenant->privacy_policy = $validated['privacy_policy'];
 
         $tenant->save();
 
-        return Redirect::route('admin.parametros.index')->with('success', 'Parâmetros atualizados com sucesso.');
+        // Limpa o cache para garantir que as novas configurações sejam aplicadas imediatamente em todo o sistema.
+        cache()->forget('tenant_settings_' . $tenant->id);
+
+        return Redirect::back()->with('success', 'Parâmetros atualizados com sucesso.');
     }
 }
+

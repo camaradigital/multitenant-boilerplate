@@ -34,6 +34,7 @@ class Tenant extends BaseTenant
         'publicar_achados_e_perdidos',
         'publicar_pessoas_desaparecidas',
         'publicar_memoria_legislativa',
+        'publicar_vagas_emprego',
         'data',
     ];
 
@@ -45,6 +46,7 @@ class Tenant extends BaseTenant
         'publicar_achados_e_perdidos' => 'boolean',
         'publicar_pessoas_desaparecidas' => 'boolean',
         'publicar_memoria_legislativa' => 'boolean',
+        'publicar_vagas_emprego' => 'boolean',
     ];
 
     /**

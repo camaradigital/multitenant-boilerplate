@@ -38,6 +38,8 @@ class PermissionsSeeder extends Seeder
             'gerenciar memoria',
             // Achados e Perdidos
             'gerenciar achados e perdidos',
+            // Vagas de Emprego
+            'gerenciar vagas de emprego',
             // Relatórios
             'visualizar relatorios',
             // Parâmetros do Sistema
