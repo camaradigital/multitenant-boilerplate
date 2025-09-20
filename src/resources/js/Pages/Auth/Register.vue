@@ -123,7 +123,8 @@ const tryOpenModal = (modalType) => {
             <div class="form-container w-full max-w-2xl">
 
                 <div class="form-icon">
-                    <AuthenticationCardLogo class="h-12 w-auto" />
+                    <AuthenticationCardLogo class="h-full w-full p-1" />
+
                 </div>
 
                 <h1 class="form-title">Criar sua Conta</h1>

@@ -42,7 +42,7 @@ const statusClass = computed(() => {
             <div class="form-container w-full max-w-md">
 
                 <div class="form-icon">
-                    <AuthenticationCardLogo class="h-12 w-auto" />
+                    <AuthenticationCardLogo class="h-full w-full p-1" />
                 </div>
 
                 <h1 class="form-title">Acessar sua Conta</h1>
@@ -75,11 +75,11 @@ const statusClass = computed(() => {
 
                     <div class="input-container">
                         <div class="flex justify-between items-center mb-1.5">
-                             <label for="password" class="form-label !mb-0">Senha</label>
-                             <!-- TESTE DE DIAGNÓSTICO: Removido v-if="canResetPassword" para forçar a exibição do link -->
-                             <Link :href="route('password.request')" class="text-sm text-emerald-600 hover:underline dark:text-green-400">
-                                 Esqueceu a senha?
-                             </Link>
+                            <label for="password" class="form-label !mb-0">Senha</label>
+                            <!-- TESTE DE DIAGNÓSTICO: Removido v-if="canResetPassword" para forçar a exibição do link -->
+                            <Link :href="route('password.request')" class="text-sm text-emerald-600 hover:underline dark:text-green-400">
+                                Esqueceu a senha?
+                            </Link>
                         </div>
                         <div class="relative">
                             <span class="input-icon"><KeyRound :size="16" /></span>
@@ -206,4 +206,3 @@ const statusClass = computed(() => {
     @apply dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400/50;
 }
 </style>
-

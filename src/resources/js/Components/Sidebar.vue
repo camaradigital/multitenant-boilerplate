@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { navigation as rawNavigation } from '@/menu.js';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue'; // <-- 1. Importado aqui
 import { LogOut, UserCircle, ChevronDown, CircleDot } from 'lucide-vue-next';
 
 const page = usePage();
@@ -95,10 +96,9 @@ const logout = () => {
 
 <template>
     <div class="flex h-full flex-col bg-white px-4 py-4 dark:bg-[#0A1E1C] dark:border-r dark:border-gray-800">
-        <Link :href="route('tenant.dashboard')" class="mb-6 flex items-center px-2">
-            <h1 class="ml-3 text-xl font-bold text-[var(--color-primary)]">
-                Câmara<span class="text-gray-800 dark:text-white">Digital</span>
-            </h1>
+        <!-- 2. Logotipo substituído e centralizado -->
+        <Link :href="route('tenant.dashboard')" class="mb-6 flex items-center justify-center px-2">
+            <ApplicationLogo class="h-full w-full p-1" />
         </Link>
 
         <div class="flex flex-1 flex-col justify-between overflow-hidden">
@@ -141,20 +141,20 @@ const logout = () => {
 
             <div class="mt-6 shrink-0">
                  <div class="user-card">
-                     <div class="flex items-center gap-x-3 overflow-hidden">
-                         <UserCircle class="h-10 w-10 text-gray-400 shrink-0" />
-                         <div class="flex-1 truncate">
-                             <p class="text-sm font-semibold text-gray-800 dark:text-white truncate">{{ page.props.auth.user.name }}</p>
-                             <Link :href="route('profile.show')" class="text-xs text-[var(--color-primary)] hover:underline">Ver Perfil</Link>
-                         </div>
-                     </div>
-                     <ThemeToggle />
+                      <div class="flex items-center gap-x-3 overflow-hidden">
+                           <UserCircle class="h-10 w-10 text-gray-400 shrink-0" />
+                           <div class="flex-1 truncate">
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white truncate">{{ page.props.auth.user.name }}</p>
+                                <Link :href="route('profile.show')" class="text-xs text-[var(--color-primary)] hover:underline">Ver Perfil</Link>
+                           </div>
+                      </div>
+                      <ThemeToggle />
                  </div>
                  <form @submit.prevent="logout" class="w-full mt-2">
-                     <button type="submit" class="logout-button">
-                         <LogOut class="h-5 w-5" :stroke-width="1.5" />
-                         <span class="nav-link-text">Sair</span>
-                     </button>
+                      <button type="submit" class="logout-button">
+                           <LogOut class="h-5 w-5" :stroke-width="1.5" />
+                           <span class="nav-link-text">Sair</span>
+                      </button>
                  </form>
             </div>
         </div>

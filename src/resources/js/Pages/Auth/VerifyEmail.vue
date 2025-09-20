@@ -32,7 +32,7 @@ const statusClass = computed(() => {
             <div class="form-container w-full max-w-md">
 
                 <div class="form-icon">
-                    <AuthenticationCardLogo class="h-12 w-auto" />
+                    <AuthenticationCardLogo class="h-full w-full p-1" />
                 </div>
 
                 <h1 class="form-title">Confirme seu E-mail</h1>
