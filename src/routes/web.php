@@ -54,8 +54,6 @@ Route::middleware([
         Route::get('campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
         Route::post('campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
 
-        // A ROTA DO CNPJ FOI REMOVIDA DESTE GRUPO
-
         Route::get('/health', [HealthCheckController::class, 'index']);
     });
 

@@ -11,6 +11,10 @@ import {
     TransitionChild,
 } from '@headlessui/vue';
 import { Plus, Eye, Trash2, ClipboardList, X } from 'lucide-vue-next';
+// --- ADIÇÃO ---
+// 1. Importar o componente vue-select e seu CSS
+import vSelect from 'vue-select';
+import 'vue-select/dist/vue-select.css';
 
 const props = defineProps({
     solicitacoes: Object,
@@ -29,15 +33,24 @@ const form = useForm({
     renda_familiar: '', // Novo campo para a renda
 });
 
+// --- ADIÇÃO ---
+// 2. Criar uma propriedade computada para formatar os dados dos cidadãos
+// para o formato que o vue-select espera (com uma propriedade 'label')
+const cidadaosForSelect = computed(() =>
+    props.cidadaos.map(c => ({
+        ...c, // Mantém todos os dados originais do cidadão
+        // Cria a 'label' que será exibida e usada para busca
+        label: `${c.name} - ${c.cpf || 'CPF não informado'}`
+    }))
+);
+
+
 // Lógica para mostrar o campo de renda dinamicamente
 const servicoSelecionado = computed(() => {
     return props.servicos.find(s => s.id === form.servico_id);
 });
 
-// --- LÓGICA CORRIGIDA ---
 const mostrarCampoRenda = computed(() => {
-    // Mostra o campo apenas se o parâmetro global estiver ativo
-    // E o serviço selecionado for do tipo jurídico.
     return props.exigirRendaJuridico && servicoSelecionado.value?.is_juridico;
 });
 
@@ -89,7 +102,6 @@ const getStatusStyle = (cor) => {
     return { backgroundColor: cor, color: textColor };
 };
 
-// Adição para depuração: Loga o tema atual no console
 const isDark = computed(() => document.documentElement.classList.contains('dark'));
 watch(isDark, (newVal) => {
     console.log('Tema atual:', newVal ? 'Dark' : 'Light');
@@ -179,10 +191,19 @@ watch(isDark, (newVal) => {
                                         <div class="mt-6 space-y-6">
                                             <div>
                                                 <label for="cidadao" class="form-label">Cidadão</label>
-                                                <select v-model="form.user_id" id="cidadao" class="form-input" required>
-                                                    <option disabled value="">Selecione um cidadão</option>
-                                                    <option v-for="cidadao in cidadaos" :key="cidadao.id" :value="cidadao.id">{{ cidadao.name }} - {{ cidadao.cpf || 'CPF não informado' }}</option>
-                                                </select>
+                                                <v-select
+                                                    id="cidadao"
+                                                    v-model="form.user_id"
+                                                    :options="cidadaosForSelect"
+                                                    :reduce="cidadao => cidadao.id"
+                                                    label="label"
+                                                    class="v-select-custom"
+                                                    placeholder="Digite ou selecione um cidadão"
+                                                >
+                                                    <template #no-options>
+                                                        Nenhum cidadão encontrado.
+                                                    </template>
+                                                </v-select>
                                                 <div v-if="form.errors.user_id" class="form-error">{{ form.errors.user_id }}</div>
                                             </div>
 
@@ -195,7 +216,6 @@ watch(isDark, (newVal) => {
                                                 <div v-if="form.errors.servico_id" class="form-error">{{ form.errors.servico_id }}</div>
                                             </div>
 
-                                            <!-- CAMPO DE RENDA DINÂMICO -->
                                             <div v-if="mostrarCampoRenda">
                                                 <label for="renda_familiar" class="form-label">Renda Familiar do Cidadão (R$)</label>
                                                 <input
@@ -236,7 +256,7 @@ watch(isDark, (newVal) => {
 </template>
 
 <style scoped>
-/* Estilos consistentes com seus outros componentes, com adição explícita para light */
+/* Estilos existentes... */
 .content-container { @apply relative w-full pt-16 rounded-3xl shadow-xl transition-all duration-300 bg-white border border-gray-200 dark:bg-[#102C26]/60 dark:border-2 dark:border-green-400/25 dark:backdrop-blur-sm; }
 .border-b-dynamic { @apply border-b border-gray-200 dark:border-green-400/10; }
 .form-icon { @apply absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full flex justify-center items-center shadow-lg bg-emerald-600 shadow-emerald-500/30 dark:bg-[#43DB9E] dark:shadow-green-400/30; }
@@ -254,4 +274,66 @@ watch(isDark, (newVal) => {
 .form-input { @apply block w-full text-sm rounded-xl transition-all h-12 py-3.5 px-4 bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-green-500 dark:focus:border-green-500; }
 textarea.form-input { @apply h-auto; }
 .form-error { @apply text-sm text-red-600 dark:text-red-400 mt-1; }
+
+/* --- ADIÇÃO --- */
+/* 4. Estilos para o componente vue-select se parecer com o restante do formulário */
+/* O seletor :deep() é usado para estilizar classes dentro de um componente filho a partir de um componente pai com <style scoped> */
+:deep(.v-select-custom) {
+    --vs-font-size: 0.875rem;
+    --vs-line-height: 1.25rem;
+}
+
+:deep(.v-select-custom .vs__dropdown-toggle) {
+    @apply block w-full text-sm rounded-xl transition-all h-12 py-0 px-0 bg-gray-50 border-gray-300 text-gray-900 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white;
+    border-width: 1px;
+}
+
+:deep(.v-select-custom .vs__dropdown-toggle:focus-within) {
+    @apply ring-1 ring-emerald-500 border-emerald-500 dark:ring-green-500 dark:border-green-500;
+}
+
+:deep(.v-select-custom .vs__selected-options) {
+    @apply p-0 flex-nowrap;
+    padding: 0.875rem 1rem;
+}
+
+:deep(.v-select-custom .vs__search) {
+    @apply m-0 p-0 text-gray-900 dark:text-white;
+    &::placeholder {
+        @apply text-gray-400 dark:text-gray-400;
+    }
+}
+
+:deep(.v-select-custom .vs__selected) {
+    @apply m-0 p-0 text-sm text-gray-900 dark:text-white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+:deep(.v-select-custom .vs__actions) {
+    @apply p-0;
+    padding-right: 0.5rem;
+}
+
+:deep(.v-select-custom .vs__clear svg) {
+    fill: #9ca3af; /* Cor do ícone de limpar */
+}
+
+:deep(.v-select-custom .vs__dropdown-menu) {
+    @apply bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-xl;
+}
+
+:deep(.v-select-custom .vs__option) {
+    @apply text-sm text-gray-900 dark:text-gray-200;
+}
+
+:deep(.v-select-custom .vs__option--highlight) {
+    @apply bg-emerald-600 text-white;
+}
+
+:deep(.v-select-custom .vs__no-options) {
+    @apply p-4 text-sm text-center text-gray-500;
+}
+
 </style>
