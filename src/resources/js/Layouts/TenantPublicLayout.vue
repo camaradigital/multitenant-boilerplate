@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -15,8 +15,13 @@ import {
     ChevronDown, Building, Eye, LogOut, LogIn, UserPlus, MapPin, Phone, Mail, ArrowUp, X, FileBadge, UserSearch,
     Menu as MenuIcon,
     Landmark as Archive,
-    Briefcase, // Ícone adicionado
+    Briefcase,
+    Instagram,
+    Youtube,
+    // MessageSquare foi removido daqui
 } from 'lucide-vue-next';
+// --- 1. IMPORTE O NOVO ÍCONE ---
+import WhatsappIcon from '@/Components/Icons/WhatsappIcon.vue';
 
 defineProps({
     title: String,
@@ -47,20 +52,28 @@ const logoUrl = computed(() => {
 });
 const siteUrl = computed(() => tenant.value?.site_url);
 const transparencyUrl = computed(() => tenant.value?.transparency_url);
+
 const endereco = computed(() => {
-    if (!tenant.value?.endereco_logradouro) return null;
-    // Constrói o endereço completo com todos os dados do banco
-    const logradouro = tenant.value.endereco_logradouro;
-    const numero = tenant.value.endereco_numero || 's/n';
-    const bairro = tenant.value.endereco_bairro;
-    const cidade = tenant.value.endereco_cidade;
-    const estado = tenant.value.endereco_estado;
-    const cep = tenant.value.endereco_cep;
-    return `${logradouro}, ${numero} - ${bairro}, ${cidade}/${estado} - CEP: ${cep}`;
+  const t = tenant.value;
+  if (!t?.endereco_logradouro) return null;
+
+  const parts = [
+    `${t.endereco_logradouro}, ${t.endereco_numero || 's/n'}`,
+    t.endereco_bairro,
+    `${t.endereco_cidade}/${t.endereco_estado}`,
+  ];
+
+  const formattedParts = parts.filter(Boolean).join(' - ');
+  const cep = t.endereco_cep ? `CEP: ${t.endereco_cep}` : '';
+
+  return [formattedParts, cep].filter(Boolean).join(' - ');
 });
-const telefone = computed(() => tenant.value?.telefone);
-// Corrigido para buscar 'admin_email' conforme o banco de dados
-const emailContato = computed(() => tenant.value?.admin_email);
+
+const telefone = computed(() => tenant.value?.telefone_contato);
+const whatsapp = computed(() => tenant.value?.whatsapp);
+const emailContato = computed(() => tenant.value?.email_contato);
+const instagram = computed(() => tenant.value?.instagram);
+const youtube = computed(() => tenant.value?.youtube);
 
 // --- ESTILO DINÂMICO ---
 const computedTenantStyle = computed(() => {
@@ -75,11 +88,18 @@ const computedTenantStyle = computed(() => {
 const mobileMenuOpen = ref(false);
 const showBackToTop = ref(false);
 
+const handleScroll = () => {
+    showBackToTop.value = window.scrollY > 400;
+};
+
 onMounted(() => {
-    window.addEventListener('scroll', () => {
-        showBackToTop.value = window.scrollY > 400;
-    });
+    window.addEventListener('scroll', handleScroll);
 });
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', handleScroll);
+});
+
 const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -125,39 +145,43 @@ const scrollToTop = () => {
 
                     <div class="flex items-center gap-2 sm:gap-4">
                         <ThemeToggle />
-                        <div v-if="authUser" class="relative">
-                            <Dropdown align="right" width="48">
-                                <template #trigger>
-                                    <button class="flex items-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900">
-                                        <span class="inline-flex items-center justify-center h-9 w-9 rounded-full bg-emerald-500 dark:bg-emerald-600 text-sm font-semibold text-white">
-                                            {{ authUser.name.charAt(0) }}
-                                        </span>
-                                    </button>
-                                </template>
-                                <template #content>
-                                    <div class="block px-4 py-2 text-xs text-gray-400">Gerenciar Conta</div>
-                                    <DropdownLink :href="route('profile.show')"> Perfil </DropdownLink>
-                                    <DropdownLink :href="route('tenant.dashboard')"> Meu Painel </DropdownLink>
-                                    <div class="border-t border-gray-200 dark:border-gray-600" />
-                                    <form @submit.prevent="logout">
-                                        <DropdownLink as="button">Sair</DropdownLink>
-                                    </form>
-                                </template>
-                            </Dropdown>
+
+                        <div class="hidden lg:flex items-center gap-2">
+                            <template v-if="authUser">
+                                <Dropdown align="right" width="56">
+                                    <template #trigger>
+                                        <button aria-label="Abrir menu do usuário" class="flex items-center gap-3 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 rounded-full pr-3">
+                                            <span class="inline-flex items-center justify-center h-9 w-9 rounded-full bg-emerald-500 dark:bg-emerald-600 text-sm font-semibold text-white ring-2 ring-white dark:ring-gray-800">
+                                                {{ authUser.name.charAt(0) }}
+                                            </span>
+                                            <span class="hidden sm:inline">{{ authUser.name.split(' ')[0] }}</span>
+                                            <ChevronDown :size="16" class="opacity-70" />
+                                        </button>
+                                    </template>
+                                    <template #content>
+                                        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+                                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ authUser.name }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ authUser.email }}</p>
+                                        </div>
+                                        <DropdownLink :href="route('profile.show')"> Perfil </DropdownLink>
+                                        <DropdownLink :href="route('tenant.dashboard')"> Meu Painel </DropdownLink>
+                                        <div class="border-t border-gray-200 dark:border-gray-600" />
+                                        <form @submit.prevent="logout">
+                                            <DropdownLink as="button" class="w-full text-left">Sair</DropdownLink>
+                                        </form>
+                                    </template>
+                                </Dropdown>
+                            </template>
+                            <template v-else>
+                                <Link :href="route('login')" class="nav-link">
+                                    <LogIn :size="16" class="mr-2" /> Entrar
+                                </Link>
+                                <Link v-if="canRegister" :href="route('register')" class="btn-primary-outline">
+                                    <UserPlus :size="16" class="mr-2" /> Registrar
+                                </Link>
+                            </template>
                         </div>
-                        <div v-else class="hidden lg:flex">
-                           <Dropdown align="right" width="48">
-                                <template #trigger>
-                                    <button class="nav-link">
-                                        Acesso <ChevronDown :size="18" class="ml-1.5" />
-                                    </button>
-                                </template>
-                                <template #content>
-                                    <DropdownLink :href="route('login')"> Entrar </DropdownLink>
-                                    <DropdownLink v-if="canRegister" :href="route('register')"> Registrar </DropdownLink>
-                                </template>
-                           </Dropdown>
-                        </div>
+
                         <div class="lg:hidden">
                             <button @click="mobileMenuOpen = true" class="header-icon-btn">
                                 <MenuIcon :size="28" />
@@ -188,8 +212,10 @@ const scrollToTop = () => {
                                     <Link v-if="tenant.publicar_pessoas_desaparecidas" :href="route('portal.pessoas-desaparecidas')" class="mobile-nav-link"><UserSearch :size="20" class="mr-4" /> Pessoas Desaparecidas</Link>
                                     <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener noreferrer" class="mobile-nav-link"><Building :size="20" class="mr-4" /> Site Oficial</a>
                                     <a v-if="transparencyUrl" :href="transparencyUrl" target="_blank" rel="noopener noreferrer" class="mobile-nav-link"><Eye :size="20" class="mr-4" /> Transparência</a>
+
                                     <div class="border-t border-gray-200 dark:border-gray-700 pt-5 mt-5 space-y-4">
                                         <template v-if="authUser">
+                                            <a :href="route('profile.show')" class="mobile-nav-link"><UserPlus :size="20" class="mr-4" /> Perfil</a>
                                             <a :href="route('tenant.dashboard')" class="mobile-nav-link"><LogIn :size="20" class="mr-4" /> Meu Painel</a>
                                             <form @submit.prevent="logout">
                                                 <button type="submit" class="mobile-nav-link w-full text-left"><LogOut :size="20" class="mr-4" /> Sair</button>
@@ -211,31 +237,79 @@ const scrollToTop = () => {
                 <slot />
             </main>
 
-            <footer class="footer text-gray-300" :style="{ backgroundColor: 'var(--cor-primaria)' }" role="contentinfo">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                       <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                           <div class="text-center md:text-left">
-                               <h4 class="font-bold text-white text-xl mb-4">{{ tenantName }}</h4>
-                               <p v-if="endereco" class="footer-contact-item"><MapPin :size="18" class="mr-3 text-emerald-500" /> {{ endereco }}</p>
-                               <p v-if="telefone" class="footer-contact-item"><Phone :size="18" class="mr-3 text-emerald-500" /> {{ telefone }}</p>
-                               <p v-if="emailContato" class="footer-contact-item"><Mail :size="18" class="mr-3 text-emerald-500" /> {{ emailContato }}</p>
+            <footer class="bg-slate-800 text-slate-300">
+                <div class="container mx-auto px-6 py-12">
+                   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+                       <div class="sm:col-span-2">
+                           <div class="flex items-center mb-4">
+                               <img v-if="logoUrl" :src="logoUrl" :alt="`Logotipo ${tenant.name}`" class="h-10 mr-3 bg-white p-1 rounded">
+                               <h2 class="text-lg font-bold text-white">{{ tenant.name }}</h2>
                            </div>
-                           <div class="text-center md:text-right">
-                               <div class="mb-4 space-x-6">
-                                   <a :href="page.props.tenant?.privacy_policy_url || '#'" class="footer-link">Política de Privacidade</a>
-                                   <a :href="page.props.tenant?.terms_url || '#'" class="footer-link">Termos de Uso</a>
-                               </div>
-                               <small class="block text-sm">© {{ new Date().getFullYear() }} {{ tenantName }}. Todos os direitos reservados.</small>
-                           </div>
+                           <p v-if="endereco" class="footer-contact-item max-w-sm"><MapPin :size="16" class="mr-2 mt-1 flex-shrink-0" /> {{ endereco }}</p>
                        </div>
+
+                       <div>
+                           <h3 class="text-base font-semibold text-white tracking-wider uppercase mb-4">Contato</h3>
+                           <ul class="space-y-2 text-sm">
+                               <li v-if="telefone" class="footer-contact-item">
+                                   <Phone :size="16" />
+                                   <a :href="`tel:${telefone.replace(/\D/g, '')}`">{{ telefone }}</a>
+                               </li>
+                               <li v-if="emailContato" class="footer-contact-item">
+                                   <Mail :size="16" />
+                                   <a :href="`mailto:${emailContato}`">{{ emailContato }}</a>
+                               </li>
+                           </ul>
+                       </div>
+
+                       <div>
+                           <h3 class="text-base font-semibold text-white tracking-wider uppercase mb-4">Redes Sociais</h3>
+                           <ul class="space-y-2 text-sm">
+                               <li v-if="instagram" class="footer-contact-item">
+                                   <Instagram :size="16" />
+                                   <a :href="instagram" target="_blank" rel="noopener noreferrer">Instagram</a>
+                               </li>
+                               <li v-if="youtube" class="footer-contact-item">
+                                   <Youtube :size="16" />
+                                   <a :href="youtube" target="_blank" rel="noopener noreferrer">YouTube</a>
+                               </li>
+                           </ul>
+                       </div>
+                   </div>
+                   <div class="mt-10 pt-8 border-t border-slate-700 text-center text-xs text-slate-500">
+                       <p>&copy; {{ new Date().getFullYear() }} {{ tenant.name }}. Todos os direitos reservados.</p>
+                       <p class="mt-1">Uma plataforma desenvolvida por Câmara Digital</p>
+                   </div>
                 </div>
             </footer>
 
-            <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-4">
-                <button v-show="showBackToTop" @click="scrollToTop" id="back-to-top" title="Voltar ao topo" aria-label="Voltar ao topo">
-                    <ArrowUp :size="24" />
-                </button>
-            </transition>
+            <div class="fixed bottom-6 right-6 z-30 flex flex-col items-center gap-3">
+                <a v-if="whatsapp"
+                    :href="`https://wa.me/55${whatsapp.replace(/\D/g, '')}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="fab-btn bg-green-500 hover:bg-green-600 focus:ring-green-500"
+                    aria-label="Fale conosco no WhatsApp">
+                    <WhatsappIcon class="w-7 h-7" />
+                </a>
+
+                <transition
+                    enter-active-class="transition ease-out duration-300"
+                    enter-from-class="opacity-0 translate-y-4"
+                    enter-to-class="opacity-100 translate-y-0"
+                    leave-active-class="transition ease-in duration-200"
+                    leave-from-class="opacity-100 translate-y-0"
+                    leave-to-class="opacity-0 translate-y-4">
+                    <button v-show="showBackToTop" @click="scrollToTop"
+                        class="fab-btn text-white"
+                        :style="{ backgroundColor: 'var(--cor-primaria)' }"
+                        title="Voltar ao topo"
+                        aria-label="Voltar ao topo">
+                        <ArrowUp :size="24" />
+                    </button>
+                </transition>
+            </div>
+
         </div>
     </div>
 </template>
@@ -278,20 +352,33 @@ body {
     color: var(--cor-primaria);
 }
 
-
-#back-to-top {
-    background-color: var(--cor-primaria);
-    @apply fixed bottom-6 right-6 w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-300 z-30 hover:scale-110;
-}
-#back-to-top:hover {
-    filter: brightness(110%);
-}
-
 .footer-contact-item {
-    @apply flex items-center justify-center md:justify-start mb-3 text-base opacity-90;
+    @apply flex items-center gap-2 text-slate-400 hover:text-white transition-colors;
 }
 
 .footer-link {
     @apply text-sm text-gray-400 hover:text-white transition-colors duration-300;
+}
+
+/* NOVOS ESTILOS REATORADOS */
+.btn-primary-outline {
+    @apply inline-flex items-center justify-center px-4 py-2 border rounded-md font-semibold text-sm transition ease-in-out duration-150;
+    color: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+}
+.btn-primary-outline:hover {
+    background-color: hsla(var(--cor-primaria-hsl), 0.1); /* Usa HSL para opacidade */
+}
+/* Fallback para cor_primaria em formato não-HSL. Ajuste a opacidade como preferir */
+[style*="--cor-primaria:#"] .btn-primary-outline:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.fab-btn {
+    @apply w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.fab-btn:hover {
+    filter: brightness(110%);
 }
 </style>

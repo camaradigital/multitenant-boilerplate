@@ -309,10 +309,6 @@ const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); };
         </section>
 
     </TenantPublicLayout>
-
-    <button v-show="showBackToTop" @click="scrollToTop" class="btn-back-to-top" aria-label="Voltar ao topo">
-        <ArrowUp :size="24" />
-    </button>
 </template>
 
 <style>

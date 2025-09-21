@@ -1,7 +1,7 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { SlidersHorizontal, Image as ImageIcon } from 'lucide-vue-next';
+import { SlidersHorizontal, Image as ImageIcon, Phone, MessageCircle, Mail, Instagram, Youtube } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
@@ -17,7 +17,16 @@ const form = useForm({
     site_url: props.tenant.site_url,
     cor_primaria: props.tenant.cor_primaria || '#4ade80',
     cor_secundaria: props.tenant.cor_secundaria || '#15803d',
-    logotipo: null, // Alterado de logotipo_url para logotipo, para o upload
+    logotipo: null, // Para o upload do arquivo
+
+    // --- INÍCIO DA MODIFICAÇÃO ---
+    telefone_contato: props.tenant.telefone_contato || '',
+    whatsapp: props.tenant.whatsapp || '',
+    email_contato: props.tenant.email_contato || '',
+    instagram: props.tenant.instagram || '',
+    youtube: props.tenant.youtube || '',
+    // --- FIM DA MODIFICAÇÃO ---
+
     permite_cadastro_cidade_externa: props.tenant.permite_cadastro_cidade_externa,
     limite_renda_juridico: props.tenant.limite_renda_juridico,
     exigir_renda_juridico: props.tenant.exigir_renda_juridico,
@@ -29,7 +38,7 @@ const form = useForm({
     privacy_policy: props.tenant.privacy_policy || '',
 });
 
-// Função para atualizar o preview do logotipo quando um novo arquivo é selecionado
+// Função para atualizar o preview do logotipo
 const updateLogoPreview = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -41,7 +50,6 @@ const updateLogoPreview = (event) => {
 watch(() => props.tenant, (newTenantValues) => {
     form.defaults(newTenantValues);
     form.reset();
-    // Atualiza o preview se os props do tenant mudarem
     logoPreview.value = newTenantValues.logotipo_url ? `/storage/${newTenantValues.logotipo_url}` : null;
 }, { deep: true });
 
@@ -49,6 +57,9 @@ const activeTab = ref('identidade');
 
 const tabs = [
     { id: 'identidade', name: 'Identidade Visual' },
+    // --- INÍCIO DA MODIFICAÇÃO ---
+    { id: 'contato', name: 'Contato e Redes' },
+    // --- FIM DA MODIFICAÇÃO ---
     { id: 'regras', name: 'Regras de Negócio' },
     { id: 'visibilidade', name: 'Visibilidade do Portal' },
     { id: 'legal', name: 'Documentos Legais' },
@@ -100,14 +111,11 @@ const submit = () => {
                                     <div v-if="form.errors.name" class="form-error">{{ form.errors.name }}</div>
                                 </div>
 
-                                <!-- Campo de Upload do Logotipo -->
                                 <div>
                                     <label for="logotipo" class="form-label">Logotipo</label>
-                                    <!-- Área de Pré-visualização -->
                                     <div v-if="logoPreview" class="my-4">
                                         <img :src="logoPreview" alt="Pré-visualização do logotipo" class="h-20 w-auto rounded-lg border border-gray-300 dark:border-gray-600 p-1">
                                     </div>
-                                    <!-- Botão de Upload Estilizado -->
                                     <label for="logotipo" class="btn-secondary h-12 px-4 cursor-pointer inline-flex items-center">
                                         <ImageIcon :size="16" class="mr-2" />
                                         {{ logoPreview ? 'Trocar Arquivo' : 'Selecionar Arquivo' }}
@@ -146,6 +154,43 @@ const submit = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- --- INÍCIO DA MODIFICAÇÃO --- -->
+                            <div v-show="activeTab === 'contato'" class="space-y-6">
+                                <div class="section-title">Informações de Contato e Redes Sociais</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="telefone_contato" class="form-label">Telefone de Contato</label>
+                                        <input id="telefone_contato" v-model="form.telefone_contato" type="text" class="form-input" placeholder="(00) 0000-0000" />
+                                        <div v-if="form.errors.telefone_contato" class="form-error">{{ form.errors.telefone_contato }}</div>
+                                    </div>
+                                    <div>
+                                        <label for="whatsapp" class="form-label">WhatsApp</label>
+                                        <input id="whatsapp" v-model="form.whatsapp" type="text" class="form-input" placeholder="(00) 90000-0000" />
+                                        <div v-if="form.errors.whatsapp" class="form-error">{{ form.errors.whatsapp }}</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="email_contato" class="form-label">E-mail de Contato Público</label>
+                                    <input id="email_contato" v-model="form.email_contato" type="email" class="form-input" placeholder="contato@camara.gov.br" />
+                                    <div v-if="form.errors.email_contato" class="form-error">{{ form.errors.email_contato }}</div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="instagram" class="form-label">URL do Instagram</label>
+                                        <input id="instagram" v-model="form.instagram" type="url" class="form-input" placeholder="https://instagram.com/..." />
+                                        <div v-if="form.errors.instagram" class="form-error">{{ form.errors.instagram }}</div>
+                                    </div>
+                                    <div>
+                                        <label for="youtube" class="form-label">URL do YouTube</label>
+                                        <input id="youtube" v-model="form.youtube" type="url" class="form-input" placeholder="https://youtube.com/..." />
+                                        <div v-if="form.errors.youtube" class="form-error">{{ form.errors.youtube }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- --- FIM DA MODIFICAÇÃO --- -->
 
                             <div v-show="activeTab === 'regras'" class="space-y-6">
                                 <div class="section-title">Regras de Negócio</div>
@@ -204,20 +249,20 @@ const submit = () => {
                             </div>
 
                              <div v-show="activeTab === 'legal'" class="space-y-6">
-                                <div class="section-title">Documentos Legais (LGPD)</div>
-                                <div>
-                                    <label for="terms_of_service" class="form-label">Termos de Serviço</label>
-                                    <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo dos Termos de Serviço. Pode usar HTML para formatação (ex: &lt;h2&gt;, &lt;p&gt;, &lt;strong&gt;).</p>
-                                    <textarea v-model="form.terms_of_service" id="terms_of_service" rows="15" class="form-input font-mono !p-4"></textarea>
-                                    <div v-if="form.errors.terms_of_service" class="form-error">{{ form.errors.terms_of_service }}</div>
-                                </div>
-                                <div>
-                                    <label for="privacy_policy" class="form-label">Política de Privacidade</label>
-                                     <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo da Política de Privacidade. Pode usar HTML para formatação.</p>
-                                    <textarea v-model="form.privacy_policy" id="privacy_policy" rows="15" class="form-input font-mono !p-4"></textarea>
-                                    <div v-if="form.errors.privacy_policy" class="form-error">{{ form.errors.privacy_policy }}</div>
-                                </div>
-                            </div>
+                                 <div class="section-title">Documentos Legais (LGPD)</div>
+                                 <div>
+                                     <label for="terms_of_service" class="form-label">Termos de Serviço</label>
+                                     <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo dos Termos de Serviço. Pode usar HTML para formatação (ex: &lt;h2&gt;, &lt;p&gt;, &lt;strong&gt;).</p>
+                                     <textarea v-model="form.terms_of_service" id="terms_of_service" rows="15" class="form-input font-mono !p-4"></textarea>
+                                     <div v-if="form.errors.terms_of_service" class="form-error">{{ form.errors.terms_of_service }}</div>
+                                 </div>
+                                 <div>
+                                     <label for="privacy_policy" class="form-label">Política de Privacidade</label>
+                                      <p class="text-xs text-gray-500 mb-2">Cole aqui o conteúdo completo da Política de Privacidade. Pode usar HTML para formatação.</p>
+                                     <textarea v-model="form.privacy_policy" id="privacy_policy" rows="15" class="form-input font-mono !p-4"></textarea>
+                                     <div v-if="form.errors.privacy_policy" class="form-error">{{ form.errors.privacy_policy }}</div>
+                                 </div>
+                             </div>
                         </div>
                     </div>
 

@@ -26,6 +26,11 @@ class Tenant extends BaseTenant
         'endereco_estado',
         'logotipo_url',
         'site_url',
+        'telefone_contato', // Novo campo
+        'whatsapp',         // Novo campo
+        'email_contato',    // Novo campo
+        'instagram',        // Novo campo
+        'youtube',          // Novo campo
         'cor_primaria',
         'cor_secundaria',
         'permite_cadastro_cidade_externa',
@@ -38,11 +43,11 @@ class Tenant extends BaseTenant
         'data',
     ];
 
-        protected $casts = [
+    protected $casts = [
         'data' => 'array',
         'permite_cadastro_cidade_externa' => 'boolean',
-        'exigir_renda_juridico' => 'boolean', // <-- Adicione esta linha
-        'limite_renda_juridico' => 'decimal:2', // APAGUE SE DE ERRO
+        'exigir_renda_juridico' => 'boolean',
+        'limite_renda_juridico' => 'decimal:2',
         'publicar_achados_e_perdidos' => 'boolean',
         'publicar_pessoas_desaparecidas' => 'boolean',
         'publicar_memoria_legislativa' => 'boolean',

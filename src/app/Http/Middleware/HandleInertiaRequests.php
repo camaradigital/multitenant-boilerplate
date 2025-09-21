@@ -39,6 +39,8 @@ class HandleInertiaRequests extends Middleware
         // Garante que os papéis do usuário sejam sempre carregados, se ele existir.
         $user?->load('roles');
 
+        $currentTenant = Tenant::current();
+
         return [
             ...parent::share($request),
 
@@ -55,7 +57,9 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
 
-            'tenant' => ($currentTenant = Tenant::current()) ? $currentTenant->toArray() : null,
+            // Usar toArray() é mais simples e pega todos os atributos fillable,
+            // garantindo que os novos campos de contato sejam incluídos.
+            'tenant' => $currentTenant ? $currentTenant->toArray() : null,
 
             'theme' => [
                 'primary'   => $currentTenant?->cor_primaria ?? '#4F46E5',
@@ -75,3 +79,4 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 }
+
