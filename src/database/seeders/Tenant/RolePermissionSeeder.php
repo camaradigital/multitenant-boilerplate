@@ -19,6 +19,7 @@ class RolePermissionSeeder extends Seeder
         // 2. Cria os papéis (ou os busca se já existirem)
         $roleCidadao = Role::on($tenantConnection)->firstOrCreate(['name' => 'Cidadao', 'guard_name' => 'tenant']);
         $roleFuncionario = Role::on($tenantConnection)->firstOrCreate(['name' => 'Funcionario', 'guard_name' => 'tenant']);
+        $roleAdvogado = Role::on($tenantConnection)->firstOrCreate(['name' => 'Advogado Coordenador', 'guard_name' => 'tenant']); // NOVO PAPEL
         $roleAdmin = Role::on($tenantConnection)->firstOrCreate(['name' => 'Admin Tenant', 'guard_name' => 'tenant']);
 
         // 3. Define e atribui as permissões para cada papel
@@ -42,6 +43,19 @@ class RolePermissionSeeder extends Seeder
             'gerenciar memoria',
             'gerenciar achados e perdidos',
             'visualizar relatorios',
+        ]);
+
+        // Papel: Advogado Coordenador (NOVA ATRIBUIÇÃO)
+        // Herda as permissões de um funcionário e adiciona a capacidade de supervisionar.
+        $this->assignPermissions($roleAdvogado, $allPermissions, [
+            'ver solicitacoes',
+            'criar solicitacoes',
+            'gerenciar solicitacoes',
+            'gerenciar cidadaos',
+            'gerenciar servicos',
+            'gerenciar entidades',
+            'visualizar relatorios',
+            'supervisionar solicitacoes juridicas', // PERMISSÃO ESPECIAL
         ]);
 
         // Papel: Admin Tenant

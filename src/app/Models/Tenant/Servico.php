@@ -53,5 +53,10 @@ class Servico extends Model
     {
         return $this->hasMany(SolicitacaoServico::class, 'servico_id');
     }
+
+    public function categoria(): BelongsTo
+    {
+        return $this->belongsTo(TipoServico::class, 'tipo_servico_id');
+    }
 }
 

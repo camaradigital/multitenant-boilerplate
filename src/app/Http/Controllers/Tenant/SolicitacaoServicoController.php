@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreSolicitacaoServicoRequest;
 use App\Models\Central\Tenant;
 use App\Models\Tenant\Servico;
+use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
 use App\Models\Tenant\User;
@@ -16,13 +17,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
-// É importante garantir que o trait AuthorizesRequests esteja sendo usado.
-// Geralmente já está na classe Controller base, mas é bom confirmar.
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class SolicitacaoServicoController extends Controller
 {
-    use AuthorizesRequests; // Adicionado para garantir que o método $this->authorize exista.
+    use AuthorizesRequests;
 
     protected $solicitacaoService;
 
@@ -34,36 +33,68 @@ class SolicitacaoServicoController extends Controller
     /**
      * Exibe a fila de solicitações.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // CORREÇÃO 1: Adicionada autorização.
-        // Assumindo que apenas administradores/funcionários podem ver a lista completa.
-        // Você pode criar um método 'viewAnyAdmin' na sua Policy ou usar uma verificação de permissão.
-        // Por simplicidade, vou usar a Policy 'viewAny', mas o ideal seria ter uma regra específica para o painel administrativo.
         $this->authorize('viewAny', SolicitacaoServico::class);
 
+        $user = Auth::user();
+        $query = SolicitacaoServico::with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
+
+        if ($request->filled('categoria') && $request->input('categoria') !== 'Todos') {
+            $query->whereHas('servico.categoria', function ($q) use ($request) {
+                $q->where('nome', $request->input('categoria'));
+            });
+        }
+
+        if ($user->can('supervisionar solicitacoes juridicas')) {
+            $query->whereHas('servico', function ($q) {
+                $q->where('is_juridico', true);
+            });
+        } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && !$user->hasRole('Admin Tenant')) {
+            $query->where('atendente_id', $user->id);
+        }
+
+        $solicitacoes = $query->latest()->paginate(15)->withQueryString();
+
+        $solicitacoes->getCollection()->transform(function ($solicitacao) use ($user) {
+            $solicitacao->can = [
+                'view' => $user->can('view', $solicitacao),
+                'delete' => $user->can('delete', $solicitacao),
+                'update' => $user->can('update', $solicitacao),
+            ];
+            return $solicitacao;
+        });
+
         return inertia('Tenant/Solicitacoes/Index', [
-            'solicitacoes' => SolicitacaoServico::with(['cidadao:id,name', 'servico:id,nome', 'status', 'atendente:id,name'])
-                ->latest()
-                ->paginate(15),
+            'solicitacoes' => $solicitacoes,
+            'categorias' => TipoServico::orderBy('nome')->get(),
+            'filters' => $request->only(['categoria']),
+        ]);
+    }
+
+    /**
+     * Exibe o formulário para criar uma nova solicitação.
+     */
+    public function create()
+    {
+        $this->authorize('create', SolicitacaoServico::class);
+
+        return inertia('Tenant/Solicitacoes/Create', [
             'cidadaos' => User::role('Cidadao')->where('is_active', true)->get(['id', 'name', 'cpf', 'profile_data']),
             'servicos' => Servico::where('is_active', true)->get(),
-            'statusDisponiveis' => StatusSolicitacao::all(),
             'exigirRendaJuridico' => Tenant::current()->exigir_renda_juridico,
         ]);
     }
+
 
     /**
      * Salva a nova solicitação.
      */
     public function store(StoreSolicitacaoServicoRequest $request)
     {
-        // Nenhuma correção de autorização necessária aqui, pois a lógica de criação
-        // é tratada pelo Form Request e pelo fluxo do método.
         $user = Auth::user();
         $validatedData = $request->validated();
 
-        // Lógica para diferenciar a origem da solicitação
         if ($user->hasRole('Cidadao')) {
             $cidadao = $user;
         } else {
@@ -72,9 +103,8 @@ class SolicitacaoServicoController extends Controller
 
         $servico = Servico::findOrFail($validatedData['servico_id']);
 
-        // Se o solicitante é um cidadão, verifica se o serviço permite solicitação online.
         if ($user->hasRole('Cidadao') && !$servico->permite_solicitacao_online) {
-            return Redirect::back()->withErrors(['servico' => 'Este serviço está disponível apenas para solicitação presencial.']);
+            return Redirect::back()->withErrors(['servico_id' => 'Este serviço está disponível apenas para solicitação presencial.']);
         }
 
         if ($servico->is_juridico && isset($validatedData['renda_familiar'])) {
@@ -87,17 +117,17 @@ class SolicitacaoServicoController extends Controller
 
         $verificacaoJuridica = $this->solicitacaoService->verificarAcessoJuridico($servico, $cidadao);
         if (!$verificacaoJuridica['pode_solicitar']) {
-            return Redirect::back()->withErrors(['servico' => $verificacaoJuridica['mensagem']]);
+            return Redirect::back()->withErrors(['servico_id' => $verificacaoJuridica['mensagem']]);
         }
 
         $verificacaoLimite = $this->solicitacaoService->verificarLimiteDeUso($servico, $cidadao);
         if (!$verificacaoLimite['pode_solicitar']) {
-            return Redirect::back()->withErrors(['servico' => $verificacaoLimite['mensagem']]);
+            return Redirect::back()->withErrors(['servico_id' => $verificacaoLimite['mensagem']]);
         }
 
         $statusInicial = StatusSolicitacao::where('is_default_abertura', true)->first();
         if (!$statusInicial) {
-            return Redirect::back()->withErrors(['servico' => 'Nenhum status inicial foi configurado no sistema.']);
+            return Redirect::back()->withErrors(['servico_id' => 'Nenhum status inicial foi configurado no sistema.']);
         }
 
         DB::beginTransaction();
@@ -127,33 +157,30 @@ class SolicitacaoServicoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Falha ao criar solicitação: ' . $e->getMessage());
-            return Redirect::back()->withErrors(['servico' => 'Ocorreu um erro inesperado ao salvar sua solicitação. Por favor, tente novamente.']);
+            return Redirect::back()->withErrors(['servico_id' => 'Ocorreu um erro inesperado ao salvar sua solicitação. Por favor, tente novamente.']);
         }
 
         if ($user->hasRole('Cidadao')) {
             return Redirect::route('portal.meu-painel')->with('success', 'Solicitação registrada com sucesso!');
         }
 
-        return Redirect::back()->with('success', 'Solicitação registrada com sucesso!');
+        return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação registrada com sucesso!');
     }
 
 
     /**
      * Exibe os detalhes de uma solicitação.
      */
-    public function show(SolicitacaoServico $solicitacao) // Usando Route Model Binding
+    public function show(SolicitacaoServico $solicitacao)
     {
-        // CORREÇÃO 2: Substituição da lógica manual pela Policy.
         $this->authorize('view', $solicitacao);
 
-        // O with() pode ser movido para o Route Model Binding no seu arquivo de rotas para otimizar,
-        // mas por clareza, podemos recarregar as relações aqui.
         $solicitacao->load(['cidadao', 'servico', 'status', 'atendente', 'documentos.uploader', 'pesquisa_satisfacao']);
 
         return inertia('Tenant/Solicitacoes/Show', [
             'solicitacao' => $solicitacao,
             'statusDisponiveis' => StatusSolicitacao::all(),
-            'atendentesDisponiveis' => User::role(['Admin Tenant', 'Funcionario'])->get(['id', 'name']),
+            'atendentesDisponiveis' => User::role(['Admin Tenant', 'Funcionario', 'Advogado Coordenador'])->get(['id', 'name']),
         ]);
     }
 
@@ -162,7 +189,6 @@ class SolicitacaoServicoController extends Controller
      */
     public function update(Request $request, SolicitacaoServico $solicitacao)
     {
-        // CORREÇÃO 3: Adicionada autorização.
         $this->authorize('update', $solicitacao);
 
         $validatedData = $request->validate([
@@ -173,10 +199,6 @@ class SolicitacaoServicoController extends Controller
 
         $dadosParaAtualizar = $validatedData;
         $novoStatus = StatusSolicitacao::find($validatedData['status_id']);
-
-        // A lógica original não atualizava o nome do status, o que pode ser um bug.
-        // Removi a linha 'dadosParaAtualizar['status'] = $novoStatus->nome;'
-        // pois o model deve usar a relação para obter o nome do status através do status_id.
 
         if ($request->filled('observacoes')) {
             $novaObservacao = "\n\n--- " . Auth::user()->name . " em " . now()->format('d/m/Y H:i') . " ---\n" . $request->observacoes;
@@ -199,7 +221,6 @@ class SolicitacaoServicoController extends Controller
      */
     public function destroy(SolicitacaoServico $solicitacao)
     {
-        // CORREÇÃO 4: Adicionada autorização.
         $this->authorize('delete', $solicitacao);
 
         $solicitacao->delete();

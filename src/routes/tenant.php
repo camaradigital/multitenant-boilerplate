@@ -138,7 +138,7 @@ Route::middleware([
         Route::prefix('admin')->as('admin.')->group(function() {
 
             // MÓDULO DE ATENDIMENTO
-            Route::resource('solicitacoes', SolicitacaoServicoController::class)->except(['create', 'edit'])->parameters(['solicitacoes' => 'solicitacao']);
+            Route::resource('solicitacoes', SolicitacaoServicoController::class)->parameters(['solicitacoes' => 'solicitacao']);
             Route::post('solicitacoes/{solicitacao}/documentos', [DocumentoController::class, 'store'])->name('documentos.store');
             Route::get('documentos/{documento}/download', [DocumentoController::class, 'download'])->name('documentos.download');
             Route::delete('documentos/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');

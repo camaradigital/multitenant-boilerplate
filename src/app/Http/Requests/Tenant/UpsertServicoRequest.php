@@ -29,18 +29,19 @@ class UpsertServicoRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
      */
     public function rules(): array
-    {
-        return [
-            'nome' => 'required|string|max:255',
-            'tipo_servico_id' => 'required|exists:tenant.tipos_servico,id',
-            'descricao' => 'nullable|string',
-            'is_active' => 'required|boolean',
-            'permite_solicitacao_online' => 'required|boolean',
-            'regras_limite.ativo' => 'sometimes|boolean',
-            'regras_limite.quantidade' => 'nullable|required_if:regras_limite.ativo,true|integer|min:1',
-            'regras_limite.periodo' => 'nullable|required_if:regras_limite.ativo,true|in:dia,semana,mes,ano',
-        ];
-    }
+{
+    return [
+        'nome' => 'required|string|max:255',
+        'tipo_servico_id' => 'required|exists:tenant.tipos_servico,id',
+        'descricao' => 'nullable|string',
+        'is_active' => 'required|boolean',
+        'is_juridico' => 'required|boolean', // <-- Adicione esta linha
+        'permite_solicitacao_online' => 'required|boolean',
+        'regras_limite.ativo' => 'sometimes|boolean',
+        'regras_limite.quantidade' => 'nullable|required_if:regras_limite.ativo,true|integer|min:1',
+        'regras_limite.periodo' => 'nullable|required_if:regras_limite.ativo,true|in:dia,semana,mes,ano',
+    ];
+}
 
     /**
      * Obtém os dados validados da requisição e aplica a lógica de negócio.

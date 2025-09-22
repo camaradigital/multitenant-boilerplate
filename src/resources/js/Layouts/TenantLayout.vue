@@ -6,7 +6,8 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import Banner from '@/Components/Banner.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
-import { Menu, Search, Bell } from 'lucide-vue-next';
+import OnboardingTour from '@/Components/OnboardingTour.vue';
+import { Menu, Search, Bell, HelpCircle } from 'lucide-vue-next'; // Importe o ícone se desejar
 
 // --- Props ---
 defineProps({
@@ -20,17 +21,20 @@ const logout = () => {
     router.post(route('logout'));
 };
 
-// Propriedade computada para criar as variáveis CSS a partir dos dados do tema
-// que vêm do middleware HandleInertiaRequests.php
+// Função para reiniciar o tour
+const restartOnboardingTour = () => {
+    // Dispara um evento global que o componente do tour pode ouvir
+    window.dispatchEvent(new CustomEvent('restart-onboarding-tour'));
+};
+
 const themeStyles = computed(() => {
     const theme = page.props.theme;
     return {
-        '--color-primary': theme?.primary || '#4F46E5',   // Cor primária com fallback
-        '--color-secondary': theme?.secondary || '#D946EF', // Cor secundária com fallback
+        '--color-primary': theme?.primary || '#4F46E5',
+        '--color-secondary': theme?.secondary || '#D946EF',
     };
 });
 
-// Permissões e Debug (mantidos)
 const userPermissions = computed(() => page.props.auth.user?.permissions || []);
 const authDebug = computed(() => page.props.auth?.debug || {});
 
@@ -51,7 +55,6 @@ function toggleMobileSidebar() {
 
 onMounted(() => window.addEventListener('resize', updateMobileStatus));
 onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
-
 </script>
 
 <template>
@@ -62,7 +65,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
         <div class="min-h-screen bg-slate-50 dark:bg-[#0A1E1C]">
             <div class="flex h-screen">
 
-                <div class="hidden lg:block lg:w-64 lg:flex-shrink-0">
+                <div class="hidden lg:block lg:w-64 lg:flex-shrink-0 sidebar">
                     <Sidebar />
                 </div>
 
@@ -73,7 +76,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                         class="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm"
                         aria-hidden="true"
                     ></div>
-                    <div :class="['fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out', isSidebarOpenOnMobile ? 'translate-x-0' : '-translate-x-full']">
+                    <div :class="['fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out sidebar', isSidebarOpenOnMobile ? 'translate-x-0' : '-translate-x-full']">
                         <Sidebar @close="toggleMobileSidebar" />
                     </div>
                 </div>
@@ -106,7 +109,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
 
                             <ThemeToggle />
 
-                            <div class="relative">
+                            <div class="relative user-menu">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
                                         <button class="flex items-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-gray-900">
@@ -121,6 +124,11 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                                             Gerenciar Conta
                                         </div>
                                         <DropdownLink :href="route('profile.show')"> Perfil </DropdownLink>
+
+                                        <DropdownLink as="button" @click="restartOnboardingTour">
+                                            Reiniciar Tour
+                                        </DropdownLink>
+
                                         <div class="border-t border-gray-200 dark:border-gray-600" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">Sair</DropdownLink>
@@ -138,6 +146,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                 </div>
             </div>
         </div>
+        <OnboardingTour />
     </div>
 </template>
 

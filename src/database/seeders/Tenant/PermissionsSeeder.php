@@ -44,6 +44,8 @@ class PermissionsSeeder extends Seeder
             'visualizar relatorios',
             // Parâmetros do Sistema
             'gerenciar parametros',
+            // Permissão para Advogado
+            'supervisionar solicitacoes juridicas'
         ];
 
         foreach ($permissions as $permission) {
