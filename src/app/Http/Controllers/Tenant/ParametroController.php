@@ -93,8 +93,18 @@ class ParametroController extends Controller
             $tenant->logotipo_url = $path;
         }
 
-        // Atualiza todos os campos validados de uma vez
-        $tenant->fill($validated);
+        $tenant->name = $validated['name'];
+        $tenant->site_url = $validated['site_url'];
+        $tenant->cor_primaria = $validated['cor_primaria'];
+        $tenant->cor_secundaria = $validated['cor_secundaria'];
+        $tenant->permite_cadastro_cidade_externa = $validated['permite_cadastro_cidade_externa'];
+        $tenant->limite_renda_juridico = $validated['limite_renda_juridico'];
+        $tenant->exigir_renda_juridico = $validated['exigir_renda_juridico'];
+        $tenant->publicar_achados_e_perdidos = $validated['publicar_achados_e_perdidos'];
+        $tenant->publicar_pessoas_desaparecidas = $validated['publicar_pessoas_desaparecidas'];
+        $tenant->publicar_memoria_legislativa = $validated['publicar_memoria_legislativa'];
+        $tenant->terms_of_service = $validated['terms_of_service'];
+        $tenant->privacy_policy = $validated['privacy_policy'];
 
         $tenant->save();
 
