@@ -47,14 +47,22 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 // Se um usuário estiver logado, compartilha seus dados.
                 // Caso contrário, compartilha 'null', como esperado pelo Inertia.
-                'user' => $user ? [
+                'user' => $user ? tap([
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    // Garante que só tentemos pegar permissões se o usuário for de um tenant.
-                    'permissions' => $user instanceof \App\Models\Tenant\User ? $user->getAllPermissions()->pluck('name') : [],
-                    'roles' => $user->roles,
-                ] : null,
+                    'roles' => $user->getRoleNames(),
+                ], function (&$data) use ($user) {
+                    // Adiciona dados específicos do tenant apenas se for o tipo de usuário correto.
+                    if ($user instanceof \App\Models\Tenant\User) {
+                        $data['permissions'] = $user->getAllPermissions()->pluck('name');
+                        $data['cpf'] = $user->cpf;
+                        $data['profile_data'] = $user->profile_data;
+                    } else {
+                        // Garante que 'permissions' seja um array vazio para outros tipos de usuário
+                        $data['permissions'] = [];
+                    }
+                }) : null,
             ],
 
             // Usar toArray() é mais simples e pega todos os atributos fillable,

@@ -10,6 +10,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import FlashMessage from '@/Components/FlashMessage.vue';
+import Spinner from '@/Components/Spinner.vue'; // Spinner para o loading de navegação
 import { Sun, Moon } from 'lucide-vue-next';
 
 defineProps({
@@ -17,6 +18,7 @@ defineProps({
 });
 
 const page = usePage();
+const isNavigating = ref(false); // Estado de loading para navegação
 
 // Verifica se o usuário tem a permissão para ver o link
 const canManagePermissions = computed(() => {
@@ -36,6 +38,15 @@ onMounted(() => {
         document.documentElement.classList.remove('dark');
         isDarkMode.value = false;
     }
+});
+
+// Ouve os eventos do Inertia para mostrar/esconder o spinner durante a navegação
+router.on('start', () => {
+  isNavigating.value = true;
+});
+
+router.on('finish', () => {
+  isNavigating.value = false;
 });
 
 const toggleTheme = () => {
@@ -66,6 +77,11 @@ const logout = () => {
 <template>
     <div class="font-sans">
         <Head :title="title" />
+
+        <!-- Overlay de Loading para Navegação -->
+        <div v-if="isNavigating" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex justify-center items-center z-[100]">
+            <Spinner />
+        </div>
 
         <FlashMessage />
         <Banner />
@@ -210,8 +226,8 @@ const logout = () => {
             </header>
 
             <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-emerald-500 scrollbar-track-emerald-900/50 hover:scrollbar-thumb-emerald-400">
-    <slot />
-</main>
+                <slot />
+            </main>
         </div>
     </div>
 </template>
@@ -247,7 +263,7 @@ const logout = () => {
     @apply border-emerald-500 dark:border-emerald-400;
 }
 :deep(.responsive-nav-link-bg-active) {
-     @apply bg-emerald-50/50 dark:bg-emerald-900/20;
+    @apply bg-emerald-50/50 dark:bg-emerald-900/20;
 }
 :deep(.responsive-nav-link-text-active) {
     @apply text-emerald-700 dark:text-emerald-300;

@@ -7,7 +7,8 @@ import Banner from '@/Components/Banner.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import OnboardingTour from '@/Components/OnboardingTour.vue';
-import { Menu, Search, Bell, HelpCircle } from 'lucide-vue-next'; // Importe o ícone se desejar
+import Spinner from '@/Components/Spinner.vue'; // 1. Importar o componente Spinner
+import { Menu, Search, Bell, HelpCircle } from 'lucide-vue-next';
 
 // --- Props ---
 defineProps({
@@ -16,6 +17,20 @@ defineProps({
 
 // --- Lógica Principal ---
 const page = usePage();
+const isNavigating = ref(false); // 2. Criar estado para controlar o loading
+
+// Ouve os eventos do Inertia para mostrar/esconder o spinner durante a navegação
+router.on('start', () => {
+  isNavigating.value = true;
+});
+
+router.on('finish', () => {
+  isNavigating.value = false;
+});
+
+const isAdminTenant = computed(() => {
+    return page.props.auth.user?.roles?.includes('Admin Tenant') || false;
+});
 
 const logout = () => {
     router.post(route('logout'));
@@ -61,6 +76,11 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
     <div :style="themeStyles">
         <Head :title="title" />
         <Banner />
+
+        <!-- 3. Adicionar a sobreposição de loading -->
+        <div v-if="isNavigating" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex justify-center items-center z-[100]">
+            <Spinner />
+        </div>
 
         <div class="min-h-screen bg-slate-50 dark:bg-[#0A1E1C]">
             <div class="flex h-screen">
@@ -125,7 +145,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                                         </div>
                                         <DropdownLink :href="route('profile.show')"> Perfil </DropdownLink>
 
-                                        <DropdownLink as="button" @click="restartOnboardingTour">
+                                        <DropdownLink v-if="isAdminTenant" as="button" @click="restartOnboardingTour">
                                             Reiniciar Tour
                                         </DropdownLink>
 
@@ -146,7 +166,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                 </div>
             </div>
         </div>
-        <OnboardingTour />
+        <OnboardingTour :user-permissions="userPermissions" />
     </div>
 </template>
 

@@ -276,3 +276,17 @@ const tryOpenModal = (modalType) => {
 .btn-primary { @apply bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-300; @apply dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400/50; }
 .btn-secondary { @apply bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-300; @apply dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-600; }
 </style>
+
+<style>
+html {
+    /*
+      O valor padrão da fonte na maioria dos navegadores é 16px.
+      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+
+      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
+      - 15px: Redução mais sutil.
+    */
+    font-size: 14px;
+}
+</style>
+

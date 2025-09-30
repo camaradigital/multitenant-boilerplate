@@ -2,15 +2,16 @@
 
 namespace App\Models\Tenant;
 
-use App\Casts\EncryptedCast;
-use App\Notifications\Tenant\VerifyTenantEmail; // 1. IMPORTAÇÃO ADICIONADA
+// use App\Casts\EncryptedCast; // REMOVIDO - Não é mais necessário
+use App\Notifications\Tenant\VerifyTenantEmail;
 use App\Notifications\TenantResetPasswordNotification;
-use Illuminate\Contracts\Auth\MustVerifyEmail; // 2. IMPORTAÇÃO NECESSÁRIA
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Crypt; // Adicionado para o Accessor/Mutator
 use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
@@ -22,7 +23,6 @@ use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use Spatie\Multitenancy\Models\Tenant;
 use Spatie\Permission\Traits\HasRoles;
 
-// 3. IMPLEMENTAÇÃO DO CONTRATO
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasProfilePhoto, Notifiable, TwoFactorAuthenticatable, HasRoles, UsesTenantConnection, LogsActivity, HasTeams;
@@ -53,26 +53,59 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
-            'profile_data' => EncryptedCast::class,
+            // 'profile_data' => EncryptedCast::class, // REMOVIDO daqui para usar Accessor/Mutator
             'terms_accepted_at' => 'datetime',
             'privacy_accepted_at' => 'datetime',
         ];
     }
+
+    // --- SOLUÇÃO FINAL: Accessor e Mutator para controle total ---
+
+    /**
+     * Accessor: Garante que os dados sejam descriptografados e convertidos para array ao serem lidos.
+     */
+    public function getProfileDataAttribute($value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        try {
+            $decrypted = Crypt::decryptString($value);
+            return json_decode($decrypted, true) ?? []; // Garante que retorne um array mesmo se o JSON for inválido
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            Log::error("Falha ao descriptografar profile_data para o usuário ID: {$this->id}. Erro: " . $e->getMessage());
+            return []; // Retorna um array vazio em caso de falha
+        }
+    }
+
+    /**
+     * Mutator: Garante que o array seja convertido para JSON e criptografado ao ser salvo.
+     */
+    public function setProfileDataAttribute($value): void
+    {
+        if (is_array($value)) {
+            $jsonValue = json_encode($value);
+            $this->attributes['profile_data'] = Crypt::encryptString($jsonValue);
+        } else {
+            // Se o valor não for um array, armazena como nulo para evitar erros.
+            $this->attributes['profile_data'] = null;
+        }
+    }
+
 
     /**
      * Configura como as atividades deste modelo devem ser logadas.
      */
     public function getActivitylogOptions(): LogOptions
     {
-        // CORREÇÃO: Combinamos os campos do $fillable com a relação 'roles'
-        // para garantir que ambos sejam auditados.
         $logAttributes = array_merge($this->fillable, ['roles']);
 
         return LogOptions::defaults()
             ->logOnly($logAttributes)
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(function(string $eventName) {
+            ->setDescriptionForEvent(function (string $eventName) {
                 $events = ['created' => 'criado', 'updated' => 'atualizado', 'deleted' => 'excluído'];
                 return "O usuário {$this->name} foi {$events[$eventName]}.";
             });
@@ -88,7 +121,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendPasswordResetNotification($token)
     {
-        if (! $tenant = Tenant::current()) {
+        if (!$tenant = Tenant::current()) {
             Log::warning('Tentativa de enviar reset de senha sem um tenant atual.');
             return;
         }
@@ -119,8 +152,6 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function solicitacoes(): HasMany
     {
-        // O modelo correto para Solicitação de Serviço deve ser referenciado aqui.
-        // Se o namespace estiver incorreto, ajuste conforme necessário.
         return $this->hasMany(\App\Models\Tenant\SolicitacaoServico::class, 'user_id');
     }
 
@@ -129,7 +160,6 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function solicitacoesAtendidas(): HasMany
     {
-        // O modelo correto para Solicitação de Serviço deve ser referenciado aqui.
         return $this->hasMany(\App\Models\Tenant\SolicitacaoServico::class, 'atendente_id');
     }
 
@@ -138,7 +168,6 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function pesquisas_satisfacao(): HasMany
     {
-        // O modelo correto para Pesquisa de Satisfação deve ser referenciado aqui.
         return $this->hasMany(\App\Models\Tenant\PesquisaSatisfacao::class, 'user_id', 'id');
     }
 }
