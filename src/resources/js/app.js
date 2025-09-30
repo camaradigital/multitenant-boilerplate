@@ -7,6 +7,7 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
+import { vMaska } from 'maska/vue';
 
 
 // Obtém o nome da aplicação do arquivo .env com um fallback para 'Laravel'.
@@ -33,11 +34,8 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) });
 
         app.use(plugin);
-
-        // Melhoria: Passa o objeto 'ziggy' das props diretamente para o plugin.
-        // Isso torna a dependência explícita e não depende de uma variável global.
         app.use(ZiggyVue, props.initialPage.props.ziggy);
-
+        app.directive('maska', vMaska);
         app.mount(el);
     },
 

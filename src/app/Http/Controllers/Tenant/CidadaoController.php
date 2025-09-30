@@ -21,6 +21,15 @@ class CidadaoController extends Controller
 {
     use AuthorizesRequests;
 
+    public function create()
+    {
+        $this->authorize('createCidadao', User::class);
+
+        return inertia('Tenant/Cidadaos/Create', [
+            'customFields' => CustomField::all(),
+        ]);
+    }
+
     public function index()
     {
         $this->authorize('viewAnyCidadao', User::class);
@@ -29,6 +38,16 @@ class CidadaoController extends Controller
             'cidadaos' => User::role('Cidadao')->latest()->paginate(10),
             'customFields' => CustomField::all(),
             'cidadeTenant' => Tenant::current()->endereco_cidade,
+        ]);
+    }
+
+    public function edit(User $cidadao)
+    {
+        $this->authorize('updateCidadao', $cidadao);
+
+        return inertia('Tenant/Cidadaos/Edit', [
+            'cidadao' => $cidadao,
+            'customFields' => CustomField::all(),
         ]);
     }
 

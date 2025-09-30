@@ -30,6 +30,7 @@ use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
 use App\Http\Controllers\Tenant\TipoServicoController;
+use App\Http\Controllers\Tenant\RealtimeValidationController;
 use App\Models\Tenant\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,6 +72,8 @@ Route::middleware([
         ]);
     })->name('register');
 
+    // --- ROTA DE VALIDAÇÃO DE DADOS (LOCAL CORRETO) ---
+    Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
 
     // --- ROTAS DE REDEFINIÇÃO DE SENHA E VERIFICAÇÃO DE E-MAIL |  NÃO PODE EXCLUIR ---
     Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');

@@ -162,3 +162,16 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
     @apply rounded-full p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white transition-colors duration-200;
 }
 </style>
+
+<style>
+html {
+    /*
+      O valor padrão da fonte na maioria dos navegadores é 16px.
+      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+
+      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
+      - 15px: Redução mais sutil.
+    */
+    font-size: 14px;
+}
+</style>

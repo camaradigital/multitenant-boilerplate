@@ -70,25 +70,26 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>{{ $tenantName }}</h1>
+            <h1><?php echo e($tenantName); ?></h1>
         </div>
         <div class="content">
-            <h2 style="font-size: 20px; color: #333; margin-bottom: 20px;">Olá, {{ $userName }}!</h2>
+            <h2 style="font-size: 20px; color: #333; margin-bottom: 20px;">Olá, <?php echo e($userName); ?>!</h2>
             <p>Obrigado por se registrar. Por favor, clique no botão abaixo para verificar seu endereço de e-mail e ativar sua conta.</p>
 
             <div class="button-container">
-                <a href="{{ $url }}" class="button" style="color: #ffffff;">Verificar E-mail Agora</a>
+                <a href="<?php echo e($url); ?>" class="button" style="color: #ffffff;">Verificar E-mail Agora</a>
             </div>
 
             <p>Se você não criou uma conta, nenhuma ação adicional é necessária.</p>
-            <p>Atenciosamente,<br>Equipe {{ $tenantName }}</p>
+            <p>Atenciosamente,<br>Equipe <?php echo e($tenantName); ?></p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
             <p style="font-size: 12px; color: #888;">Se estiver com problemas para clicar no botão "Verificar E-mail Agora", copie e cole a URL abaixo em seu navegador:</p>
-            <p style="font-size: 12px; color: #888; word-break: break-all;">{{ $url }}</p>
+            <p style="font-size: 12px; color: #888; word-break: break-all;"><?php echo e($url); ?></p>
         </div>
         <div class="footer">
-            <p>&copy; {{ date('Y') }} {{ $tenantName }}. Todos os direitos reservados.</p>
+            <p>&copy; <?php echo e(date('Y')); ?> <?php echo e($tenantName); ?>. Todos os direitos reservados.</p>
         </div>
     </div>
 </body>
 </html>
+<?php /**PATH /var/www/html/resources/views/emails/tenant/verify-email.blade.php ENDPATH**/ ?>

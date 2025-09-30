@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useForm, Head, router } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
@@ -11,6 +11,7 @@ import {
     TransitionChild,
 } from '@headlessui/vue';
 import { Plus, Pencil, Trash2, Library, X } from 'lucide-vue-next';
+import axios from 'axios';
 
 const props = defineProps({
     entidades: Object, // Objeto de paginação
@@ -78,6 +79,44 @@ const deleteEntidade = (entidade) => {
         });
     }
 };
+
+// ========================================================================
+// --- LÓGICA DE VALIDAÇÃO EM TEMPO REAL ---
+// ========================================================================
+const realtimeErrors = ref({});
+
+const debounce = (func, delay = 500) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(this, args);
+        }, delay);
+    };
+};
+
+const validateField = async (fieldName, value) => {
+    delete realtimeErrors.value[fieldName];
+    if (!value) return;
+
+    try {
+        await axios.post(route('realtime.validate'), { field: fieldName, value: value });
+    } catch (error) {
+        if (error.response && error.response.status === 422) {
+            realtimeErrors.value[fieldName] = error.response.data[fieldName][0];
+        } else {
+            console.error('Erro ao validar o campo:', error);
+        }
+    }
+};
+
+const debouncedValidate = debounce(validateField);
+
+// Watchers para os campos do formulário de entidade
+watch(() => form.cnpj, (newValue) => { debouncedValidate('cnpj', newValue) });
+watch(() => form.email, (newValue) => { debouncedValidate('email', newValue) });
+watch(() => form.telefone, (newValue) => { debouncedValidate('telefone', newValue) });
+
 </script>
 
 <template>
@@ -165,18 +204,21 @@ const deleteEntidade = (entidade) => {
                                                 </div>
                                                 <div>
                                                     <label for="cnpj" class="form-label">CNPJ (Opcional)</label>
-                                                    <input type="text" v-model="form.cnpj" id="cnpj" class="form-input">
+                                                    <input id="cnpj" v-model="form.cnpj" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.cnpj, 'input-valid': !realtimeErrors.cnpj && form.cnpj }" v-maska data-maska="##.###.###/####-##" placeholder="00.000.000/0000-00" />
                                                     <div v-if="form.errors.cnpj" class="form-error">{{ form.errors.cnpj }}</div>
+                                                    <div v-if="realtimeErrors.cnpj" class="form-error">{{ realtimeErrors.cnpj }}</div>
                                                 </div>
                                                 <div>
                                                     <label for="telefone" class="form-label">Telefone (Opcional)</label>
-                                                    <input type="text" v-model="form.telefone" id="telefone" class="form-input">
+                                                    <input id="telefone" v-model="form.telefone" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.telefone, 'input-valid': !realtimeErrors.telefone && form.telefone }" v-maska data-maska="['(##) ####-####', '(##) #####-####']" placeholder="(00) 0000-0000" />
                                                     <div v-if="form.errors.telefone" class="form-error">{{ form.errors.telefone }}</div>
+                                                    <div v-if="realtimeErrors.telefone" class="form-error">{{ realtimeErrors.telefone }}</div>
                                                 </div>
                                                 <div class="md:col-span-2">
                                                     <label for="email" class="form-label">Email (Opcional)</label>
-                                                    <input type="email" v-model="form.email" id="email" class="form-input">
+                                                    <input id="email" v-model="form.email" type="email" class="form-input" :class="{ 'input-invalid': realtimeErrors.email, 'input-valid': !realtimeErrors.email && form.email }" />
                                                     <div v-if="form.errors.email" class="form-error">{{ form.errors.email }}</div>
+                                                    <div v-if="realtimeErrors.email" class="form-error">{{ realtimeErrors.email }}</div>
                                                 </div>
                                                 <div class="md:col-span-2">
                                                     <label for="endereco" class="form-label">Endereço (Opcional)</label>
@@ -245,4 +287,15 @@ textarea.form-input { @apply h-auto; }
 .form-error { @apply text-sm text-red-600 dark:text-red-400 mt-1 text-left; }
 .section-title { @apply font-semibold text-gray-700 dark:text-gray-300 text-sm border-b border-gray-200 dark:border-gray-700 pb-2 text-left; }
 .form-radio { @apply h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 dark:bg-gray-700 dark:border-gray-600; }
+
+/* Estilos para feedback de validação em tempo real */
+.input-valid {
+    @apply border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500;
+    @apply dark:border-green-500 dark:focus:border-green-500 dark:focus:ring-green-500;
+}
+
+.input-invalid {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500;
+    @apply dark:border-red-400 dark:focus:border-red-400 dark:focus:ring-red-400;
+}
 </style>
