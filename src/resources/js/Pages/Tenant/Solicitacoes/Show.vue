@@ -23,20 +23,22 @@ const props = defineProps({
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 
-// --- CORREÇÃO 1: Propriedade computada segura para verificar o papel ---
+// --- LÓGICA CORRIGIDA ---
+// O backend envia 'roles' como um array de strings (ex: ['Cidadao']).
+// A verificação foi ajustada para usar '.includes()' em vez de '.some()',
+// que resolve o problema de visibilidade.
 const isCidadao = computed(() => {
-    // Verifica se 'user' existe, depois se 'user.roles' existe, e SÓ ENTÃO chama o '.some()'
-    return user.value && user.value.roles && user.value.roles.some(role => role.name === 'Cidadao');
+    return user.value && user.value.roles && user.value.roles.includes('Cidadao');
 });
 
-// Formulário para atualizar o status e atendente (Lógica Existente)
+// Formulário para atualizar o status e atendente
 const formStatus = useForm({
     status_id: props.solicitacao.status ? props.solicitacao.status.id : null,
     atendente_id: props.solicitacao.atendente ? props.solicitacao.atendente.id : null,
     observacoes: '',
 });
 
-// Formulário para o upload de documentos (Lógica Existente)
+// Formulário para o upload de documentos
 const formDocumento = useForm({
     documento: null,
 });
@@ -49,7 +51,7 @@ const formAvaliacao = useForm({
 
 const hoverRating = ref(0);
 
-// Lógica para o modal de confirmação (Lógica Existente)
+// Lógica para o modal de confirmação
 const isDeleteModalOpen = ref(false);
 const documentoParaExcluir = ref(null);
 
@@ -91,12 +93,10 @@ const submitAvaliacao = () => {
     });
 };
 
-// --- CORREÇÃO 2: Usar a nova propriedade computada 'isCidadao' ---
 const podeAvaliar = computed(() => {
     if (!isCidadao.value) {
         return false;
     }
-    // A solicitação precisa ser do usuário logado, ter um status final e não ter sido avaliada.
     return props.solicitacao.user_id === user.value.id &&
            props.solicitacao.status?.is_final &&
            !props.solicitacao.pesquisa_satisfacao;
@@ -181,14 +181,14 @@ const formatarTamanho = (bytes) => {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <a :href="route('admin.documentos.download', doc.id)" class="table-action-btn" title="Baixar"><Download class="w-5 h-5"/></a>
-                                    <button @click="openDeleteModal(doc)" class="table-action-btn hover:text-red-500" title="Excluir"><Trash2 class="w-5 h-5"/></button>
+                                    <!-- Apenas quem gerencia pode excluir -->
+                                    <button v-if="!isCidadao" @click="openDeleteModal(doc)" class="table-action-btn hover:text-red-500" title="Excluir"><Trash2 class="w-5 h-5"/></button>
                                 </div>
                             </div>
                         </div>
                         <p v-else class="text-sm text-gray-500 dark:text-gray-400">Nenhum documento foi anexado a esta solicitação.</p>
 
                         <!-- Formulário de Upload (Apenas para Admin/Funcionário) -->
-                        <!-- --- CORREÇÃO 3: Usar a nova propriedade computada 'isCidadao' --- -->
                         <div v-if="!isCidadao" class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
                             <form @submit.prevent="submitDocumento">
                                 <label for="documento" class="form-label">Anexar Novo Documento</label>
@@ -210,7 +210,7 @@ const formatarTamanho = (bytes) => {
                         <div class="historico-observacoes" v-html="formatarObservacoes(solicitacao.observacoes)"></div>
                     </div>
 
-                    <!-- SEÇÃO DE AVALIAÇÃO -->
+                    <!-- SEÇÃO DE AVALIAÇÃO (Apenas para o Cidadão dono da solicitação) -->
                     <div v-if="podeAvaliar" class="content-container p-6">
                         <h3 class="header-title">Avalie este Atendimento</h3>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Sua opinião é muito importante para melhorarmos nossos serviços.</p>
@@ -253,7 +253,6 @@ const formatarTamanho = (bytes) => {
                 </div>
 
                 <!-- Coluna de Ações (Apenas para Admin/Funcionário) -->
-                <!-- --- CORREÇÃO 4: Usar a nova propriedade computada 'isCidadao' --- -->
                 <div v-if="!isCidadao" class="content-container p-6 h-fit">
                     <form @submit.prevent="submitStatus">
                         <h3 class="header-title mb-4">Atualizar Solicitação</h3>
