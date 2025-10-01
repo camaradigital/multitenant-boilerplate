@@ -24,6 +24,9 @@ import {
     // --- Ícones para o novo módulo ---
     Briefcase,
     Building2,
+    // --- ÍCONES NOVOS PARA RELATÓRIOS ESTRATÉGICOS ---
+    MapPin,
+    TrendingUp,
 } from 'lucide-vue-next';
 
 /**
@@ -133,6 +136,9 @@ const reportsNav = [
             { name: 'Atendimentos', href: route('admin.relatorios.atendimentos'), current: 'admin.relatorios.atendimentos', icon: ClipboardCheck, permission: 'visualizar relatorios' },
             { name: 'Satisfação', href: route('admin.relatorios.satisfacao'), current: 'admin.relatorios.satisfacao', icon: Star, permission: 'visualizar relatorios' },
             { name: 'Cidadãos', href: route('admin.relatorios.cidadaos'), current: 'admin.relatorios.cidadaos', icon: Users, permission: 'visualizar relatorios' },
+            // --- NOVOS RELATÓRIOS ---
+            { name: 'Mapeamento de Demandas', href: route('admin.relatorios.demandas-por-bairro'), current: 'admin.relatorios.demandas-por-bairro', icon: MapPin, permission: 'viewDemandasPorBairro' },
+            { name: 'Análise de Tendências', href: route('admin.relatorios.analise-de-tendencias'), current: 'admin.relatorios.analise-de-tendencias', icon: TrendingUp, permission: 'viewAnaliseDeTendencias' },
         ]
     },
 ];

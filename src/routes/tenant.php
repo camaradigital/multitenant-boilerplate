@@ -211,6 +211,10 @@ Route::middleware([
                 Route::get('/cidadaos', [RelatorioController::class, 'cidadaos'])->name('cidadaos');
                 Route::get('/cidadaos/exportar', [RelatorioController::class, 'exportarCidadaos'])->name('cidadaos.exportar');
                 Route::get('/cidadaos/exportar-pdf', [RelatorioController::class, 'exportarCidadaosPDF'])->name('cidadaos.exportarPDF');
+
+                // --- NOVAS ROTAS ESTRATÉGICAS ---
+                Route::get('/demandas-por-bairro', [RelatorioController::class, 'demandasPorBairro'])->name('demandas-por-bairro');
+                Route::get('/analise-de-tendencias', [RelatorioController::class, 'analiseDeTendencias'])->name('analise-de-tendencias');
             });
 
             // MÓDULO DE CONFIGURAÇÕES E PARÂMETROS

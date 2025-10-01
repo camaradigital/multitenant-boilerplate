@@ -40,8 +40,8 @@ const emit = defineEmits(['buscar-cep']);
             <input id="numero" v-model="form.profile_data.endereco_numero" type="text" class="form-input !pl-5" placeholder="Ex: 123"/>
         </div>
         <div class="input-container md:col-span-4">
-            <label for="bairro" class="form-label">Bairro</label>
-            <input id="bairro" v-model="form.profile_data.endereco_bairro" type="text" class="form-input !pl-5" placeholder="Seu bairro"/>
+            <label for="bairro" class="form-label">Bairro/Córrego</label>
+            <input id="bairro" v-model="form.profile_data.endereco_bairro" type="text" class="form-input !pl-5" placeholder="Seu bairro ou córrego"/>
         </div>
         <div class="input-container md:col-span-4">
             <label for="cidade" class="form-label">Cidade</label>

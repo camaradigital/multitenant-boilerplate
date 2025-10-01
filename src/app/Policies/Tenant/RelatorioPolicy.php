@@ -38,4 +38,26 @@ class RelatorioPolicy
     {
         return $user->hasAnyRole(['Admin Tenant', 'Funcionario']);
     }
+
+    /**
+     * (NOVO) Determina se o usuário pode visualizar o mapeamento de demandas por bairro.
+     *
+     * @param  \App\Models\Tenant\User  $user
+     * @return bool
+     */
+    public function viewDemandasPorBairro(User $user): bool
+    {
+        return $user->hasAnyRole(['Admin Tenant']);
+    }
+
+    /**
+     * (NOVO) Determina se o usuário pode visualizar a análise de tendências.
+     *
+     * @param  \App\Models\Tenant\User  $user
+     * @return bool
+     */
+    public function viewAnaliseDeTendencias(User $user): bool
+    {
+        return $user->hasAnyRole(['Admin Tenant']);
+    }
 }

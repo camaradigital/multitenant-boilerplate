@@ -45,6 +45,19 @@ class SolicitacaoServicoController extends Controller
                 $q->where('nome', $request->input('categoria'));
             });
         }
+        // Adicionado: Filtro de busca por nome do cidadão
+        if ($request->filled('search')) {
+            $query->whereHas('cidadao', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->input('search') . '%');
+            });
+        }
+        // Adicionado: Filtro por status
+        if ($request->filled('status')) {
+            $query->whereHas('status', function ($q) use ($request) {
+                $q->where('nome', $request->input('status'));
+            });
+        }
+        // --- FIM DAS ALTERAÇÕES ---
 
         if ($user->can('supervisionar solicitacoes juridicas')) {
             $query->whereHas('servico', function ($q) {
@@ -68,7 +81,8 @@ class SolicitacaoServicoController extends Controller
         return inertia('Tenant/Solicitacoes/Index', [
             'solicitacoes' => $solicitacoes,
             'categorias' => TipoServico::orderBy('nome')->get(),
-            'filters' => $request->only(['categoria']),
+            'statuses' => StatusSolicitacao::orderBy('nome')->get(),
+            'filters' => $request->only(['categoria', 'search', 'status']),
         ]);
     }
 

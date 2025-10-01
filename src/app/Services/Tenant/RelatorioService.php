@@ -20,39 +20,33 @@ class RelatorioService
         $tipoServicoId = $filters['tipo_servico_id'] ?? null;
         $funcionarioId = $filters['funcionario_id'] ?? null;
         $status = $filters['status'] ?? null;
+        $bairro = $filters['bairro'] ?? null;
 
         $query = SolicitacaoServico::with(['cidadao', 'servico.tipoServico', 'atendente']);
 
-        // --- CORREÇÃO APLICADA ---
-        // Especificamos a tabela 'solicitacoes_servico' para a coluna 'created_at'
-        // para evitar ambiguidade quando a consulta for usada com JOINs.
         $query->when($dataInicio && $dataFim, function ($q) use ($dataInicio, $dataFim) {
             $q->whereBetween('solicitacoes_servico.created_at', [$dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
         });
 
         $query->when($tipoServicoId, function ($q) use ($tipoServicoId) {
-            $q->whereHas('servico', function ($subQuery) use ($tipoServicoId) {
-                $subQuery->where('tipo_servico_id', $tipoServicoId);
-            });
+            $q->whereHas('servico', fn($sub) => $sub->where('tipo_servico_id', $tipoServicoId));
         });
 
-        $query->when($funcionarioId, function ($q) use ($funcionarioId) {
-            $q->where('atendente_id', $funcionarioId);
+        $query->when($funcionarioId, fn($q) => $q->where('atendente_id', $funcionarioId));
+
+        $query->when($status, fn($q) => $q->where('status', $status));
+
+        // VERSÃO FINAL E OTIMIZADA: Filtro simplificado usando a nova coluna 'bairro'.
+        $query->when($bairro, function ($q) use ($bairro) {
+            $q->whereHas('cidadao', fn($cidadaoQuery) => $cidadaoQuery->where('bairro', $bairro));
         });
 
-        $query->when($status, function ($q) use ($status) {
-            $q->where('status', $status);
-        });
-
-        // Também é uma boa prática ser explícito aqui.
         return $query->latest('solicitacoes_servico.created_at');
     }
 
     /**
      * Calcula as principais estatísticas de atendimentos com base nos filtros.
-     *
-     * @param array $filters
-     * @return array
+     * (Este método não precisa de alterações)
      */
     public function calcularEstatisticasAtendimentos(array $filters = []): array
     {
@@ -62,7 +56,6 @@ class RelatorioService
 
         $tempoMedioHoras = 0;
         if ($totalSolicitacoes > 0) {
-            // --- CORREÇÃO APLICADA ---
             $avgSeconds = $query->clone()
                 ->whereNotNull('finalizado_em')
                 ->selectRaw('AVG(TIMESTAMPDIFF(SECOND, solicitacoes_servico.created_at, finalizado_em)) as avg_duration')
@@ -95,6 +88,7 @@ class RelatorioService
 
     /**
      * Gera uma consulta (query) de pesquisas de satisfação com base nos filtros fornecidos.
+     * (Este método não precisa de alterações)
      */
     public function gerarRelatorioSatisfacaoQuery(array $filters = []): Builder
     {
@@ -105,12 +99,10 @@ class RelatorioService
 
         $query = PesquisaSatisfacao::with(['cidadao:id,name', 'solicitacaoServico.servico']);
 
-        // Filtra pelo período em que a pesquisa foi respondida.
         $query->when($dataInicio && $dataFim, function ($q) use ($dataInicio, $dataFim) {
             $q->whereBetween('pesquisas_satisfacao.created_at', [$dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
         });
 
-        // Filtra por tipo de serviço ou funcionário através do relacionamento com a solicitação.
         $query->whereHas('solicitacaoServico', function ($solicitacaoQuery) use ($tipoServicoId, $funcionarioId) {
             if ($tipoServicoId) {
                 $solicitacaoQuery->whereHas('servico', function ($servicoQuery) use ($tipoServicoId) {
@@ -127,16 +119,13 @@ class RelatorioService
 
     /**
      * Calcula as principais estatísticas de satisfação com base nos filtros.
-     *
-     * @param array $filters
-     * @return array
+     * (Este método não precisa de alterações)
      */
     public function calcularEstatisticasSatisfacao(array $filters = []): array
     {
         $query = $this->gerarRelatorioSatisfacaoQuery($filters);
 
         $totalRespostas = $query->clone()->count();
-
         $notaMedia = $totalRespostas > 0 ? round($query->clone()->avg('nota'), 2) : 0;
 
         $totalFinalizados = SolicitacaoServico::query()
@@ -155,7 +144,6 @@ class RelatorioService
             ->orderBy('nota', 'asc')
             ->pluck('total', 'nota');
 
-        // Garante que todas as notas (de 1 a 5) existam no array para o gráfico.
         $distribuicaoCompleta = [ '1' => 0, '2' => 0, '3' => 0, '4' => 0, '5' => 0 ];
         foreach ($distribuicaoNotas as $nota => $total) {
             $distribuicaoCompleta[$nota] = $total;
@@ -169,6 +157,10 @@ class RelatorioService
         ];
     }
 
+    /**
+     * Gera uma consulta para o relatório de cidadãos.
+     * (Este método não precisa de alterações)
+     */
     public function gerarRelatorioCidadaosQuery(array $filters = []): Builder
     {
         $busca = $filters['busca'] ?? null;
@@ -193,15 +185,72 @@ class RelatorioService
             $q->where('is_active', $status);
         });
 
-        // --- ATUALIZAÇÃO IMPORTANTE ---
-        // Garante que o histórico de solicitações e seus detalhes sejam carregados
-        // de forma otimizada para a geração do PDF.
         $query->with(['solicitacoes.servico', 'solicitacoes.status', 'solicitacoes.atendente']);
-
-        // Mantém a contagem de solicitações para a visualização na web.
         $query->withCount('solicitacoes');
 
         return $query->latest();
+    }
+
+    /**
+     * Gera dados agregados de solicitações por bairro e serviço.
+     */
+    public function gerarRelatorioDemandasPorBairro(array $filters = [])
+    {
+        // VERSÃO FINAL E OTIMIZADA: Usa a nova coluna 'bairro' diretamente.
+        $query = DB::connection('tenant')
+            ->table('solicitacoes_servico')
+            ->join('users', 'solicitacoes_servico.user_id', '=', 'users.id')
+            ->join('servicos', 'solicitacoes_servico.servico_id', '=', 'servicos.id')
+            ->join('tipos_servico', 'servicos.tipo_servico_id', '=', 'tipos_servico.id')
+            ->select(
+                'users.bairro', // A MÁGICA ACONTECE AQUI
+                'tipos_servico.nome as tipo_servico',
+                DB::raw('COUNT(solicitacoes_servico.id) as total_solicitacoes')
+            )
+            ->whereNotNull('users.bairro')
+            ->where('users.bairro', '!=', '');
+
+        if (!empty($filters['data_inicio']) && !empty($filters['data_fim'])) {
+             $query->whereBetween('solicitacoes_servico.created_at', [
+                $filters['data_inicio'] . ' 00:00:00',
+                $filters['data_fim'] . ' 23:59:59'
+            ]);
+        }
+        if (!empty($filters['tipo_servico_id'])) {
+            $query->where('servicos.tipo_servico_id', $filters['tipo_servico_id']);
+        }
+
+        return $query->groupBy('users.bairro', 'tipo_servico')
+            ->orderBy('total_solicitacoes', 'desc')
+            ->get();
+    }
+
+    /**
+     * Gera dados de tendências de solicitações por tipo de serviço.
+     * (Este método não precisa de alterações)
+     */
+    public function gerarAnaliseDeTendencias(array $filters = [])
+    {
+        $query = DB::connection('tenant')
+            ->table('solicitacoes_servico')
+            ->join('servicos', 'solicitacoes_servico.servico_id', '=', 'servicos.id')
+            ->join('tipos_servico', 'servicos.tipo_servico_id', '=', 'tipos_servico.id')
+            ->select(
+                'tipos_servico.nome as tipo_servico',
+                DB::raw('DATE(solicitacoes_servico.created_at) as data'),
+                DB::raw('COUNT(solicitacoes_servico.id) as total')
+            );
+
+        if (!empty($filters['data_inicio']) && !empty($filters['data_fim'])) {
+            $query->whereBetween('solicitacoes_servico.created_at', [
+                $filters['data_inicio'] . ' 00:00:00',
+                $filters['data_fim'] . ' 23:59:59'
+            ]);
+        }
+
+        return $query->groupBy('tipo_servico', 'data')
+            ->orderBy('data', 'asc')
+            ->get();
     }
 }
 

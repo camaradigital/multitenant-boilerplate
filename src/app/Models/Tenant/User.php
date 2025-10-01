@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'cpf',
         'is_active',
         'profile_data',
+        'bairro',
         'terms_accepted_at',
         'privacy_accepted_at',
     ];
@@ -85,10 +86,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function setProfileDataAttribute($value): void
     {
         if (is_array($value)) {
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Alinhado para buscar 'endereco_bairro' dentro do array, que é o nome vindo do formulário.
+            $this->attributes['bairro'] = $value['endereco_bairro'] ?? null;
+
+            // Continua com a criptografia normal para o profile_data
             $jsonValue = json_encode($value);
             $this->attributes['profile_data'] = Crypt::encryptString($jsonValue);
         } else {
-            // Se o valor não for um array, armazena como nulo para evitar erros.
+            // Garante que, se profile_data for nulo, a coluna bairro também seja.
+            $this->attributes['bairro'] = null;
             $this->attributes['profile_data'] = null;
         }
     }

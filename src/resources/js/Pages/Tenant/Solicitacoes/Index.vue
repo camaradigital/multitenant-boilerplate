@@ -4,17 +4,22 @@ import { Head, router, Link, usePage } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
-import { Eye, Trash2, ClipboardList, Plus } from 'lucide-vue-next';
+import { Eye, Trash2, ClipboardList, Plus, Pencil, Search } from 'lucide-vue-next';
 
 const props = defineProps({
     solicitacoes: Object,
     categorias: Array,
+    statuses: Array, // Adicionado para receber os status do backend
     filters: Object,
 });
 
 // Lógica para o modal de exclusão
 const confirmingSolicitacaoDeletion = ref(false);
 const solicitacaoToDelete = ref(null);
+
+// Variaveis reativas para os novos filtros
+const search = ref(props.filters.search || '');
+const status = ref(props.filters.status || '');
 
 // Título da página dinâmico
 const userRoles = computed(() => usePage().props.auth.user?.roles || []);
@@ -25,16 +30,36 @@ const pageTitle = computed(() => {
     return 'Fila de Atendimento';
 });
 
-const filterByCategory = (categoria) => {
-    const query = {};
-    if (categoria !== 'Todos') {
-        query.categoria = categoria;
-    }
+// Função para aplicar todos os filtros de uma vez
+const applyFilters = (newFilters = {}) => {
+    // Começa com os filtros já aplicados e os valores atuais dos campos
+    const query = {
+        categoria: props.filters.categoria,
+        search: search.value,
+        status: status.value,
+        ...newFilters,
+    };
+
+    // Remove chaves com valores vazios ou nulos para não poluir a URL
+    Object.keys(query).forEach(key => {
+        if (!query[key]) {
+            delete query[key];
+        }
+    });
+
     router.get(route('admin.solicitacoes.index'), query, {
         preserveState: true,
         preserveScroll: true,
         replace: true,
     });
+};
+
+const filterByCategory = (categoria) => {
+    applyFilters({ categoria: categoria === 'Todos' ? undefined : categoria });
+};
+
+const applySearchAndStatusFilters = () => {
+    applyFilters();
 };
 
 const confirmSolicitacaoDeletion = (solicitacao) => {
@@ -116,6 +141,44 @@ const getStatusStyle = (cor) => {
                             </button>
                         </nav>
                     </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 items-center mt-4">
+                        <div class="w-full md:w-1/3">
+                            <label for="status-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Filtrar por Status</label>
+                            <select
+                                id="status-filter"
+                                v-model="status"
+                                @change="applySearchAndStatusFilters"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md"
+                            >
+                                <option value="">Todos os Status</option>
+                                <option v-for="st in statuses" :key="st.id" :value="st.nome">
+                                    {{ st.nome }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="w-full md:w-2/3">
+                             <label for="search-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Buscar por Cidadão</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <input
+                                    type="text"
+                                    id="search-filter"
+                                    v-model="search"
+                                    @keydown.enter="applySearchAndStatusFilters"
+                                    class="flex-1 block w-full rounded-none rounded-l-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                    placeholder="Digite o nome do cidadão..."
+                                />
+                                <button
+                                    @click="applySearchAndStatusFilters"
+                                    class="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                                >
+                                    <Search class="h-5 w-5" />
+                                    <span class="ml-2 hidden sm:block">Buscar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="p-4 md:p-6">
@@ -150,7 +213,7 @@ const getStatusStyle = (cor) => {
                     </div>
                     <div v-else class="text-center py-10">
                         <p class="text-gray-500 dark:text-gray-400">
-                            Nenhuma solicitação encontrada<span v-if="filters.categoria"> na categoria "{{ filters.categoria }}"</span>.
+                            Nenhuma solicitação encontrada com os filtros aplicados.
                         </p>
                     </div>
                 </div>

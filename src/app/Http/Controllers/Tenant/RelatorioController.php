@@ -164,4 +164,58 @@ class RelatorioController extends Controller
 
         return $pdf->stream('relatorio_cidadaos_' . now()->format('Y-m-d') . '.pdf');
     }
+
+    public function demandasPorBairro(RelatorioAtendimentoRequest $request)
+    {
+        $this->authorize('viewDemandasPorBairro', Relatorio::class); // Requer uma nova permissão na Policy
+
+        $filters = $request->validated();
+
+        $demandas = $this->relatorioService->gerarRelatorioDemandasPorBairro($filters);
+
+        // Agrupa os dados para facilitar a exibição em gráficos e tabelas
+        $dadosMapeamento = $demandas->groupBy('bairro')->map(function ($items, $bairro) {
+            return [
+                'bairro' => $bairro,
+                'total' => $items->sum('total_solicitacoes'),
+                'detalhes' => $items,
+            ];
+        })->sortByDesc('total')->values();
+
+        return Inertia::render('Tenant/Relatorios/DemandasPorBairro', array_merge(
+            $this->getCommonViewData(),
+            [
+                'demandas' => $dadosMapeamento,
+                'filtros' => $filters,
+            ]
+        ));
+    }
+
+    public function analiseDeTendencias(RelatorioAtendimentoRequest $request)
+    {
+        $this->authorize('viewAnaliseDeTendencias', Relatorio::class); // Requer nova permissão
+
+        $filters = $request->validated();
+        $tendencias = $this->relatorioService->gerarAnaliseDeTendencias($filters);
+
+        // Formata os dados para o gráfico de linhas
+        $chartData = [
+            'labels' => $tendencias->pluck('data')->unique()->sort()->values(),
+            'datasets' => $tendencias->groupBy('tipo_servico')->map(function ($items, $tipo) {
+                return [
+                    'label' => $tipo,
+                    'data' => $items->pluck('total', 'data'),
+                    // Adicione cores dinâmicas se desejar
+                ];
+            })->values()
+        ];
+
+        return Inertia::render('Tenant/Relatorios/AnaliseDeTendencias', array_merge(
+            $this->getCommonViewData(),
+            [
+                'tendenciasChartData' => $chartData,
+                'filtros' => $filters,
+            ]
+        ));
+    }
 }
