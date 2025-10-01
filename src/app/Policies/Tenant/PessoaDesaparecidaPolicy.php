@@ -37,7 +37,6 @@ class PessoaDesaparecidaPolicy
      * Determine whether the user can update the model.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\Tenant\PessoaDesaparecida  $pessoaDesaparecida
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function update(User $user, PessoaDesaparecida $pessoaDesaparecida)
@@ -52,7 +51,6 @@ class PessoaDesaparecidaPolicy
      * Determine whether the user can delete the model.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\Tenant\PessoaDesaparecida  $pessoaDesaparecida
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function delete(User $user, PessoaDesaparecida $pessoaDesaparecida)
@@ -66,7 +64,6 @@ class PessoaDesaparecidaPolicy
      * Determine whether the user can view the police report.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\Tenant\PessoaDesaparecida  $pessoaDesaparecida
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function viewBoletim(User $user, PessoaDesaparecida $pessoaDesaparecida)

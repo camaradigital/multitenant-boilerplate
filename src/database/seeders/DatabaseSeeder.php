@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use Database\Seeders\Central\LeadSeeder;
 use Database\Seeders\Central\SuperAdminSeeder;
-use Database\Seeders\Central\LeadSeeder; // Importe o LeadSeeder também
+use Illuminate\Database\Seeder; // Importe o LeadSeeder também
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
         // Chama os seeders para popular o banco de dados.
         $this->call([
             SuperAdminSeeder::class,
-            LeadSeeder::class
+            LeadSeeder::class,
         ]);
     }
 }

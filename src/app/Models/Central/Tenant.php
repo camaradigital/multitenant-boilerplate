@@ -66,6 +66,6 @@ class Tenant extends BaseTenant
     public function getDomainUrl(): string
     {
         // Monta a URL completa: http://<subdomínio>.<domínio_central>
-        return 'http://' . $this->subdomain . '.' . config('app.central_domain');
+        return 'http://'.$this->subdomain.'.'.config('app.central_domain');
     }
 }

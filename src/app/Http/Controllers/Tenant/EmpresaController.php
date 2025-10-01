@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Validation\Rule;
 
 class EmpresaController extends Controller
 {
@@ -18,6 +17,7 @@ class EmpresaController extends Controller
     public function index(): Response
     {
         $empresas = Empresa::with('user')->latest()->paginate(10);
+
         return Inertia::render('Tenant/Empresas/Index', compact('empresas'));
     }
 
@@ -61,6 +61,7 @@ class EmpresaController extends Controller
     public function show(Empresa $empresa): Response
     {
         $empresa->load('user', 'vagas');
+
         return Inertia::render('Tenant/Empresas/Show', compact('empresa'));
     }
 
@@ -82,8 +83,8 @@ class EmpresaController extends Controller
         $request->validate([
             'nome_fantasia' => 'required|string|max:255',
             'razao_social' => 'nullable|string|max:255',
-            'cnpj' => 'nullable|string|max:18|unique:tenant.empresas,cnpj,' . $empresa->id,
-            'email' => 'required|email|max:255|unique:tenant.empresas,email,' . $empresa->id,
+            'cnpj' => 'nullable|string|max:18|unique:tenant.empresas,cnpj,'.$empresa->id,
+            'email' => 'required|email|max:255|unique:tenant.empresas,email,'.$empresa->id,
             'telefone' => 'nullable|string|max:20',
             'endereco' => 'nullable|string',
             'is_active' => 'boolean',

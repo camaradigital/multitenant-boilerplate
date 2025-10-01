@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +14,7 @@ class CnpjController extends Controller
     /**
      * Consulta os dados de um CNPJ na API pública e retorna uma resposta JSON.
      *
-     * @param string $cnpj O CNPJ a ser consultado.
+     * @param  string  $cnpj  O CNPJ a ser consultado.
      * @return \Illuminate\Http\JsonResponse
      */
     public function consultarCnpj(string $cnpj)
@@ -33,7 +32,7 @@ class CnpjController extends Controller
 
         try {
             // Realiza a chamada GET para a API de consulta de CNPJ.
-            $response = Http::get($apiUrl . $cnpjLimpo);
+            $response = Http::get($apiUrl.$cnpjLimpo);
 
             // Se a requisição foi bem-sucedida, retorna os dados em JSON.
             if ($response->successful()) {
@@ -46,7 +45,8 @@ class CnpjController extends Controller
             }
 
             // Para outros erros da API, retorna uma mensagem genérica com o status de erro.
-            Log::warning('Falha na API de CNPJ. Status: ' . $response->status() . '. CNPJ: ' . $cnpjLimpo);
+            Log::warning('Falha na API de CNPJ. Status: '.$response->status().'. CNPJ: '.$cnpjLimpo);
+
             return response()->json(
                 ['error' => 'Falha ao consultar o CNPJ. O serviço externo pode estar indisponível.'],
                 $response->status()
@@ -54,7 +54,8 @@ class CnpjController extends Controller
 
         } catch (\Exception $e) {
             // Captura exceções de conexão (timeout, erro de DNS, etc.).
-            Log::error('Erro de conexão com a API de CNPJ: ' . $e->getMessage());
+            Log::error('Erro de conexão com a API de CNPJ: '.$e->getMessage());
+
             return response()->json(['error' => 'Não foi possível conectar ao serviço de consulta de CNPJ.'], 500);
         }
     }

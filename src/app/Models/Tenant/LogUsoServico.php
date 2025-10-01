@@ -4,9 +4,9 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection; // Importação do Trait
+use Spatie\Activitylog\LogOptions; // Importação do Trait
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class LogUsoServico extends Model
 {
@@ -28,7 +28,7 @@ class LogUsoServico extends Model
     protected $fillable = [
         'user_id',
         'servico_id',
-        'solicitacao_servico_id'
+        'solicitacao_servico_id',
     ];
 
     public function getActivitylogOptions(): LogOptions

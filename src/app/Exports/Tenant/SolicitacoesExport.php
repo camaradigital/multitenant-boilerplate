@@ -14,8 +14,6 @@ class SolicitacoesExport implements FromQuery, WithHeadings, WithMapping
 
     /**
      * O construtor recebe os filtros que serão usados na consulta.
-     *
-     * @param array $filters
      */
     public function __construct(array $filters)
     {
@@ -33,8 +31,6 @@ class SolicitacoesExport implements FromQuery, WithHeadings, WithMapping
 
     /**
      * Define os títulos das colunas na planilha.
-     *
-     * @return array
      */
     public function headings(): array
     {
@@ -54,8 +50,7 @@ class SolicitacoesExport implements FromQuery, WithHeadings, WithMapping
     /**
      * Mapeia cada linha de resultado para o formato desejado na planilha.
      *
-     * @param mixed $solicitacao O modelo Eloquent SolicitacaoServico.
-     * @return array
+     * @param  mixed  $solicitacao  O modelo Eloquent SolicitacaoServico.
      */
     public function map($solicitacao): array
     {

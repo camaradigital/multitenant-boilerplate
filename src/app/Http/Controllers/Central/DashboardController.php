@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 use App\Models\Central\Tenant; // Importa o modelo Tenant da área central
-use App\Models\Tenant\User as TenantUser; // Alias para o modelo User do tenant
-use App\Models\Tenant\SolicitacaoServico; // Importa o modelo SolicitacaoServico do contexto do tenant
-use Spatie\Activitylog\Models\Activity; // Importa o modelo Activity do Spatie Activity Log
+use App\Models\Tenant\SolicitacaoServico; // Alias para o modelo User do tenant
+use App\Models\Tenant\User as TenantUser; // Importa o modelo SolicitacaoServico do contexto do tenant
+use Carbon\Carbon; // Importa o modelo Activity do Spatie Activity Log
 use Inertia\Inertia; // Para renderizar componentes Vue com Inertia.js
-use Carbon\Carbon; // Para trabalhar com datas (ex: "hoje")
+use Spatie\Activitylog\Models\Activity; // Para trabalhar com datas (ex: "hoje")
 
 class DashboardController extends Controller
 {
@@ -53,8 +53,8 @@ class DashboardController extends Controller
 
             // Conta solicitações concluídas HOJE no tenant atual
             $completedRequestsToday += SolicitacaoServico::where('status', 'concluido')
-                                                        ->whereDate('updated_at', $startOfToday)
-                                                        ->count();
+                ->whereDate('updated_at', $startOfToday)
+                ->count();
 
             // Conta tentativas de login falhas HOJE no tenant atual
             // Assumindo que o spatie/laravel-activitylog está configurado para logar logins falhos
@@ -62,9 +62,9 @@ class DashboardController extends Controller
             // Você pode precisar ajustar a condição 'description' ou 'event'
             // baseando-se em como os logins falhos são registrados no seu activity log.
             $failedLoginsToday += Activity::where('log_name', 'default') // Ou outro log_name específico para autenticação
-                                         ->where('description', 'failed_login') // Exemplo: se você loga 'failed_login'
-                                         ->whereDate('created_at', $startOfToday)
-                                         ->count();
+                ->where('description', 'failed_login') // Exemplo: se você loga 'failed_login'
+                ->whereDate('created_at', $startOfToday)
+                ->count();
 
             // Volta para o contexto do banco de dados central antes de ir para o próximo tenant
             // CONFORME DOCUMENTAÇÃO: Usando o método forgetCurrent() na instância do Tenant
@@ -81,4 +81,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-

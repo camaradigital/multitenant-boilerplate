@@ -37,7 +37,7 @@ class TenantWelcomeNotification extends Notification
         }
 
         // Constrói a URL usando o domínio do tenant atual
-        $url = "https://" . $tenant->domain . route('password.reset', [
+        $url = 'https://'.$tenant->domain.route('password.reset', [
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
         ], false);

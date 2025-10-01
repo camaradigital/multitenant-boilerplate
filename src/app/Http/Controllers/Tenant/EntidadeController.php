@@ -42,7 +42,7 @@ class EntidadeController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'categoria' => 'required|string|max:100',
-            'cnpj' => 'nullable|string|max:18|unique:tenant.entidades,cnpj,' . $entidade->id,
+            'cnpj' => 'nullable|string|max:18|unique:tenant.entidades,cnpj,'.$entidade->id,
             'telefone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'endereco' => 'nullable|string',
@@ -58,6 +58,7 @@ class EntidadeController extends Controller
     public function destroy(Entidade $entidade)
     {
         $entidade->delete();
+
         return Redirect::route('admin.entidades.index')->with('success', 'Entidade excluída com sucesso.');
     }
 }

@@ -10,8 +10,6 @@ class PermissionsSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     *
-     * @return void
      */
     public function run(): void
     {
@@ -45,14 +43,17 @@ class PermissionsSeeder extends Seeder
             // Parâmetros do Sistema
             'gerenciar parametros',
             // Permissão para Advogado
-            'supervisionar solicitacoes juridicas'
+            'supervisionar solicitacoes juridicas',
+            // Relatório para Admin
+            'viewDemandasPorBairro',
+            'viewAnaliseDeTendencias',
         ];
 
         foreach ($permissions as $permission) {
             // Usa o método on() para garantir que a permissão seja criada na conexão do tenant
             Permission::on($tenantConnection)->firstOrCreate([
                 'name' => $permission,
-                'guard_name' => 'tenant' // Especifica o guard 'tenant'
+                'guard_name' => 'tenant', // Especifica o guard 'tenant'
             ]);
         }
     }

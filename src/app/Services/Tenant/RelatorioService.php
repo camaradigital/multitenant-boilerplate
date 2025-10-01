@@ -25,20 +25,20 @@ class RelatorioService
         $query = SolicitacaoServico::with(['cidadao', 'servico.tipoServico', 'atendente']);
 
         $query->when($dataInicio && $dataFim, function ($q) use ($dataInicio, $dataFim) {
-            $q->whereBetween('solicitacoes_servico.created_at', [$dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
+            $q->whereBetween('solicitacoes_servico.created_at', [$dataInicio.' 00:00:00', $dataFim.' 23:59:59']);
         });
 
         $query->when($tipoServicoId, function ($q) use ($tipoServicoId) {
-            $q->whereHas('servico', fn($sub) => $sub->where('tipo_servico_id', $tipoServicoId));
+            $q->whereHas('servico', fn ($sub) => $sub->where('tipo_servico_id', $tipoServicoId));
         });
 
-        $query->when($funcionarioId, fn($q) => $q->where('atendente_id', $funcionarioId));
+        $query->when($funcionarioId, fn ($q) => $q->where('atendente_id', $funcionarioId));
 
-        $query->when($status, fn($q) => $q->where('status', $status));
+        $query->when($status, fn ($q) => $q->where('status', $status));
 
         // VERSÃO FINAL E OTIMIZADA: Filtro simplificado usando a nova coluna 'bairro'.
         $query->when($bairro, function ($q) use ($bairro) {
-            $q->whereHas('cidadao', fn($cidadaoQuery) => $cidadaoQuery->where('bairro', $bairro));
+            $q->whereHas('cidadao', fn ($cidadaoQuery) => $cidadaoQuery->where('bairro', $bairro));
         });
 
         return $query->latest('solicitacoes_servico.created_at');
@@ -100,7 +100,7 @@ class RelatorioService
         $query = PesquisaSatisfacao::with(['cidadao:id,name', 'solicitacaoServico.servico']);
 
         $query->when($dataInicio && $dataFim, function ($q) use ($dataInicio, $dataFim) {
-            $q->whereBetween('pesquisas_satisfacao.created_at', [$dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
+            $q->whereBetween('pesquisas_satisfacao.created_at', [$dataInicio.' 00:00:00', $dataFim.' 23:59:59']);
         });
 
         $query->whereHas('solicitacaoServico', function ($solicitacaoQuery) use ($tipoServicoId, $funcionarioId) {
@@ -130,8 +130,8 @@ class RelatorioService
 
         $totalFinalizados = SolicitacaoServico::query()
             ->whereNotNull('finalizado_em')
-            ->when(!empty($filters['data_inicio']) && !empty($filters['data_fim']), function ($q) use ($filters) {
-                $q->whereBetween('finalizado_em', [$filters['data_inicio'] . ' 00:00:00', $filters['data_fim'] . ' 23:59:59']);
+            ->when(! empty($filters['data_inicio']) && ! empty($filters['data_fim']), function ($q) use ($filters) {
+                $q->whereBetween('finalizado_em', [$filters['data_inicio'].' 00:00:00', $filters['data_fim'].' 23:59:59']);
             })
             ->count();
 
@@ -144,7 +144,7 @@ class RelatorioService
             ->orderBy('nota', 'asc')
             ->pluck('total', 'nota');
 
-        $distribuicaoCompleta = [ '1' => 0, '2' => 0, '3' => 0, '4' => 0, '5' => 0 ];
+        $distribuicaoCompleta = ['1' => 0, '2' => 0, '3' => 0, '4' => 0, '5' => 0];
         foreach ($distribuicaoNotas as $nota => $total) {
             $distribuicaoCompleta[$nota] = $total;
         }
@@ -172,13 +172,13 @@ class RelatorioService
 
         $query->when($busca, function ($q) use ($busca) {
             $q->where(function ($subQuery) use ($busca) {
-                $subQuery->where('name', 'like', '%' . $busca . '%')
-                         ->orWhere('cpf', 'like', '%' . $busca . '%');
+                $subQuery->where('name', 'like', '%'.$busca.'%')
+                    ->orWhere('cpf', 'like', '%'.$busca.'%');
             });
         });
 
         $query->when($dataInicio && $dataFim, function ($q) use ($dataInicio, $dataFim) {
-            $q->whereBetween('created_at', [$dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
+            $q->whereBetween('created_at', [$dataInicio.' 00:00:00', $dataFim.' 23:59:59']);
         });
 
         $query->when(isset($filters['status']) && $filters['status'] !== '', function ($q) use ($status) {
@@ -210,13 +210,13 @@ class RelatorioService
             ->whereNotNull('users.bairro')
             ->where('users.bairro', '!=', '');
 
-        if (!empty($filters['data_inicio']) && !empty($filters['data_fim'])) {
-             $query->whereBetween('solicitacoes_servico.created_at', [
-                $filters['data_inicio'] . ' 00:00:00',
-                $filters['data_fim'] . ' 23:59:59'
+        if (! empty($filters['data_inicio']) && ! empty($filters['data_fim'])) {
+            $query->whereBetween('solicitacoes_servico.created_at', [
+                $filters['data_inicio'].' 00:00:00',
+                $filters['data_fim'].' 23:59:59',
             ]);
         }
-        if (!empty($filters['tipo_servico_id'])) {
+        if (! empty($filters['tipo_servico_id'])) {
             $query->where('servicos.tipo_servico_id', $filters['tipo_servico_id']);
         }
 
@@ -241,10 +241,10 @@ class RelatorioService
                 DB::raw('COUNT(solicitacoes_servico.id) as total')
             );
 
-        if (!empty($filters['data_inicio']) && !empty($filters['data_fim'])) {
+        if (! empty($filters['data_inicio']) && ! empty($filters['data_fim'])) {
             $query->whereBetween('solicitacoes_servico.created_at', [
-                $filters['data_inicio'] . ' 00:00:00',
-                $filters['data_fim'] . ' 23:59:59'
+                $filters['data_inicio'].' 00:00:00',
+                $filters['data_fim'].' 23:59:59',
             ]);
         }
 
@@ -253,4 +253,3 @@ class RelatorioService
             ->get();
     }
 }
-

@@ -2,7 +2,7 @@
 
 // Caminho: config/multitenancy.php
 
-//use App\Multitenancy\Tasks\CacheTenantSettingsTask;
+// use App\Multitenancy\Tasks\CacheTenantSettingsTask;
 use Spatie\Multitenancy\Actions\ForgetCurrentTenantAction;
 use Spatie\Multitenancy\Actions\MakeTenantCurrentAction;
 

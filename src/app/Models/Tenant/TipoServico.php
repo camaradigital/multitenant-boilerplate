@@ -4,9 +4,9 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class TipoServico extends Model
 {
@@ -53,4 +53,3 @@ class TipoServico extends Model
         return $this->hasMany(Servico::class);
     }
 }
-

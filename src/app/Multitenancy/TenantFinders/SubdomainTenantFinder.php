@@ -2,13 +2,14 @@
 
 // ARQUIVO 1: app/Multitenancy/TenantFinders/SubdomainTenantFinder.php
 // Objetivo: Verificar se o tenant está sendo identificado corretamente.
+
 namespace App\Multitenancy\TenantFinders;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; // Adicionado
+use App\Models\Central\Tenant as TenantModel;
+use Illuminate\Http\Request; // Adicionado
+use Illuminate\Support\Facades\Log;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Spatie\Multitenancy\TenantFinder\TenantFinder;
-use App\Models\Central\Tenant as TenantModel;
 
 class SubdomainTenantFinder extends TenantFinder
 {
@@ -19,6 +20,7 @@ class SubdomainTenantFinder extends TenantFinder
 
         if (in_array($host, config('multitenancy.central_domains', []))) {
             Log::info("[DEBUG] SubdomainTenantFinder: Host '{$host}' é um domínio central. Nenhum tenant será usado.");
+
             return null;
         }
 

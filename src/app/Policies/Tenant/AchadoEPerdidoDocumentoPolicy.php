@@ -13,7 +13,6 @@ class AchadoEPerdidoDocumentoPolicy
     /**
      * Determine whether the user can view any models.
      *
-     * @param  \App\Models\Tenant\User  $user
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function viewAny(User $user)
@@ -27,8 +26,6 @@ class AchadoEPerdidoDocumentoPolicy
     /**
      * Determine whether the user can view the model.
      *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\AchadoEPerdidoDocumento  $achadosEPerdidosDocumento
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function view(User $user, AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
@@ -41,7 +38,6 @@ class AchadoEPerdidoDocumentoPolicy
     /**
      * Determine whether the user can create models.
      *
-     * @param  \App\Models\Tenant\User  $user
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function create(User $user)
@@ -52,25 +48,20 @@ class AchadoEPerdidoDocumentoPolicy
     /**
      * Determine whether the user can update the model.
      *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\AchadoEPerdidoDocumento  $achadosEPerdidosDocumento
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function update(User $user, AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
     {
-            return $user->can('gerenciar achados e perdidos');
+        return $user->can('gerenciar achados e perdidos');
     }
 
     /**
      * Determine whether the user can delete the model.
      *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\AchadoEPerdidoDocumento  $achadosEPerdidosDocumento
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function delete(User $user, AchadoEPerdidoDocumento $achadosEPerdidosDocumento)
     {
         return $user->can('gerenciar achados e perdidos');
     }
-
 }

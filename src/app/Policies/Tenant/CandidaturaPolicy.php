@@ -15,9 +15,6 @@ class CandidaturaPolicy
     /**
      * Determine whether the user can view any models.
      * Apenas administradores podem ver a lista de todas as candidaturas.
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @return bool
      */
     public function viewAny(User $user): bool
     {
@@ -27,10 +24,6 @@ class CandidaturaPolicy
     /**
      * Determine whether the user can view the model.
      * O administrador pode ver qualquer uma, ou o utilizador pode ver a sua própria.
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\Candidatura  $candidatura
-     * @return bool
      */
     public function view(User $user, Candidatura $candidatura): bool
     {
@@ -45,18 +38,16 @@ class CandidaturaPolicy
      * Determine whether the user can create models.
      * Qualquer utilizador autenticado pode candidatar-se, mas apenas uma vez por vaga.
      *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\Vaga  $vaga
      * @return \Illuminate\Auth\Access\Response|bool
      */
     public function create(User $user, Vaga $vaga)
     {
         // Verifica se o utilizador já se candidatou a esta vaga específica
         $hasApplied = Candidatura::where('user_id', $user->id)
-                                 ->where('vaga_id', $vaga->id)
-                                 ->exists();
+            ->where('vaga_id', $vaga->id)
+            ->exists();
 
-        return !$hasApplied
+        return ! $hasApplied
             ? Response::allow()
             : Response::deny('Você já se candidatou para esta vaga.');
     }
@@ -64,10 +55,6 @@ class CandidaturaPolicy
     /**
      * Determine whether the user can update the model.
      * Apenas administradores podem atualizar o estado de uma candidatura.
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\Candidatura  $candidatura
-     * @return bool
      */
     public function update(User $user, Candidatura $candidatura): bool
     {
@@ -77,10 +64,6 @@ class CandidaturaPolicy
     /**
      * Determine whether the user can delete the model.
      * Apenas administradores podem apagar uma candidatura.
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @param  \App\Models\Tenant\Candidatura  $candidatura
-     * @return bool
      */
     public function delete(User $user, Candidatura $candidatura): bool
     {

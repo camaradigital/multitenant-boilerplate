@@ -16,15 +16,13 @@ class TenantWelcomeMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public Tenant $tenant;
+
     public User $user;
+
     public string $token;
 
     /**
      * Create a new message instance.
-     *
-     * @param Tenant $tenant
-     * @param User $user
-     * @param string $token
      */
     public function __construct(Tenant $tenant, User $user, string $token)
     {
@@ -49,10 +47,10 @@ class TenantWelcomeMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         // Constrói a URL de redefinição de senha para o domínio do tenant
-        $domain = $this->tenant->subdomain . '.' . config('app.central_domain');
+        $domain = $this->tenant->subdomain.'.'.config('app.central_domain');
         $scheme = config('app.env') === 'production' ? 'https' : 'http';
 
-        $url = $scheme . "://" . $domain . route('password.reset', [
+        $url = $scheme.'://'.$domain.route('password.reset', [
             'token' => $this->token,
             'email' => $this->user->getEmailForPasswordReset(),
         ], false);
@@ -78,4 +76,3 @@ class TenantWelcomeMail extends Mailable implements ShouldQueue
         return [];
     }
 }
-

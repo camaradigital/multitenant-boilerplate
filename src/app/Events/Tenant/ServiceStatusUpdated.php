@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Events\Tenant;
 
 use App\Models\Tenant\SolicitacaoServico;

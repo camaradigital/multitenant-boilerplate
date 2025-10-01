@@ -2,11 +2,10 @@
 
 namespace App\Http\Responses;
 
+use Illuminate\Http\JsonResponse;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
-use Illuminate\Http\Request;
 use Spatie\Multitenancy\Models\Tenant;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Http\JsonResponse;
 
 class TenantLoginResponse implements LoginResponseContract
 {
@@ -14,7 +13,6 @@ class TenantLoginResponse implements LoginResponseContract
      * Create an HTTP response that represents the object.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function toResponse($request): Response
     {

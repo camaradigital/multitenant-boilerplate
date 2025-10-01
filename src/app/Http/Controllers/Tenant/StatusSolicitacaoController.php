@@ -18,7 +18,7 @@ class StatusSolicitacaoController extends Controller
     {
         // Renderiza o componente Vue e passa os status paginados como prop.
         return inertia('Tenant/StatusSolicitacao/Index', [
-            'status' => StatusSolicitacao::latest()->paginate(10)
+            'status' => StatusSolicitacao::latest()->paginate(10),
         ]);
     }
 
@@ -45,7 +45,7 @@ class StatusSolicitacaoController extends Controller
 
         // Redireciona para a rota correta usando o nome definido no seu arquivo de rotas.
         return Redirect::route('admin.status-solicitacao.index')
-                         ->with('success', 'Status criado com sucesso.');
+            ->with('success', 'Status criado com sucesso.');
     }
 
     /**
@@ -64,14 +64,14 @@ class StatusSolicitacaoController extends Controller
             // Se este status for o padrão, desmarca todos os outros.
             if ($request->boolean('is_default_abertura')) {
                 StatusSolicitacao::where('id', '!=', $statusSolicitacao->id)
-                                 ->update(['is_default_abertura' => false]);
+                    ->update(['is_default_abertura' => false]);
             }
 
             $statusSolicitacao->update($request->all());
         });
 
         return Redirect::route('admin.status-solicitacao.index')
-                         ->with('success', 'Status atualizado com sucesso.');
+            ->with('success', 'Status atualizado com sucesso.');
     }
 
     /**
@@ -92,6 +92,6 @@ class StatusSolicitacaoController extends Controller
         $statusSolicitacao->delete();
 
         return Redirect::route('admin.status-solicitacao.index')
-                         ->with('success', 'Status excluído com sucesso.');
+            ->with('success', 'Status excluído com sucesso.');
     }
 }

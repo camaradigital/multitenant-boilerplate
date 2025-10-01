@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Central;
 
+use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use App\Models\Tenant;
 
 class HealthCheckController extends Controller
 {
@@ -19,7 +19,7 @@ class HealthCheckController extends Controller
             'app' => 'up',
             'central_database' => 'down',
             'redis' => 'down',
-            'tenants_databases' => []
+            'tenants_databases' => [],
         ];
 
         // 1. Verifica a conexão com o banco de dados central
@@ -55,7 +55,7 @@ class HealthCheckController extends Controller
             }
         }
 
-        $allTenantsUp = !in_array('down', $status['tenants_databases']);
+        $allTenantsUp = ! in_array('down', $status['tenants_databases']);
 
         if ($status['central_database'] === 'up' && $status['redis'] === 'up' && $allTenantsUp) {
             return response()->json($status, 200);

@@ -2,13 +2,13 @@
 
 namespace App\Models\Tenant;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use Illuminate\Database\Eloquent\Casts\Attribute; // Importar a classe Attribute
+use Spatie\Activitylog\LogOptions; // Importar a classe Attribute
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class Legislatura extends Model
 {
@@ -24,7 +24,7 @@ class Legislatura extends Model
         'data_inicio',
         'data_fim',
         'foto_principal_path',
-        'texto_destaque'
+        'texto_destaque',
     ];
 
     /**
@@ -34,7 +34,7 @@ class Legislatura extends Model
      */
     protected $casts = [
         'data_inicio' => 'date',
-        'data_fim' => 'date'
+        'data_fim' => 'date',
     ];
 
     /**
@@ -55,7 +55,6 @@ class Legislatura extends Model
             ->dontSubmitEmptyLogs();
     }
 
-
     /**
      * Define o acessor para a URL da foto principal da legislatura.
      */
@@ -66,6 +65,7 @@ class Legislatura extends Model
                 if ($this->foto_principal_path && Storage::disk('public')->exists($this->foto_principal_path)) {
                     return Storage::disk('public')->url($this->foto_principal_path);
                 }
+
                 return null;
             }
         );

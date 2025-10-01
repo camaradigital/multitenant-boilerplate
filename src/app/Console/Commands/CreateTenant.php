@@ -2,9 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\Central\TenantManagerService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+
 // use Spatie\Multitenancy\Commands\Concerns\TenantAware; // Uncomment if needed, but not typical for tenant creation command
 
 class CreateTenant extends Command
@@ -70,11 +71,11 @@ class CreateTenant extends Command
             // It calls 'tenants:artisan' which might handle seeding.
             // If admin creation/email sending is part of the seed, it will happen.
             // Otherwise, you might need to add that logic to your TenantManagerService::create method.
-            $this->info("Verifique os logs para detalhes sobre a criação do administrador e envio de e-mail.");
-
+            $this->info('Verifique os logs para detalhes sobre a criação do administrador e envio de e-mail.');
 
         } catch (\Exception $e) {
-            $this->error("Erro ao criar o tenant: " . $e->getMessage());
+            $this->error('Erro ao criar o tenant: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 

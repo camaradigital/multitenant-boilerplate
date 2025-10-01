@@ -47,4 +47,3 @@ class CidadaosExport implements FromQuery, WithHeadings, WithMapping
         ];
     }
 }
-

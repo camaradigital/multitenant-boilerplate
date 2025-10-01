@@ -42,10 +42,6 @@ class TenantController extends Controller
 
     /**
      * Armazena um novo tenant no banco de dados.
-     *
-     * @param StoreTenantRequest $request
-     * @param TenantManagerService $tenantManager
-     * @return RedirectResponse
      */
     public function store(StoreTenantRequest $request, TenantManagerService $tenantManager): RedirectResponse
     {
@@ -71,7 +67,7 @@ class TenantController extends Controller
         try {
             $tenantManager->create($tenantData);
         } catch (\Exception $e) {
-            return back()->withErrors(['general' => 'Falha ao criar o tenant: ' . $e->getMessage()]);
+            return back()->withErrors(['general' => 'Falha ao criar o tenant: '.$e->getMessage()]);
         }
 
         return redirect()->route('central.tenants.index')->with('success', 'Tenant criado com sucesso!');
@@ -83,7 +79,7 @@ class TenantController extends Controller
     public function show(Tenant $tenant): Response
     {
         return Inertia::render('Central/Tenants/Show', [
-            'tenant' => $tenant
+            'tenant' => $tenant,
         ]);
     }
 
@@ -93,16 +89,12 @@ class TenantController extends Controller
     public function edit(Tenant $tenant): Response
     {
         return Inertia::render('Central/Tenants/Edit', [
-            'tenant' => $tenant
+            'tenant' => $tenant,
         ]);
     }
 
     /**
      * Atualiza o tenant especificado no banco de dados.
-     *
-     * @param UpdateTenantRequest $request
-     * @param Tenant $tenant
-     * @return RedirectResponse
      */
     public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
     {

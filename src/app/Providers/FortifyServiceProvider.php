@@ -3,39 +3,35 @@
 namespace App\Providers;
 
 // Imports para a lógica de autenticação multi-tenant
-use App\Models\User as CentralUser;
-use App\Models\Tenant\User as TenantUser;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Spatie\Multitenancy\Models\Tenant;
-
-// Imports para as customizações de Login e Logout
+use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\Tenant\AttemptToAuthenticate;
+use App\Actions\Fortify\Tenant\ResetUserPassword as TenantResetUserPassword;
+use App\Actions\Fortify\UpdateUserPassword;
+// Imports para as customizações de Login e Logout
+use App\Actions\Fortify\UpdateUserProfileInformation;
 use App\Http\Responses\CustomLogoutResponse;
 use App\Http\Responses\TenantLoginResponse;
 use App\Http\Responses\TenantRegisterResponse;
+use App\Models\Tenant\User as TenantUser;
+use App\Models\User as CentralUser;
+use Carbon\Carbon;
+use Illuminate\Cache\RateLimiting\Limit;
+// Imports Padrão e outras Ações Customizadas do Fortify
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
-
-// Imports Padrão e outras Ações Customizadas do Fortify
-use App\Actions\Fortify\CreateNewUser;
-use App\Actions\Fortify\UpdateUserPassword;
-use App\Actions\Fortify\UpdateUserProfileInformation;
-use App\Actions\Fortify\Tenant\ResetUserPassword as TenantResetUserPassword;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
-use Laravel\Fortify\Fortify;
-
 // --- ADICIONADO ---
 // Importe a classe Inertia para renderizar a view com dados.
-use Inertia\Inertia;
+use Laravel\Fortify\Fortify;
 // Importe a classe Carbon para manipulação de datas.
-use Carbon\Carbon;
+use Spatie\Multitenancy\Models\Tenant;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -87,6 +83,7 @@ class FortifyServiceProvider extends ServiceProvider
                     return $user;
                 }
             }
+
             return null;
         });
 
@@ -109,18 +106,18 @@ class FortifyServiceProvider extends ServiceProvider
                         $freshTenant->endereco_numero,
                         $freshTenant->endereco_bairro,
                         $freshTenant->endereco_cidade,
-                        $freshTenant->endereco_estado
+                        $freshTenant->endereco_estado,
                     ]);
                     $address = implode(', ', $addressParts);
                     $date = Carbon::now()->locale('pt_BR')->translatedFormat('d \\de F \\de Y');
 
                     // Mapeia os placeholders para os valores reais do tenant
                     $replacements = [
-                        '[Nome da Câmara Municipal]'       => $freshTenant->name,
-                        '[CNPJ da Câmara]'                => $freshTenant->cnpj,
-                        '[Endereço Completo da Câmara]'   => $address,
-                        '[Cidade]'                        => $freshTenant->endereco_cidade,
-                        '[dia] de [mês] de [ano]'         => $date,
+                        '[Nome da Câmara Municipal]' => $freshTenant->name,
+                        '[CNPJ da Câmara]' => $freshTenant->cnpj,
+                        '[Endereço Completo da Câmara]' => $address,
+                        '[Cidade]' => $freshTenant->endereco_cidade,
+                        '[dia] de [mês] de [ano]' => $date,
                         // O placeholder [Nome Completo do Cidadão] agora é ignorado aqui
                     ];
 
@@ -135,6 +132,7 @@ class FortifyServiceProvider extends ServiceProvider
                     ];
                 }
             }
+
             return Inertia::render('Auth/Register', [
                 'tenant' => $processedTenantData,
             ]);
@@ -153,7 +151,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::confirmPasswordView(fn () => inertia('Auth/ConfirmPassword'));
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+
             return Limit::perMinute(5)->by($throttleKey);
         });
 
@@ -162,6 +161,3 @@ class FortifyServiceProvider extends ServiceProvider
         });
     }
 }
-
-
-

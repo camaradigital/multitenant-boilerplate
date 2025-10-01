@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Central;
 
+use App\Http\Controllers\Controller;
+use App\Mail\Central\ContactFormSubmitted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\Central\ContactFormSubmitted;
-use App\Http\Controllers\Controller;
 
 class ContactController extends Controller
 {
@@ -14,9 +14,9 @@ class ContactController extends Controller
         // 1. Validação dos dados (com mensagens em português)
         $validatedData = $request->validate([
             'cityCouncilName' => 'required|string|max:255',
-            'contactPerson'   => 'required|string|max:255',
-            'email'           => 'required|email|max:255',
-            'message'         => 'required|string|max:5000',
+            'contactPerson' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'message' => 'required|string|max:5000',
         ]);
 
         // 2. Envio do e-mail

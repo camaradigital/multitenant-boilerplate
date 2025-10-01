@@ -25,7 +25,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, HasProfilePhoto, Notifiable, TwoFactorAuthenticatable, HasRoles, UsesTenantConnection, LogsActivity, HasTeams;
+    use HasApiTokens, HasFactory, HasProfilePhoto, HasRoles, HasTeams, LogsActivity, Notifiable, TwoFactorAuthenticatable, UsesTenantConnection;
 
     protected $guard_name = 'tenant';
 
@@ -73,9 +73,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
         try {
             $decrypted = Crypt::decryptString($value);
+
             return json_decode($decrypted, true) ?? []; // Garante que retorne um array mesmo se o JSON for inválido
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            Log::error("Falha ao descriptografar profile_data para o usuário ID: {$this->id}. Erro: " . $e->getMessage());
+            Log::error("Falha ao descriptografar profile_data para o usuário ID: {$this->id}. Erro: ".$e->getMessage());
+
             return []; // Retorna um array vazio em caso de falha
         }
     }
@@ -86,10 +88,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function setProfileDataAttribute($value): void
     {
         if (is_array($value)) {
-            // --- CORREÇÃO APLICADA AQUI ---
-            // Alinhado para buscar 'endereco_bairro' dentro do array, que é o nome vindo do formulário.
             $this->attributes['bairro'] = $value['endereco_bairro'] ?? null;
-
             // Continua com a criptografia normal para o profile_data
             $jsonValue = json_encode($value);
             $this->attributes['profile_data'] = Crypt::encryptString($jsonValue);
@@ -99,7 +98,6 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->attributes['profile_data'] = null;
         }
     }
-
 
     /**
      * Configura como as atividades deste modelo devem ser logadas.
@@ -114,6 +112,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(function (string $eventName) {
                 $events = ['created' => 'criado', 'updated' => 'atualizado', 'deleted' => 'excluído'];
+
                 return "O usuário {$this->name} foi {$events[$eventName]}.";
             });
     }
@@ -128,15 +127,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendPasswordResetNotification($token)
     {
-        if (!$tenant = Tenant::current()) {
+        if (! $tenant = Tenant::current()) {
             Log::warning('Tentativa de enviar reset de senha sem um tenant atual.');
+
             return;
         }
 
-        $domain = $tenant->subdomain . '.' . config('app.central_domain');
+        $domain = $tenant->subdomain.'.'.config('app.central_domain');
         $scheme = config('app.env') === 'production' ? 'https' : 'http';
 
-        $url = $scheme . "://" . $domain . route('password.reset', [
+        $url = $scheme.'://'.$domain.route('password.reset', [
             'token' => $token,
             'email' => $this->getEmailForPasswordReset(),
         ], false);

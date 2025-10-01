@@ -33,7 +33,7 @@ class FuncionarioRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('tenant.users', 'email')->ignore($funcionarioId)
+                Rule::unique('tenant.users', 'email')->ignore($funcionarioId),
             ],
             'roles' => 'required|array|min:1',
             'roles.*' => 'exists:tenant.roles,id',

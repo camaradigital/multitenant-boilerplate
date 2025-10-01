@@ -11,8 +11,6 @@ class StoreTenantRequest extends FormRequest
     /**
      * Determina se o usuário está autorizado a fazer esta requisição.
      * A autorização é baseada na policy 'create' para o modelo Tenant.
-     *
-     * @return bool
      */
     public function authorize(): bool
     {

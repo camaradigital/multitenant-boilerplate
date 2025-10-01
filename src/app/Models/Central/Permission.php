@@ -2,8 +2,8 @@
 
 namespace App\Models\Central;
 
-use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
+use Spatie\Permission\Models\Permission as SpatiePermission;
 
 class Permission extends SpatiePermission
 {

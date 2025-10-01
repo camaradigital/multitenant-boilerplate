@@ -2,13 +2,13 @@
 
 namespace App\Models\Tenant;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use Illuminate\Database\Eloquent\Casts\Attribute; // Importar a classe Attribute
+use Spatie\Activitylog\LogOptions; // Importar a classe Attribute
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class Politico extends Model
 {
@@ -59,8 +59,9 @@ class Politico extends Model
                 if ($this->foto_path && Storage::disk('public')->exists($this->foto_path)) {
                     return Storage::disk('public')->url($this->foto_path);
                 }
+
                 // Se não houver foto, gera uma URL de avatar com as iniciais do nome político
-                return 'https://ui-avatars.com/api/?name=' . urlencode($this->nome_politico) . '&color=FFFFFF&background=0284C7&bold=true';
+                return 'https://ui-avatars.com/api/?name='.urlencode($this->nome_politico).'&color=FFFFFF&background=0284C7&bold=true';
             },
         );
     }

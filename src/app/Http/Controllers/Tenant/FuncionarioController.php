@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\FuncionarioRequest;
+use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
-use App\Models\Tenant\Role;
 
 class FuncionarioController extends Controller
 {
@@ -68,7 +68,7 @@ class FuncionarioController extends Controller
             'is_active' => $validatedData['is_active'],
         ];
 
-        if (!empty($validatedData['password'])) {
+        if (! empty($validatedData['password'])) {
             $dataToUpdate['password'] = Hash::make($validatedData['password']);
         }
 

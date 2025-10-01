@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-// Importa a nossa nova classe personalizada
 use App\Services\Auth\TenantAwarePasswordBrokerManager;
+// Importa a nossa nova classe personalizada
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {

@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\TipoServico;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\Database\QueryException; // Importar exceção do DB
-use Exception; // Importar exceção genérica
+use Exception;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request; // Importar exceção do DB
+use Illuminate\Support\Facades\Redirect; // Importar exceção genérica
 
 class TipoServicoController extends Controller
 {
@@ -17,7 +17,7 @@ class TipoServicoController extends Controller
     public function index()
     {
         return inertia('Tenant/TiposServico/Index', [
-            'tiposServico' => TipoServico::latest()->paginate(10)
+            'tiposServico' => TipoServico::latest()->paginate(10),
         ]);
     }
 
@@ -35,7 +35,7 @@ class TipoServicoController extends Controller
         TipoServico::create($request->all());
 
         return Redirect::route('admin.tipos-servico.index')
-                         ->with('success', 'Tipo de serviço criado com sucesso.');
+            ->with('success', 'Tipo de serviço criado com sucesso.');
     }
 
     /**
@@ -44,7 +44,7 @@ class TipoServicoController extends Controller
     public function update(Request $request, TipoServico $tipoServico)
     {
         $request->validate([
-            'nome' => 'required|string|max:255|unique:tenant.tipos_servico,nome,' . $tipoServico->id,
+            'nome' => 'required|string|max:255|unique:tenant.tipos_servico,nome,'.$tipoServico->id,
             'descricao' => 'nullable|string',
             'is_active' => 'required|boolean',
         ]);
@@ -52,7 +52,7 @@ class TipoServicoController extends Controller
         $tipoServico->update($request->all());
 
         return Redirect::route('admin.tipos-servico.index')
-                         ->with('success', 'Tipo de serviço atualizado com sucesso.');
+            ->with('success', 'Tipo de serviço atualizado com sucesso.');
     }
 
     /**
@@ -85,4 +85,3 @@ class TipoServicoController extends Controller
         }
     }
 }
-

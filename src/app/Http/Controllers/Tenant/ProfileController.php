@@ -3,22 +3,20 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Contracts\Encryption\DecryptException; // Adicionado para o catch
+use App\Models\Tenant\SolicitacaoServico; // Adicionado para o catch
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log; // Adicionado para o log
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\ValidationException;
-use App\Models\Tenant\User;
-use App\Models\Tenant\SolicitacaoServico;
 use Inertia\Inertia; // Supondo que você use Inertia.js
 
 class ProfileController extends Controller
 {
-
     public function show()
     {
         $user = Auth::user();
@@ -31,7 +29,7 @@ class ProfileController extends Controller
                 $profileData = json_decode(decrypt($user->profile_data), true);
             } catch (DecryptException $e) {
                 // Loga o erro e define os dados como vazios para evitar falhas no front-end
-                Log::error("Erro ao descriptografar profile_data para o usuário {$user->id}: " . $e->getMessage());
+                Log::error("Erro ao descriptografar profile_data para o usuário {$user->id}: ".$e->getMessage());
                 $profileData = [];
             }
         }
@@ -71,11 +69,11 @@ class ProfileController extends Controller
             'solicitacoes.pesquisa_satisfacao',
         ]);
 
-        $fileName = 'meus_dados_' . now()->format('Y-m-d') . '.json';
+        $fileName = 'meus_dados_'.now()->format('Y-m-d').'.json';
 
         // Retorna uma resposta JSON que força o download no navegador
         return response()->json($user, 200, [
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Content-Type' => 'application/json',
         ]);
     }
@@ -89,8 +87,8 @@ class ProfileController extends Controller
         $this->authorize('anonymizeProfile', $user); // <-- ALTERADO
 
         $user->update([
-            'name' => 'Usuário Anônimo #' . $user->id,
-            'email' => 'anonymized_' . $user->id . '@' . request()->getHost(),
+            'name' => 'Usuário Anônimo #'.$user->id,
+            'email' => 'anonymized_'.$user->id.'@'.request()->getHost(),
             'cpf' => null,
             'profile_data' => null,
             'is_active' => false,
@@ -110,9 +108,6 @@ class ProfileController extends Controller
     /**
      * Deleta a conta do usuário autenticado.
      * Esta ação requer uma senha.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Request $request): RedirectResponse
     {
@@ -120,7 +115,7 @@ class ProfileController extends Controller
         $this->authorize('deleteProfile', $user); // <-- ALTERADO
 
         // Validação da senha para confirmar a exclusão
-        if (!Hash::check($request->password, $user->password)) {
+        if (! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => __('This password does not match our records.'),
             ]);

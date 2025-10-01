@@ -7,9 +7,9 @@ use App\Models\Tenant\Servico;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Services\Tenant\RelatorioService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,10 +18,6 @@ class DashboardController extends Controller
 {
     /**
      * Exibe o dashboard apropriado com base no papel do usuário.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\Services\Tenant\RelatorioService $relatorioService
-     * @return \Inertia\Response
      */
     public function __invoke(Request $request, RelatorioService $relatorioService): Response
     {
@@ -38,8 +34,6 @@ class DashboardController extends Controller
 
     /**
      * Monta e retorna a view do Portal Pessoal para o Cidadão.
-     *
-     * @return \Inertia\Response
      */
     private function showCidadaoDashboard(): Response
     {
@@ -56,24 +50,25 @@ class DashboardController extends Controller
             'pesquisa_satisfacao',
             'historicos' => function ($q_hist) {
                 $q_hist->with('causer:id,name')->latest();
-            }
+            },
         ])
-        ->latest('solicitacoes_servico.created_at')
-        ->paginate(10)
-        ->withQueryString();
+            ->latest('solicitacoes_servico.created_at')
+            ->paginate(10)
+            ->withQueryString();
 
         // Renomeia 'historicos' para 'activity' para corresponder ao que o frontend espera.
         $solicitacoes->getCollection()->transform(function ($solicitacao) {
             $solicitacao->activity = $solicitacao->historicos;
             unset($solicitacao->historicos);
+
             return $solicitacao;
         });
 
         // Adiciona a verificação que estava faltando
         $canCreateOnlineSolicitacao = Servico::withoutGlobalScopes()
-                                            ->where('is_active', true)
-                                            ->where('permite_solicitacao_online', true)
-                                            ->exists();
+            ->where('is_active', true)
+            ->where('permite_solicitacao_online', true)
+            ->exists();
 
         return Inertia::render('Tenant/PortalPessoal/Index', [
             'solicitacoes' => $solicitacoes,
@@ -83,9 +78,6 @@ class DashboardController extends Controller
 
     /**
      * Monta e retorna a view do Dashboard Administrativo.
-     *
-     * @param \App\Services\Tenant\RelatorioService $relatorioService
-     * @return \Inertia\Response
      */
     private function showAdminDashboard(RelatorioService $relatorioService): Response
     {
@@ -123,7 +115,7 @@ class DashboardController extends Controller
             ->orderBy('date', 'asc')
             ->get([
                 DB::raw('DATE(created_at) as date'),
-                DB::raw('count(*) as total')
+                DB::raw('count(*) as total'),
             ])
             ->pluck('total', 'date');
 

@@ -6,18 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreSolicitacaoServicoRequest;
 use App\Models\Central\Tenant;
 use App\Models\Tenant\Servico;
-use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
+use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Services\Tenant\SolicitacaoService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class SolicitacaoServicoController extends Controller
 {
@@ -48,7 +48,7 @@ class SolicitacaoServicoController extends Controller
         // Adicionado: Filtro de busca por nome do cidadão
         if ($request->filled('search')) {
             $query->whereHas('cidadao', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->input('search') . '%');
+                $q->where('name', 'like', '%'.$request->input('search').'%');
             });
         }
         // Adicionado: Filtro por status
@@ -63,7 +63,7 @@ class SolicitacaoServicoController extends Controller
             $query->whereHas('servico', function ($q) {
                 $q->where('is_juridico', true);
             });
-        } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && !$user->hasRole('Admin Tenant')) {
+        } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && ! $user->hasRole('Admin Tenant')) {
             $query->where('atendente_id', $user->id);
         }
 
@@ -75,6 +75,7 @@ class SolicitacaoServicoController extends Controller
                 'delete' => $user->can('delete', $solicitacao),
                 'update' => $user->can('update', $solicitacao),
             ];
+
             return $solicitacao;
         });
 
@@ -100,7 +101,6 @@ class SolicitacaoServicoController extends Controller
         ]);
     }
 
-
     /**
      * Salva a nova solicitação.
      */
@@ -117,7 +117,7 @@ class SolicitacaoServicoController extends Controller
 
         $servico = Servico::findOrFail($validatedData['servico_id']);
 
-        if ($user->hasRole('Cidadao') && !$servico->permite_solicitacao_online) {
+        if ($user->hasRole('Cidadao') && ! $servico->permite_solicitacao_online) {
             return Redirect::back()->withErrors(['servico_id' => 'Este serviço está disponível apenas para solicitação presencial.']);
         }
 
@@ -130,17 +130,17 @@ class SolicitacaoServicoController extends Controller
         }
 
         $verificacaoJuridica = $this->solicitacaoService->verificarAcessoJuridico($servico, $cidadao);
-        if (!$verificacaoJuridica['pode_solicitar']) {
+        if (! $verificacaoJuridica['pode_solicitar']) {
             return Redirect::back()->withErrors(['servico_id' => $verificacaoJuridica['mensagem']]);
         }
 
         $verificacaoLimite = $this->solicitacaoService->verificarLimiteDeUso($servico, $cidadao);
-        if (!$verificacaoLimite['pode_solicitar']) {
+        if (! $verificacaoLimite['pode_solicitar']) {
             return Redirect::back()->withErrors(['servico_id' => $verificacaoLimite['mensagem']]);
         }
 
         $statusInicial = StatusSolicitacao::where('is_default_abertura', true)->first();
-        if (!$statusInicial) {
+        if (! $statusInicial) {
             return Redirect::back()->withErrors(['servico_id' => 'Nenhum status inicial foi configurado no sistema.']);
         }
 
@@ -156,7 +156,7 @@ class SolicitacaoServicoController extends Controller
 
             if ($request->hasFile('documentos')) {
                 foreach ($request->file('documentos') as $arquivo) {
-                    $caminho = $arquivo->store('solicitacoes/' . $solicitacao->id, 'tenant_private');
+                    $caminho = $arquivo->store('solicitacoes/'.$solicitacao->id, 'tenant_private');
                     $solicitacao->documentos()->create([
                         'path' => $caminho,
                         'nome_original' => $arquivo->getClientOriginalName(),
@@ -170,7 +170,8 @@ class SolicitacaoServicoController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Falha ao criar solicitação: ' . $e->getMessage());
+            Log::error('Falha ao criar solicitação: '.$e->getMessage());
+
             return Redirect::back()->withErrors(['servico_id' => 'Ocorreu um erro inesperado ao salvar sua solicitação. Por favor, tente novamente.']);
         }
 
@@ -180,7 +181,6 @@ class SolicitacaoServicoController extends Controller
 
         return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação registrada com sucesso!');
     }
-
 
     /**
      * Exibe os detalhes de uma solicitação.
@@ -215,13 +215,13 @@ class SolicitacaoServicoController extends Controller
         $novoStatus = StatusSolicitacao::find($validatedData['status_id']);
 
         if ($request->filled('observacoes')) {
-            $novaObservacao = "\n\n--- " . Auth::user()->name . " em " . now()->format('d/m/Y H:i') . " ---\n" . $request->observacoes;
-            $dadosParaAtualizar['observacoes'] = $solicitacao->observacoes . $novaObservacao;
+            $novaObservacao = "\n\n--- ".Auth::user()->name.' em '.now()->format('d/m/Y H:i')." ---\n".$request->observacoes;
+            $dadosParaAtualizar['observacoes'] = $solicitacao->observacoes.$novaObservacao;
         }
 
         if ($novoStatus->is_final && is_null($solicitacao->finalizado_em)) {
             $dadosParaAtualizar['finalizado_em'] = now();
-        } elseif (!$novoStatus->is_final) {
+        } elseif (! $novoStatus->is_final) {
             $dadosParaAtualizar['finalizado_em'] = null;
         }
 
@@ -238,6 +238,7 @@ class SolicitacaoServicoController extends Controller
         $this->authorize('delete', $solicitacao);
 
         $solicitacao->delete();
+
         return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação excluída.');
     }
 }

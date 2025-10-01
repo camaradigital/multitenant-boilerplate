@@ -3,21 +3,18 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\PesquisaSatisfacao;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
-use App\Models\Tenant\PesquisaSatisfacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
 
 class PesquisaSatisfacaoController extends Controller
 {
     /**
      * Armazena uma nova pesquisa de satisfação.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Tenant\SolicitacaoServico  $solicitacao
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request, SolicitacaoServico $solicitacao)
@@ -39,7 +36,7 @@ class PesquisaSatisfacaoController extends Controller
         $statusAtual = StatusSolicitacao::find($solicitacao->status_id);
 
         // Garante que a solicitação já foi finalizada.
-        if (!$statusAtual || !$statusAtual->is_final) {
+        if (! $statusAtual || ! $statusAtual->is_final) {
             return Redirect::route('portal.meu-painel')->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
         }
 
@@ -59,4 +56,3 @@ class PesquisaSatisfacaoController extends Controller
         return Redirect::route('portal.meu-painel')->with('success', 'Obrigado pela sua avaliação!');
     }
 }
-

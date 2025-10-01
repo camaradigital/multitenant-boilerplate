@@ -65,4 +65,3 @@ class SwitchAuthConfigTask implements SwitchTenantTask
         config(['auth.defaults.guard' => $this->originalAuthGuard]);
     }
 }
-

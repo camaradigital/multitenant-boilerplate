@@ -59,4 +59,3 @@ class Servico extends Model
         return $this->belongsTo(TipoServico::class, 'tipo_servico_id');
     }
 }
-

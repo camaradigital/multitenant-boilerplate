@@ -34,7 +34,7 @@ return new class extends Migration
                 'whatsapp',
                 'email_contato',
                 'instagram',
-                'youtube'
+                'youtube',
             ]);
         });
     }

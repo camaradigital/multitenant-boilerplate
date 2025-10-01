@@ -12,13 +12,13 @@ class PoliticoController extends Controller
 {
     // No método index()
 
-public function index()
-{
-    return inertia('Tenant/Memoria/Politicos/Index', [
-        // Troque latest() por orderBy('nome_politico')
-        'politicos' => Politico::orderBy('nome_politico')->paginate(10),
-    ]);
-}
+    public function index()
+    {
+        return inertia('Tenant/Memoria/Politicos/Index', [
+            // Troque latest() por orderBy('nome_politico')
+            'politicos' => Politico::orderBy('nome_politico')->paginate(10),
+        ]);
+    }
 
     public function store(Request $request)
     {
@@ -37,6 +37,7 @@ public function index()
         }
 
         Politico::create($validated);
+
         return Redirect::route('admin.politicos.index')->with('success', 'Político cadastrado.');
     }
 
@@ -59,6 +60,7 @@ public function index()
         }
 
         $politico->update($validated);
+
         return Redirect::route('admin.politicos.index')->with('success', 'Político atualizado.');
     }
 
@@ -68,6 +70,7 @@ public function index()
             Storage::disk('public')->delete($politico->foto_path);
         }
         $politico->delete();
+
         return Redirect::route('admin.politicos.index')->with('success', 'Político excluído.');
     }
 }

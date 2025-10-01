@@ -1,4 +1,5 @@
 <?php
+
 // Caminho: database/seeders/Tenant/TenantDatabaseSeeder.php
 
 namespace Database\Seeders\Tenant;
@@ -10,9 +11,6 @@ class TenantDatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     *
-     * @param \App\Models\Central\Tenant $tenant
-     * @return void
      */
     public function run(Tenant $tenant): void
     {

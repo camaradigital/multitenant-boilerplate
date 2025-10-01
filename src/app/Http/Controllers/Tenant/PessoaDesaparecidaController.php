@@ -30,7 +30,6 @@ class PessoaDesaparecidaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -70,8 +69,6 @@ class PessoaDesaparecidaController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Tenant\PessoaDesaparecida  $pessoaDesaparecida
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, PessoaDesaparecida $pessoaDesaparecida)
@@ -93,7 +90,6 @@ class PessoaDesaparecidaController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Tenant\PessoaDesaparecida  $pessoaDesaparecida
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(PessoaDesaparecida $pessoaDesaparecida)
@@ -114,7 +110,7 @@ class PessoaDesaparecidaController extends Controller
         $this->authorize('viewBoletim', $pessoaDesaparecida);
 
         abort_if(
-            !Storage::exists($pessoaDesaparecida->boletim_ocorrencia_path),
+            ! Storage::exists($pessoaDesaparecida->boletim_ocorrencia_path),
             404,
             'Arquivo não encontrado.'
         );

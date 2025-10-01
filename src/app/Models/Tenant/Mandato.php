@@ -4,9 +4,9 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 /**
  * Representa a participação de um político em uma legislatura específica, com um cargo definido.
@@ -22,7 +22,6 @@ class Mandato extends Model
      * @var array<int, string>
      */
     protected $fillable = ['legislatura_id', 'politico_id', 'cargo'];
-
 
     public function getActivitylogOptions(): LogOptions
     {

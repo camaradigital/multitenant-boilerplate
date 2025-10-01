@@ -2,8 +2,8 @@
 
 namespace App\Models\Central;
 
-use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class Role extends SpatieRole
 {

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant\Vaga;
 use App\Models\Tenant\Empresa;
+use App\Models\Tenant\Vaga;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,6 +43,7 @@ class VagaController extends Controller
     public function create(): Response
     {
         $empresas = Empresa::where('is_active', true)->orderBy('nome_fantasia')->get();
+
         return Inertia::render('Tenant/Vagas/Create', compact('empresas'));
     }
 
@@ -75,6 +76,7 @@ class VagaController extends Controller
     public function show(Vaga $vaga): Response
     {
         $vaga->load('empresa', 'candidaturas.user');
+
         return Inertia::render('Tenant/Vagas/Show', compact('vaga'));
     }
 
@@ -85,6 +87,7 @@ class VagaController extends Controller
     public function edit(Vaga $vaga): Response
     {
         $empresas = Empresa::where('is_active', true)->orderBy('nome_fantasia')->get();
+
         return Inertia::render('Tenant/Vagas/Edit', [
             'vaga' => $vaga,
             'empresas' => $empresas,
@@ -120,6 +123,7 @@ class VagaController extends Controller
     public function destroy(Vaga $vaga)
     {
         $vaga->delete();
+
         return redirect()->route('admin.vagas.index')->with('success', 'Vaga excluída com sucesso.');
     }
 
@@ -150,7 +154,7 @@ class VagaController extends Controller
         }
 
         $vaga->load('empresa');
+
         return Inertia::render('Tenant/Portal/Publico/Vagas/Show', compact('vaga'));
     }
 }
-

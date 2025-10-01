@@ -4,8 +4,8 @@ namespace Database\Seeders\Tenant;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -65,10 +65,6 @@ class RolePermissionSeeder extends Seeder
 
     /**
      * Função auxiliar para filtrar e atribuir permissões de forma segura.
-     *
-     * @param Role $role
-     * @param Collection $allPermissions
-     * @param array $permissionNames
      */
     private function assignPermissions(Role $role, Collection $allPermissions, array $permissionNames): void
     {

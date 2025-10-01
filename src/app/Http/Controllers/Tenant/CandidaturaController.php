@@ -18,9 +18,6 @@ class CandidaturaController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @param \App\Models\Tenant\Vaga $vaga
-     * @return \Inertia\Response
      */
     public function index(Vaga $vaga): Response
     {
@@ -47,6 +44,7 @@ class CandidaturaController extends Controller
         $this->authorize('create', [Candidatura::class, $vaga]);
 
         $vaga->load('empresa');
+
         return Inertia::render('Tenant/Candidaturas/Create', compact('vaga'));
     }
 
@@ -69,7 +67,7 @@ class CandidaturaController extends Controller
         $candidato = $request->user();
 
         // O currículo agora é guardado no disco privado 'local'
-        $path = $request->file('curriculo')->store("curriculos", 'local');
+        $path = $request->file('curriculo')->store('curriculos', 'local');
 
         $candidatura = Candidatura::create([
             'vaga_id' => $vaga->id,
@@ -90,7 +88,7 @@ class CandidaturaController extends Controller
                 Log::warning("Não foi possível enviar e-mail para a vaga ID {$vaga->id}: a empresa não tem um e-mail cadastrado.");
             }
         } catch (\Exception $e) {
-            Log::error("Falha ao enviar e-mail de nova candidatura para a vaga ID {$vaga->id}: " . $e->getMessage());
+            Log::error("Falha ao enviar e-mail de nova candidatura para a vaga ID {$vaga->id}: ".$e->getMessage());
         }
 
         return redirect()->route('portal.vagas.index')->with('success', 'Candidatura enviada com sucesso!');
@@ -99,17 +97,15 @@ class CandidaturaController extends Controller
     /**
      * Download the curriculum for the specified candidatura.
      *
-     * @param \App\Models\Tenant\Candidatura $candidatura
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function downloadCurriculo(Candidatura $candidatura)
     {
         $this->authorize('view', $candidatura);
 
-        $filename = 'curriculo_' . Str::slug($candidatura->user->name) . '_' . $candidatura->id . '.' . pathinfo($candidatura->curriculo_path, PATHINFO_EXTENSION);
+        $filename = 'curriculo_'.Str::slug($candidatura->user->name).'_'.$candidatura->id.'.'.pathinfo($candidatura->curriculo_path, PATHINFO_EXTENSION);
 
         // O download agora é feito a partir do disco privado 'local'
         return Storage::disk('local')->download($candidatura->curriculo_path, $filename);
     }
 }
-

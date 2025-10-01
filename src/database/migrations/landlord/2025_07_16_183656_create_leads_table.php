@@ -10,17 +10,18 @@ return new class extends Migration
      * Run the migrations.
      */
     // ..._create_leads_table.php
-public function up(): void {
-    Schema::create('leads', function (Blueprint $table) {
-        $table->id();
-        $table->string('nome');
-        $table->string('email')->unique();
-        $table->string('telefone')->nullable();
-        $table->string('site')->nullable();
-        $table->text('endereco')->nullable();
-        $table->timestamps();
-    });
-}
+    public function up(): void
+    {
+        Schema::create('leads', function (Blueprint $table) {
+            $table->id();
+            $table->string('nome');
+            $table->string('email')->unique();
+            $table->string('telefone')->nullable();
+            $table->string('site')->nullable();
+            $table->text('endereco')->nullable();
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.

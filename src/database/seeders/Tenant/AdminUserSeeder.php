@@ -15,9 +15,6 @@ class AdminUserSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     *
-     * @param \App\Models\Central\Tenant $tenant
-     * @return void
      */
     public function run(Tenant $tenant): void
     {
@@ -29,7 +26,7 @@ class AdminUserSeeder extends Seeder
             $user = User::firstOrCreate(
                 ['email' => $tenant->admin_email],
                 [
-                    'name'     => 'Administrador',
+                    'name' => 'Administrador',
                     'password' => Hash::make(Str::random(16)),
                 ]
             );

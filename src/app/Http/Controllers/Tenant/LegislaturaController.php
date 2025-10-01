@@ -49,6 +49,7 @@ class LegislaturaController extends Controller
     {
         // Carrega os relacionamentos necessários para a edição.
         $legislatura->load('mandatos.politico');
+
         return inertia('Tenant/Memoria/Legislaturas/Form', [
             'legislatura' => $legislatura,
             'politicos' => Politico::orderBy('nome_politico')->get(['id', 'nome_politico']),
@@ -75,7 +76,7 @@ class LegislaturaController extends Controller
         $legislatura->update($validated);
 
         // Após atualizar, o correto é continuar na mesma página.
-                return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura atualizada.');
+        return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura atualizada.');
     }
 
     public function destroy(Legislatura $legislatura)

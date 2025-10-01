@@ -17,7 +17,7 @@ class MemoriaLegislativaController extends Controller
             ->get();
 
         return Inertia::render('Tenant/Portal/Publico/MemoriaLegislativa', [
-            'timelineJson' => $this->formatDataForTimeline($legislaturas)
+            'timelineJson' => $this->formatDataForTimeline($legislaturas),
         ]);
     }
 
@@ -37,7 +37,7 @@ class MemoriaLegislativaController extends Controller
             // --- Construção do HTML do Slide ---
             $textBody = '<div class="timeline-slide-content">';
             if ($leg->texto_destaque) {
-                $textBody .= '<p class="timeline-summary">' . nl2br(e($leg->texto_destaque)) . '</p>';
+                $textBody .= '<p class="timeline-summary">'.nl2br(e($leg->texto_destaque)).'</p>';
             }
 
             // Galeria da Mesa Diretora
@@ -66,11 +66,11 @@ class MemoriaLegislativaController extends Controller
             $mediaUrl = $leg->foto_principal_url ?: ($presidente?->politico->foto_url ?: '');
 
             $events[] = [
-                'start_date' => [ 'year' => $leg->data_inicio->year, 'month' => $leg->data_inicio->month, 'day' => $leg->data_inicio->day ],
-                'end_date' => [ 'year' => $leg->data_fim->year, 'month' => $leg->data_fim->month, 'day' => $leg->data_fim->day ],
-                'text' => [ 'headline' => $leg->titulo, 'text' => $textBody ],
-                'media' => [ 'url' => $mediaUrl, 'caption' => "Composição da " . $leg->titulo, 'thumbnail' => $mediaUrl ],
-                'group' => 'Legislaturas'
+                'start_date' => ['year' => $leg->data_inicio->year, 'month' => $leg->data_inicio->month, 'day' => $leg->data_inicio->day],
+                'end_date' => ['year' => $leg->data_fim->year, 'month' => $leg->data_fim->month, 'day' => $leg->data_fim->day],
+                'text' => ['headline' => $leg->titulo, 'text' => $textBody],
+                'media' => ['url' => $mediaUrl, 'caption' => 'Composição da '.$leg->titulo, 'thumbnail' => $mediaUrl],
+                'group' => 'Legislaturas',
             ];
         }
 
@@ -79,24 +79,21 @@ class MemoriaLegislativaController extends Controller
 
         return [
             'title' => [
-                'media' => [ 'url' => $urlCapa, 'caption' => 'Câmara Municipal' ],
-                'text' => [ 'headline' => 'Memória Legislativa', 'text' => '<p>Navegue pela história política do nosso município.</p>' ]
+                'media' => ['url' => $urlCapa, 'caption' => 'Câmara Municipal'],
+                'text' => ['headline' => 'Memória Legislativa', 'text' => '<p>Navegue pela história política do nosso município.</p>'],
             ],
-            'events' => $events
+            'events' => $events,
         ];
     }
 
     /**
      * <<< MUDANÇA AQUI: NOVA FUNÇÃO AUXILIAR >>>
      * Constrói o bloco HTML para um político, incluindo o atributo data-councilor para o modal.
-     *
-     * @param Mandato $mandato
-     * @return string
      */
     private function buildPoliticoHtmlBlock(Mandato $mandato): string
     {
         $politico = $mandato->politico;
-        if (!$politico) {
+        if (! $politico) {
             return '';
         }
 
@@ -120,7 +117,7 @@ class MemoriaLegislativaController extends Controller
         $html .= "<img src='{$fotoUrl}' alt='Foto de {$politico->nome_politico}' />";
         $html .= "<span class='member-name'>{$politico->nome_politico}</span>";
         $html .= "<span class='member-role'>{$mandato->cargo}</span>";
-        $html .= "</div>";
+        $html .= '</div>';
 
         return $html;
     }

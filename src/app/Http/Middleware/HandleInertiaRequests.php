@@ -19,7 +19,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      */
-    public function version(Request $request): string|null
+    public function version(Request $request): ?string
     {
         return parent::version($request);
     }
@@ -70,14 +70,14 @@ class HandleInertiaRequests extends Middleware
             'tenant' => $currentTenant ? $currentTenant->toArray() : null,
 
             'theme' => [
-                'primary'   => $currentTenant?->cor_primaria ?? '#4F46E5',
+                'primary' => $currentTenant?->cor_primaria ?? '#4F46E5',
                 'secondary' => $currentTenant?->cor_secundaria ?? '#D946EF',
             ],
 
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'status'  => fn () => $request->session()->get('status'),
+                'error' => fn () => $request->session()->get('error'),
+                'status' => fn () => $request->session()->get('status'),
             ],
 
             'ziggy' => fn () => [
@@ -87,4 +87,3 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 }
-

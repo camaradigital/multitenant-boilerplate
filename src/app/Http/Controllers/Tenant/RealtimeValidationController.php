@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Http\Controllers\Controller;
 
 class RealtimeValidationController extends Controller
 {
@@ -30,17 +30,17 @@ class RealtimeValidationController extends Controller
             'data_nascimento' => [
                 'required',
                 'date_format:d/m/Y',
-                'before_or_equal:' . $maxDate
+                'before_or_equal:'.$maxDate,
             ],
         ];
 
         // --- MENSAGEM DE ERRO PERSONALIZADA ---
         $messages = [
-            'data_nascimento.before_or_equal' => 'Você deve ter pelo menos 16 anos para se cadastrar.'
+            'data_nascimento.before_or_equal' => 'Você deve ter pelo menos 16 anos para se cadastrar.',
         ];
 
         // Verifica se o campo enviado existe nas regras definidas
-        if (!isset($rules[$fieldName])) {
+        if (! isset($rules[$fieldName])) {
             return response()->json(['error' => 'Campo de validação desconhecido.'], 400);
         }
 

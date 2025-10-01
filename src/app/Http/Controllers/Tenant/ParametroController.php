@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Central\Tenant;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -47,7 +47,7 @@ class ParametroController extends Controller
                 'publicar_vagas_emprego',
                 'terms_of_service',
                 'privacy_policy'
-            )
+            ),
         ]);
     }
 
@@ -89,7 +89,7 @@ class ParametroController extends Controller
                 Storage::disk('public')->delete($tenant->logotipo_url);
             }
             // A pasta 'tenants/{id}/logos' é mais organizada
-            $path = $request->file('logotipo')->store('tenants/' . $tenant->id . '/logos', 'public');
+            $path = $request->file('logotipo')->store('tenants/'.$tenant->id.'/logos', 'public');
             $tenant->logotipo_url = $path;
         }
 
@@ -108,7 +108,7 @@ class ParametroController extends Controller
 
         $tenant->save();
 
-        cache()->forget('tenant_settings_' . $tenant->id);
+        cache()->forget('tenant_settings_'.$tenant->id);
 
         return Redirect::back()->with('success', 'Parâmetros atualizados com sucesso.');
     }

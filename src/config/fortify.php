@@ -73,8 +73,7 @@ return [
     |
     */
 
-        'home' => '/superadmin/dashboard', // <-- CORREÇÃO APLICADA AQUI
-
+    'home' => '/superadmin/dashboard', // <-- CORREÇÃO APLICADA AQUI
 
     /*
     |--------------------------------------------------------------------------
@@ -105,7 +104,6 @@ return [
     'middleware' => [
         'web',
     ],
-
 
     /*
     |--------------------------------------------------------------------------
@@ -148,15 +146,15 @@ return [
     */
 
     'features' => [
-    Features::registration(),
-    Features::resetPasswords(), // <-- GARANTA QUE ESTA LINHA ESTEJA ATIVA
-    Features::emailVerification(),
-    Features::updateProfileInformation(),
-    Features::updatePasswords(),
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]),
-],
+        Features::registration(),
+        Features::resetPasswords(), // <-- GARANTA QUE ESTA LINHA ESTEJA ATIVA
+        Features::emailVerification(),
+        Features::updateProfileInformation(),
+        Features::updatePasswords(),
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]),
+    ],
 
 ];

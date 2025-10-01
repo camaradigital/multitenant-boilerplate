@@ -19,7 +19,7 @@ class TenantManagerService
     public function create(array $data): Tenant
     {
         // Define o nome do banco de dados a partir do subdomínio
-        $dbName = 'cac_' . $data['subdomain'];
+        $dbName = 'cac_'.$data['subdomain'];
         $data['database_name'] = $dbName;
 
         try {
@@ -38,13 +38,13 @@ class TenantManagerService
                 // Executa as migrações do tenant.
                 Artisan::call('migrate', [
                     '--database' => 'tenant',
-                    '--path'     => 'database/migrations/tenant',
-                    '--force'    => true,
+                    '--path' => 'database/migrations/tenant',
+                    '--force' => true,
                 ]);
                 Log::info("Migrations para o tenant {$tenant->id} executadas com sucesso.");
 
                 // Executa os seeders do tenant.
-                (new TenantDatabaseSeeder())->run($tenant);
+                (new TenantDatabaseSeeder)->run($tenant);
                 Log::info("Seeders para o tenant {$tenant->id} executados com sucesso.");
 
                 // Encontra o usuário administrador recém-criado para enviar o e-mail de boas-vindas.
@@ -62,7 +62,7 @@ class TenantManagerService
             return $this->tenant;
 
         } catch (Exception $e) {
-            Log::error("Falha ao criar o tenant: " . $e->getMessage(), ['exception' => $e]);
+            Log::error('Falha ao criar o tenant: '.$e->getMessage(), ['exception' => $e]);
             // Se algo der errado, desfaz as operações (rollback).
             if ($this->tenant) {
                 DB::connection('central')->statement("DROP DATABASE IF EXISTS `{$dbName}`");

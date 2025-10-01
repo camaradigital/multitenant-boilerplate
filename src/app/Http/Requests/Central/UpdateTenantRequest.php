@@ -11,13 +11,12 @@ class UpdateTenantRequest extends FormRequest
     /**
      * Determina se o usuário está autorizado a fazer esta requisição.
      * A autorização é baseada na policy 'update' para o tenant específico.
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
         // Pega o tenant da rota para verificar a permissão
         $tenant = $this->route('tenant');
+
         return Gate::allows('update', $tenant);
     }
 

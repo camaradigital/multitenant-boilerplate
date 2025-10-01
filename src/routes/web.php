@@ -1,15 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use App\Http\Controllers\Central\TenantController;
-use App\Http\Controllers\Central\DashboardController;
-use App\Http\Controllers\Central\RolePermissionController;
-use App\Http\Controllers\Central\LeadController;
 use App\Http\Controllers\Central\CampaignController;
 use App\Http\Controllers\Central\CnpjController;
-use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\Central\ContactController;
+use App\Http\Controllers\Central\DashboardController;
+use App\Http\Controllers\Central\LeadController;
+use App\Http\Controllers\Central\RolePermissionController;
+use App\Http\Controllers\Central\TenantController;
+use App\Http\Controllers\HealthCheckController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,13 +57,13 @@ Route::middleware([
         Route::get('/health', [HealthCheckController::class, 'index']);
     });
 
-    Route::get('/unsubscribe/{lead}', function (\App\Models\Central\Lead $lead) {
-        // Aqui você adicionaria a lógica para marcar o lead como "descadastrado"
-        // Exemplo:
-        // $lead->update(['subscribed' => false]);
+Route::get('/unsubscribe/{lead}', function (\App\Models\Central\Lead $lead) {
+    // Aqui você adicionaria a lógica para marcar o lead como "descadastrado"
+    // Exemplo:
+    // $lead->update(['subscribed' => false]);
 
-        return 'Sua inscrição foi cancelada com sucesso.';
-    })->name('unsubscribe')->middleware('signed');
+    return 'Sua inscrição foi cancelada com sucesso.';
+})->name('unsubscribe')->middleware('signed');
 
 /*
 |--------------------------------------------------------------------------

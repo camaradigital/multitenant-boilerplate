@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Central;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionController extends Controller
 {
@@ -36,7 +36,7 @@ class RolePermissionController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:roles,name',
-            'permissions' => 'array'
+            'permissions' => 'array',
         ]);
 
         $role = Role::create(['name' => $request->name, 'guard_name' => 'web']);
@@ -54,8 +54,8 @@ class RolePermissionController extends Controller
     public function update(Request $request, Role $role)
     {
         $request->validate([
-            'name' => 'required|string|unique:roles,name,' . $role->id,
-            'permissions' => 'array'
+            'name' => 'required|string|unique:roles,name,'.$role->id,
+            'permissions' => 'array',
         ]);
 
         $role->update(['name' => $request->name]);
@@ -70,6 +70,7 @@ class RolePermissionController extends Controller
     public function destroy(Role $role)
     {
         $role->delete();
+
         return redirect()->route('central.roles.index')->with('success', 'Papel removido com sucesso.');
     }
 }

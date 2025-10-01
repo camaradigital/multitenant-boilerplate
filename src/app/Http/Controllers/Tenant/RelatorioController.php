@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Exports\Tenant\CidadaosExport;
+use App\Exports\Tenant\SolicitacoesExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\RelatorioAtendimentoRequest;
-use App\Http\Requests\Tenant\RelatorioCidadaosRequest;
+use App\Http\Requests\Tenant\RelatorioCidadaosRequest; // Classe "conceitual" para a policy
 use App\Models\Central\Tenant;
-use App\Models\Tenant\Relatorio; // Classe "conceitual" para a policy
+use App\Models\Tenant\Relatorio;
 use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Services\Tenant\RelatorioService;
-use App\Exports\Tenant\SolicitacoesExport;
-use App\Exports\Tenant\CidadaosExport;
-use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class RelatorioController extends Controller
 {
@@ -28,7 +27,6 @@ class RelatorioController extends Controller
 
     /**
      * Obtém dados comuns para as views de relatórios.
-     * @return array
      */
     private function getCommonViewData(): array
     {
@@ -69,7 +67,7 @@ class RelatorioController extends Controller
         $this->authorize('viewAtendimentos', Relatorio::class);
 
         $filters = $request->validated();
-        $fileName = 'relatorio_atendimentos_' . now()->format('Y-m-d_His') . '.xlsx';
+        $fileName = 'relatorio_atendimentos_'.now()->format('Y-m-d_His').'.xlsx';
 
         return Excel::download(new SolicitacoesExport($filters), $fileName);
     }
@@ -94,7 +92,7 @@ class RelatorioController extends Controller
             'tenant_name' => Tenant::current()->name,
         ]);
 
-        return $pdf->stream('relatorio_atendimentos_' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->stream('relatorio_atendimentos_'.now()->format('Y-m-d').'.pdf');
     }
 
     public function satisfacao(RelatorioAtendimentoRequest $request)
@@ -142,7 +140,7 @@ class RelatorioController extends Controller
         $this->authorize('viewCidadaos', Relatorio::class);
 
         $filters = $request->validated();
-        $fileName = 'relatorio_cidadaos_' . now()->format('Y-m-d_His') . '.xlsx';
+        $fileName = 'relatorio_cidadaos_'.now()->format('Y-m-d_His').'.xlsx';
 
         return Excel::download(new CidadaosExport($filters), $fileName);
     }
@@ -162,7 +160,7 @@ class RelatorioController extends Controller
             'tenant_name' => Tenant::current()->name,
         ]);
 
-        return $pdf->stream('relatorio_cidadaos_' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->stream('relatorio_cidadaos_'.now()->format('Y-m-d').'.pdf');
     }
 
     public function demandasPorBairro(RelatorioAtendimentoRequest $request)
@@ -207,7 +205,7 @@ class RelatorioController extends Controller
                     'data' => $items->pluck('total', 'data'),
                     // Adicione cores dinâmicas se desejar
                 ];
-            })->values()
+            })->values(),
         ];
 
         return Inertia::render('Tenant/Relatorios/AnaliseDeTendencias', array_merge(

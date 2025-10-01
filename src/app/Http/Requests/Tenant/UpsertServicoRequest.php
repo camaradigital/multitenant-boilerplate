@@ -11,8 +11,6 @@ class UpsertServicoRequest extends FormRequest
      *
      * A lógica de autorização é movida do controller para cá, garantindo que
      * a verificação ocorra antes mesmo da validação.
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -29,19 +27,19 @@ class UpsertServicoRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
      */
     public function rules(): array
-{
-    return [
-        'nome' => 'required|string|max:255',
-        'tipo_servico_id' => 'required|exists:tenant.tipos_servico,id',
-        'descricao' => 'nullable|string',
-        'is_active' => 'required|boolean',
-        'is_juridico' => 'required|boolean', // <-- Adicione esta linha
-        'permite_solicitacao_online' => 'required|boolean',
-        'regras_limite.ativo' => 'sometimes|boolean',
-        'regras_limite.quantidade' => 'nullable|required_if:regras_limite.ativo,true|integer|min:1',
-        'regras_limite.periodo' => 'nullable|required_if:regras_limite.ativo,true|in:dia,semana,mes,ano',
-    ];
-}
+    {
+        return [
+            'nome' => 'required|string|max:255',
+            'tipo_servico_id' => 'required|exists:tenant.tipos_servico,id',
+            'descricao' => 'nullable|string',
+            'is_active' => 'required|boolean',
+            'is_juridico' => 'required|boolean', // <-- Adicione esta linha
+            'permite_solicitacao_online' => 'required|boolean',
+            'regras_limite.ativo' => 'sometimes|boolean',
+            'regras_limite.quantidade' => 'nullable|required_if:regras_limite.ativo,true|integer|min:1',
+            'regras_limite.periodo' => 'nullable|required_if:regras_limite.ativo,true|in:dia,semana,mes,ano',
+        ];
+    }
 
     /**
      * Obtém os dados validados da requisição e aplica a lógica de negócio.
@@ -59,7 +57,7 @@ class UpsertServicoRequest extends FormRequest
 
         // Lógica para anular ou manter as regras de limite.
         // Se 'ativo' não estiver presente ou for falso, todo o campo 'regras_limite' se torna nulo.
-        if (!($data['regras_limite']['ativo'] ?? false)) {
+        if (! ($data['regras_limite']['ativo'] ?? false)) {
             $data['regras_limite'] = null;
         } else {
             // Garante que 'ativo' seja sempre um booleano no banco, caso o checkbox esteja marcado.

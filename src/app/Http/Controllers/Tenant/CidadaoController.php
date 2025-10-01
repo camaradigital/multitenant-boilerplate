@@ -6,16 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\CustomField;
 use App\Models\Tenant\User;
 use App\Notifications\Tenant\SetInitialPassword;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
-use Spatie\Multitenancy\Models\Tenant;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
-use Illuminate\Http\RedirectResponse;
+use Spatie\Multitenancy\Models\Tenant;
 
 class CidadaoController extends Controller
 {
@@ -75,7 +75,7 @@ class CidadaoController extends Controller
         ], $customRules));
 
         $tenant = Tenant::current();
-        if (!$tenant->permite_cadastro_cidade_externa) {
+        if (! $tenant->permite_cadastro_cidade_externa) {
             if (Str::lower($request->input('profile_data.endereco_cidade')) !== Str::lower($tenant->endereco_cidade)) {
                 return Redirect::back()->with('error', 'Não é permitido cadastrar cidadãos de outras cidades.')->withInput();
             }
@@ -120,8 +120,8 @@ class CidadaoController extends Controller
 
         $request->validate(array_merge([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:tenant.users,email,' . $cidadao->id,
-            'cpf' => 'nullable|string|max:14|unique:tenant.users,cpf,' . $cidadao->id,
+            'email' => 'required|string|email|max:255|unique:tenant.users,email,'.$cidadao->id,
+            'cpf' => 'nullable|string|max:14|unique:tenant.users,cpf,'.$cidadao->id,
             'profile_data.telefone' => 'nullable|string|max:20',
             'profile_data.data_nascimento' => 'nullable|date',
             'profile_data.genero' => 'nullable|string|max:50',
@@ -150,6 +150,7 @@ class CidadaoController extends Controller
             return Redirect::back()->with('error', 'Não é possível excluir. Este cidadão já possui solicitações de serviço.');
         }
         $cidadao->delete();
+
         return Redirect::route('admin.cidadaos.index')->with('success', 'Cidadão excluído com sucesso.');
     }
 
@@ -163,12 +164,17 @@ class CidadaoController extends Controller
                 $rule = ['required'];
             }
             switch ($field->type) {
-                case 'number': $rule[] = 'numeric'; break;
-                case 'date': $rule[] = 'date'; break;
-                default: $rule[] = 'string'; $rule[] = 'max:255'; break;
+                case 'number': $rule[] = 'numeric';
+                    break;
+                case 'date': $rule[] = 'date';
+                    break;
+                default: $rule[] = 'string';
+                    $rule[] = 'max:255';
+                    break;
             }
-            $rules['profile_data.' . $field->name] = $rule;
+            $rules['profile_data.'.$field->name] = $rule;
         }
+
         return $rules;
     }
 
@@ -180,8 +186,8 @@ class CidadaoController extends Controller
         $this->authorize('anonymizeCidadao', $cidadao);
 
         $cidadao->update([
-            'name' => 'Usuário Anônimo #' . $cidadao->id,
-            'email' => 'anonymized_' . $cidadao->id . '@' . request()->getHost(),
+            'name' => 'Usuário Anônimo #'.$cidadao->id,
+            'email' => 'anonymized_'.$cidadao->id.'@'.request()->getHost(),
             'cpf' => null,
             'profile_data' => null,
             'is_active' => false,
@@ -206,12 +212,11 @@ class CidadaoController extends Controller
             'solicitacoes.pesquisa_satisfacao',
         ]);
 
-        $fileName = 'dados_cidadao_' . $cidadao->id . '_' . now()->format('Y-m-d') . '.json';
+        $fileName = 'dados_cidadao_'.$cidadao->id.'_'.now()->format('Y-m-d').'.json';
 
         return response()->json($cidadao, 200, [
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Content-Type' => 'application/json',
         ]);
     }
 }
-

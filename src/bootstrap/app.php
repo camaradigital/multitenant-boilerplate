@@ -11,8 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Deixamos 'web' nulo para controlar o carregamento manualmente.
         // Isto é crucial para separar os contextos central e de tenant.
         web: null,
-        api: __DIR__ . '/../routes/api.php',
-        commands: __DIR__ . '/../routes/console.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
             $host = request()->getHost();

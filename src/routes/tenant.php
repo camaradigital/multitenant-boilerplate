@@ -3,18 +3,17 @@
 use App\Http\Controllers\Tenant\AchadoEPerdidoDocumentoController;
 use App\Http\Controllers\Tenant\ActivityLogController;
 use App\Http\Controllers\Tenant\Auth\VerificationController;
+use App\Http\Controllers\Tenant\CandidaturaController;
 use App\Http\Controllers\Tenant\CidadaoController;
 use App\Http\Controllers\Tenant\ConvenioController;
 use App\Http\Controllers\Tenant\CustomFieldController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\DocumentoController;
+use App\Http\Controllers\Tenant\EmpresaController;
 use App\Http\Controllers\Tenant\EntidadeController;
 use App\Http\Controllers\Tenant\FuncionarioController;
 use App\Http\Controllers\Tenant\LegislaturaController;
 use App\Http\Controllers\Tenant\MandatoController;
-use App\Http\Controllers\Tenant\VagaController;
-use App\Http\Controllers\Tenant\CandidaturaController;
-use App\Http\Controllers\Tenant\EmpresaController;
 use App\Http\Controllers\Tenant\MemoriaLegislativaController;
 use App\Http\Controllers\Tenant\MeuPainelController;
 use App\Http\Controllers\Tenant\ParametroController;
@@ -24,13 +23,14 @@ use App\Http\Controllers\Tenant\PessoaDesaparecidaController;
 use App\Http\Controllers\Tenant\PoliticoController;
 use App\Http\Controllers\Tenant\PortalController;
 use App\Http\Controllers\Tenant\ProfileController;
+use App\Http\Controllers\Tenant\RealtimeValidationController;
 use App\Http\Controllers\Tenant\RelatorioController;
 use App\Http\Controllers\Tenant\RolePermissionController;
 use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
 use App\Http\Controllers\Tenant\TipoServicoController;
-use App\Http\Controllers\Tenant\RealtimeValidationController;
+use App\Http\Controllers\Tenant\VagaController;
 use App\Models\Tenant\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +67,7 @@ Route::middleware([
     // --- Rota para a página de registro ---
     Route::get('/register', function () {
         $customFields = CustomField::all();
+
         return Inertia::render('Auth/Register', [
             'customFields' => $customFields,
         ]);
@@ -85,10 +86,10 @@ Route::middleware([
     Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
     Route::post('/email/verification-notification', [VerificationController::class, 'send'])->middleware(['auth:tenant', 'throttle:6,1'])->name('verification.send');
 
-
     // --- ROTAS PARA TERMOS E POLÍTICA DE PRIVACIDADE (VERSÃO FINAL) ---
     Route::get('/terms-of-service', function () {
         $tenant = Tenant::current();
+
         return Inertia::render('Policy', [
             'tenantName' => $tenant?->name,
             'lastUpdated' => $tenant?->updated_at->translatedFormat('d \d\e F \d\e Y'),
@@ -99,6 +100,7 @@ Route::middleware([
 
     Route::get('/privacy-policy', function () {
         $tenant = Tenant::current();
+
         return Inertia::render('Policy', [
             'tenantName' => $tenant?->name,
             'lastUpdated' => $tenant?->updated_at->translatedFormat('d \d\e F \d\e Y'),
@@ -113,7 +115,7 @@ Route::middleware([
     Route::middleware([
         'auth:tenant',
         config('jetstream.auth_session'),
-        'verified'
+        'verified',
     ])->group(function () {
 
         // --- CORREÇÃO APLICADA ---
@@ -136,9 +138,8 @@ Route::middleware([
         Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
         Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-
         // --- ROTAS DO PAINEL ADMINISTRATIVO ---
-        Route::prefix('admin')->as('admin.')->group(function() {
+        Route::prefix('admin')->as('admin.')->group(function () {
 
             // MÓDULO DE ATENDIMENTO
             Route::resource('solicitacoes', SolicitacaoServicoController::class)->parameters(['solicitacoes' => 'solicitacao']);
@@ -236,6 +237,7 @@ Route::middleware([
 
         Route::put('/user/profile-information', function (Request $request) {
             app(UpdatesUserProfileInformation::class)->update(Auth::user(), $request->all());
+
             return back()->with('success', 'Perfil atualizado com sucesso.');
         })->name('user-profile-information.update');
     });

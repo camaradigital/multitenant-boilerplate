@@ -37,6 +37,7 @@ class SeedTenant extends Command
 
         if (empty($seederClass)) {
             $this->error('A classe do seeder é obrigatória. Use a opção --class.');
+
             return Command::FAILURE;
         }
 
@@ -46,17 +47,18 @@ class SeedTenant extends Command
 
         if ($tenants->isEmpty()) {
             $this->warn('Nenhum tenant encontrado para os IDs fornecidos.');
+
             return Command::SUCCESS;
         }
 
-        $this->info("Executando seeder '{$seederClass}' para " . $tenants->count() . " tenant(s).");
+        $this->info("Executando seeder '{$seederClass}' para ".$tenants->count().' tenant(s).');
 
         $tenants->each(function (Tenant $tenant) use ($seederClass) {
             $this->line('');
-            $this->info("========================================");
+            $this->info('========================================');
             $this->info("Tenant: {$tenant->name} (ID: {$tenant->id})");
             $this->info("Database: {$tenant->database_name}");
-            $this->info("========================================");
+            $this->info('========================================');
 
             try {
                 // A função execute() muda o contexto para o banco de dados do tenant.
@@ -66,11 +68,11 @@ class SeedTenant extends Command
                         '--force' => $this->option('force'),
                         // CORREÇÃO: Especifica que o comando db:seed deve usar
                         // a conexão 'tenant', que agora aponta para o BD correto.
-                        '--database' => 'tenant'
+                        '--database' => 'tenant',
                     ]);
                 });
             } catch (QueryException $e) {
-                $this->error("Erro ao executar seeder no tenant {$tenant->id}: " . $e->getMessage());
+                $this->error("Erro ao executar seeder no tenant {$tenant->id}: ".$e->getMessage());
             }
         });
 

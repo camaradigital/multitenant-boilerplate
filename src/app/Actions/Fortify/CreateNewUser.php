@@ -2,15 +2,13 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
-use App\Models\CustomField;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Laravel\Jetstream\Jetstream;
-use App\Models\Tenant\Role;
-use Illuminate\Support\Str;
 use Spatie\Multitenancy\Models\Tenant;
 
 class CreateNewUser implements CreatesNewUsers
@@ -52,7 +50,7 @@ class CreateNewUser implements CreatesNewUsers
 
         // Lógica de verificação da cidade do cidadão
         $tenant = Tenant::current();
-        if ($tenant && !$tenant->permite_cadastro_cidade_externa) {
+        if ($tenant && ! $tenant->permite_cadastro_cidade_externa) {
             $cidadeInput = $input['profile_data']['endereco_cidade'] ?? '';
             if (Str::lower($cidadeInput) !== Str::lower($tenant->endereco_cidade)) {
                 // Lança uma exceção de validação que o Inertia entende
@@ -82,4 +80,3 @@ class CreateNewUser implements CreatesNewUsers
         return $user;
     }
 }
-

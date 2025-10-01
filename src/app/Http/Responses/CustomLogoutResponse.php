@@ -3,7 +3,6 @@
 namespace App\Http\Responses;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
@@ -16,7 +15,6 @@ class CustomLogoutResponse implements LogoutResponseContract
      * Create an HTTP response that represents the object.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function toResponse($request): Response
     {
@@ -27,13 +25,13 @@ class CustomLogoutResponse implements LogoutResponseContract
         $guard = Tenant::current() ? 'tenant' : 'web';
 
         // Log do guard detectado
-        Log::debug('Guard detectado para logout: ' . $guard);
+        Log::debug('Guard detectado para logout: '.$guard);
 
         // Executa o logout no guard correto
         Auth::guard($guard)->logout();
 
         // Log após logout
-        Log::debug('Logout executado no guard: ' . $guard);
+        Log::debug('Logout executado no guard: '.$guard);
 
         // Remove tenant_id da sessão (se tenant)
         if (Tenant::current()) {
@@ -50,6 +48,7 @@ class CustomLogoutResponse implements LogoutResponseContract
 
         if ($request->wantsJson()) {
             Log::debug('Resposta JSON retornada para logout');
+
             return new JsonResponse('', 204);
         }
 

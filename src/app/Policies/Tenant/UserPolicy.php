@@ -84,7 +84,6 @@ class UserPolicy
         return $user->can('gerenciar cidadaos');
     }
 
-
     // --- Habilidades para Funcionários ---
 
     public function viewAnyFuncionario(User $user): bool

@@ -9,19 +9,21 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
-use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection; // Importante!
+use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
+use Spatie\Permission\Traits\HasRoles; // Importante!
 
 class User extends Authenticatable
 {
     // Adiciona todos os traits, incluindo os do Jetstream e os da nossa solução.
     use HasApiTokens;
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+
     use HasProfilePhoto;
+    use HasRoles;
     use Notifiable;
     use TwoFactorAuthenticatable;
-    use HasRoles;
     use UsesLandlordConnection; // Chave da solução multi-tenancy
 
     /**

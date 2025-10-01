@@ -50,7 +50,6 @@ class VerificationController extends Controller
         return redirect()->route('tenant.dashboard')->with('status', 'E-mail verificado com sucesso!');
     }
 
-
     /**
      * Reenvia a notificação de verificação de e-mail.
      */

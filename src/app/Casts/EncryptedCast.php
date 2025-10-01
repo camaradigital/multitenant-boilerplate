@@ -27,6 +27,7 @@ class EncryptedCast implements CastsAttributes
             // Descriptografa o valor do banco de dados.
             // O retorno é um JSON string, então ele é decodificado para um array.
             $decrypted = Crypt::decryptString($value);
+
             return json_decode($decrypted, true);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             // Se houver um erro na descriptografia, retorna um array vazio
@@ -36,6 +37,7 @@ class EncryptedCast implements CastsAttributes
                 'key' => $key,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -56,7 +58,7 @@ class EncryptedCast implements CastsAttributes
         }
 
         // Verifica se o valor é um array ou objeto, pois ele será convertido para JSON.
-        if (!is_array($value) && !is_object($value)) {
+        if (! is_array($value) && ! is_object($value)) {
             throw new InvalidArgumentException('O valor para o cast EncyptedCast deve ser um array ou objeto.');
         }
 

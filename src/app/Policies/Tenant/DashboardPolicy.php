@@ -11,9 +11,6 @@ class DashboardPolicy
 
     /**
      * Determina se o usuário pode visualizar o dashboard do cidadão (Portal Pessoal).
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @return bool
      */
     public function viewCidadaoDashboard(User $user): bool
     {
@@ -25,12 +22,9 @@ class DashboardPolicy
      *
      * A lógica aqui é permitir o acesso a qualquer usuário que NÃO seja um 'Cidadao',
      * o que implicitamente cobre os papéis administrativos.
-     *
-     * @param  \App\Models\Tenant\User  $user
-     * @return bool
      */
     public function viewAdminDashboard(User $user): bool
     {
-        return !$user->hasRole('Cidadao');
+        return ! $user->hasRole('Cidadao');
     }
 }

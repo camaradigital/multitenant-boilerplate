@@ -29,7 +29,6 @@ return [
      */
     'activity_model' => \Spatie\Activitylog\Models\Activity::class,
 
-
     /**
      * O nome da tabela a ser usada para o log de atividades.
      */

@@ -5,7 +5,6 @@ namespace App\Policies\Tenant;
 use App\Models\Tenant\Documento;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\User;
-use Illuminate\Auth\Access\Response;
 
 class DocumentoPolicy
 {

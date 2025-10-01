@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ActivityLogController extends Controller
 {
@@ -47,7 +46,7 @@ class ActivityLogController extends Controller
 
         // Filtra pelo período de tempo.
         $query->when(($filters['data_inicio'] ?? null) && ($filters['data_fim'] ?? null), function ($q) use ($filters) {
-            $q->whereBetween('created_at', [$filters['data_inicio'] . ' 00:00:00', $filters['data_fim'] . ' 23:59:59']);
+            $q->whereBetween('created_at', [$filters['data_inicio'].' 00:00:00', $filters['data_fim'].' 23:59:59']);
         });
 
         // 4. Pagina os resultados e mantém os filtros na paginação.

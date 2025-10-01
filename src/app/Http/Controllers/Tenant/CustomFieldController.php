@@ -42,7 +42,7 @@ class CustomFieldController extends Controller
     {
         $request->validate([
             // CORREÇÃO: Adicionada a regra 'unique', ignorando o ID do campo atual
-            'label' => 'required|string|max:255|unique:tenant.custom_fields,label,' . $customField->id,
+            'label' => 'required|string|max:255|unique:tenant.custom_fields,label,'.$customField->id,
             'type' => 'required|in:text,number,date,select',
             'options' => 'nullable|required_if:type,select|array',
             'is_required' => 'required|boolean',
@@ -64,6 +64,7 @@ class CustomFieldController extends Controller
         // Aqui, futuramente, poderíamos adicionar uma lógica para limpar
         // este campo dos `profile_data` de todos os cidadãos.
         $customField->delete();
+
         return Redirect::route('admin.custom-fields.index')->with('success', 'Campo personalizado excluído.');
     }
 }

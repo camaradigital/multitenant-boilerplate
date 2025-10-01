@@ -5,7 +5,6 @@ namespace App\Actions\Fortify\Tenant;
 use App\Actions\Fortify\PasswordValidationRules;
 use Illuminate\Contracts\Auth\CanResetPassword; // Importante: Usa a interface para maior compatibilidade.
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
@@ -16,7 +15,6 @@ class ResetUserPassword implements ResetsUserPasswords
     /**
      * Validate and reset the user's forgotten password.
      *
-     * @param  \Illuminate\Contracts\Auth\CanResetPassword  $user
      * @param  array<string, string>  $input
      */
     public function reset(CanResetPassword $user, array $input): void
@@ -35,4 +33,3 @@ class ResetUserPassword implements ResetsUserPasswords
         }
     }
 }
-

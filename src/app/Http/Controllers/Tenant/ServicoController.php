@@ -59,6 +59,7 @@ class ServicoController extends Controller
     {
         $this->authorize('gerenciar servicos');
         $servico->load('tipoServico');
+
         return response()->json($servico);
     }
 

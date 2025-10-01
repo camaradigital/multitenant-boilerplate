@@ -18,23 +18,25 @@ class MandatoController extends Controller
         ]);
 
         $legislatura->mandatos()->create($validated);
+
         return Redirect::back()->with('success', 'Membro adicionado.');
     }
 
     public function update(Request $request, Mandato $mandato)
-{
-    $validated = $request->validate([
-        'cargo' => 'required|string|max:100',
-    ]);
+    {
+        $validated = $request->validate([
+            'cargo' => 'required|string|max:100',
+        ]);
 
-    $mandato->update($validated);
+        $mandato->update($validated);
 
-    return Redirect::back()->with('success', 'Cargo do membro atualizado.');
-}
+        return Redirect::back()->with('success', 'Cargo do membro atualizado.');
+    }
 
     public function destroy(Mandato $mandato)
     {
         $mandato->delete();
+
         return Redirect::back()->with('success', 'Membro removido.');
     }
 }

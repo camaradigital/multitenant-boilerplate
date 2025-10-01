@@ -2,7 +2,7 @@
 
 namespace App\Models\Tenant;
 
-use App\Models\Tenant\User; // <-- Adicionado para a relação
+// <-- Adicionado para a relação
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <-- Adicionado para o type-hint da relação
 use Laravel\Jetstream\Events\TeamCreated;
@@ -15,6 +15,7 @@ class Team extends JetstreamTeam
 {
     /** @use HasFactory<\Database\Factories\TeamFactory> */
     use HasFactory;
+
     use UsesTenantConnection;
 
     /**
@@ -56,8 +57,6 @@ class Team extends JetstreamTeam
     /**
      * Define a relação inversa para buscar os usuários que pertencem ao time,
      * especificando a tabela pivô 'team_user' para garantir consistência.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function users(): BelongsToMany
     {

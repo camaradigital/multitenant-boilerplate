@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 // Models
-use App\Models\Tenant\PesquisaSatisfacao;
 use App\Models\Tenant\Servico;
 use App\Models\Tenant\SolicitacaoServico;
 // Facades e Classes
@@ -17,7 +16,6 @@ class MeuPainelController extends Controller
     /**
      * Exibe o painel pessoal do cidadão com suas solicitações.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Inertia\Response
      */
     public function index(Request $request)
@@ -51,9 +49,9 @@ class MeuPainelController extends Controller
                 $query->with('causer:id,name')->latest();
             },
         ])
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         // Renomeia a propriedade 'historicos' para 'activity' para compatibilidade com o frontend.
         $solicitacoesPaginadas->getCollection()->transform(function ($solicitacao) {
@@ -61,6 +59,7 @@ class MeuPainelController extends Controller
                 $solicitacao->activity = $solicitacao->historicos;
                 unset($solicitacao->historicos);
             }
+
             return $solicitacao;
         });
 
@@ -83,9 +82,9 @@ class MeuPainelController extends Controller
 
         // Busca apenas os serviços que estão ATIVOS e permitem solicitação ONLINE.
         $servicosDisponiveis = Servico::where('is_active', true)
-                                        ->where('permite_solicitacao_online', true)
-                                        ->with('tipoServico:id,nome')
-                                        ->get(['id', 'nome', 'descricao', 'tipo_servico_id']);
+            ->where('permite_solicitacao_online', true)
+            ->with('tipoServico:id,nome')
+            ->get(['id', 'nome', 'descricao', 'tipo_servico_id']);
 
         return Inertia::render('Tenant/PortalPessoal/Create', [
             'servicos' => $servicosDisponiveis,
@@ -111,7 +110,7 @@ class MeuPainelController extends Controller
         // }
 
         // Validações de regra de negócio permanecem no controller.
-        if (!$solicitacao->status->is_final) {
+        if (! $solicitacao->status->is_final) {
             return redirect()->back()->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
         }
         if ($solicitacao->pesquisa_satisfacao()->exists()) {

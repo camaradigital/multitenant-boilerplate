@@ -47,7 +47,7 @@ class PortalController extends Controller
 
         // Se houver um termo de busca, filtra pelo nome no documento
         if ($request->filled('busca')) {
-            $query->where('nome_completo', 'like', '%' . $request->busca . '%');
+            $query->where('nome_completo', 'like', '%'.$request->busca.'%');
         }
 
         return Inertia::render('Tenant/Portal/Publico/AchadosEPerdidos', [

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\LogUsoServico;
@@ -22,10 +23,14 @@ class ServicoLimiterService
         $inicioPeriodo = null;
 
         switch ($periodo) {
-            case 'diario': $inicioPeriodo = $agora->startOfDay(); break;
-            case 'semanal': $inicioPeriodo = $agora->startOfWeek(); break;
-            case 'mensal': $inicioPeriodo = $agora->startOfMonth(); break;
-            case 'anual': $inicioPeriodo = $agora->startOfYear(); break;
+            case 'diario': $inicioPeriodo = $agora->startOfDay();
+                break;
+            case 'semanal': $inicioPeriodo = $agora->startOfWeek();
+                break;
+            case 'mensal': $inicioPeriodo = $agora->startOfMonth();
+                break;
+            case 'anual': $inicioPeriodo = $agora->startOfYear();
+                break;
         }
 
         if ($inicioPeriodo) {
@@ -36,7 +41,7 @@ class ServicoLimiterService
 
             if ($usosNoPeriodo >= $limite) {
                 throw ValidationException::withMessages([
-                    'servico' => "Limite de {$limite} solicitações por {$periodo} atingido para este serviço."
+                    'servico' => "Limite de {$limite} solicitações por {$periodo} atingido para este serviço.",
                 ]);
             }
         }

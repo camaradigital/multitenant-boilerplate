@@ -56,6 +56,7 @@ class ConvenioController extends Controller
     public function destroy(Convenio $convenio)
     {
         $convenio->delete();
+
         return Redirect::route('admin.convenios.index')->with('success', 'Convênio excluído com sucesso.');
     }
 }

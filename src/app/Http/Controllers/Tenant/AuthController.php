@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
-use Spatie\Multitenancy\Models\Tenant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Spatie\Multitenancy\Models\Tenant;
 
 class AuthController extends Controller
 {
     public function showResetPasswordForm($token, Request $request)
     {
-        if (!Tenant::checkCurrent()) {
+        if (! Tenant::checkCurrent()) {
             abort(403, 'Tenant inválido.');
         }
 
@@ -33,7 +33,7 @@ class AuthController extends Controller
             'token' => 'required',
         ]);
 
-        if (!Tenant::checkCurrent()) {
+        if (! Tenant::checkCurrent()) {
             return back()->withErrors(['email' => 'Tenant inválido.']);
         }
 

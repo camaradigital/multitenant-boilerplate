@@ -4,9 +4,9 @@ namespace App\Mail\Central;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 
 class CampaignMail extends Mailable
@@ -14,21 +14,24 @@ class CampaignMail extends Mailable
     use Queueable, SerializesModels;
 
     public string $leadName;
+
     public string $body;
+
     public string $ctaUrl;
+
     public string $ctaText;
+
     public string $unsubscribeUrl;
 
     public function __construct(
         array $data,
         public ?string $attachmentPath = null,
         public ?string $attachmentName = null
-    )
-    {
-        $this->leadName       = $data['leadName'];
-        $this->body           = $data['body'];
-        $this->ctaUrl         = $data['ctaUrl'];
-        $this->ctaText        = $data['ctaText'];
+    ) {
+        $this->leadName = $data['leadName'];
+        $this->body = $data['body'];
+        $this->ctaUrl = $data['ctaUrl'];
+        $this->ctaText = $data['ctaText'];
         $this->unsubscribeUrl = $data['unsubscribeUrl'];
     }
 
@@ -53,7 +56,7 @@ class CampaignMail extends Mailable
      */
     public function attachments(): array
     {
-        if (!$this->attachmentPath) {
+        if (! $this->attachmentPath) {
             return [];
         }
 

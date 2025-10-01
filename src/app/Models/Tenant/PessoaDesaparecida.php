@@ -5,9 +5,9 @@ namespace App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class PessoaDesaparecida extends Model
 {
@@ -54,6 +54,7 @@ class PessoaDesaparecida extends Model
         if ($this->foto_path && Storage::disk('public')->exists($this->foto_path)) {
             return Storage::disk('public')->url($this->foto_path);
         }
+
         // Retorna uma imagem padrão se a foto não for encontrada
         return 'https://via.placeholder.com/400x400.png?text=Foto+Indisponivel';
     }
