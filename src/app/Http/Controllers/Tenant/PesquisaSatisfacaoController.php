@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\PesquisaSatisfacao;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
+use App\Models\Tenant\User;
+use App\Notifications\Tenant\AvaliacaoNegativaRecebida;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
 
 class PesquisaSatisfacaoController extends Controller
@@ -40,19 +43,30 @@ class PesquisaSatisfacaoController extends Controller
             return Redirect::route('portal.meu-painel')->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
         }
 
-        // Garante que a solicitação ainda não foi avaliada, usando uma consulta direta para maior robustez.
+        // Garante que a solicitação ainda não foi avaliada.
         if (PesquisaSatisfacao::where('solicitacao_servico_id', $solicitacao->id)->exists()) {
             return Redirect::route('portal.meu-painel')->withErrors(['geral' => 'Esta solicitação já foi avaliada.']);
         }
 
-        // 3. Criação da pesquisa de satisfação, usando o nome correto do relacionamento.
-        $solicitacao->pesquisa_satisfacao()->create([
+        // 3. Criação da pesquisa de satisfação.
+        // ** A CORREÇÃO ESTÁ AQUI: Atribui o resultado a `$pesquisa` **
+        $pesquisa = $solicitacao->pesquisa_satisfacao()->create([
             'user_id' => Auth::id(),
             'nota' => $validatedData['nota'],
             'comentario' => $validatedData['comentario'],
         ]);
 
-        // 4. Redirecionamento com mensagem de sucesso para a página correta.
+        // --- LÓGICA DE NOTIFICAÇÃO ---
+        // Agora a variável $pesquisa existe e pode ser usada.
+        if ($pesquisa->nota <= 2) {
+            $admins = User::role('Admin Tenant')->get();
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new AvaliacaoNegativaRecebida($pesquisa));
+            }
+        }
+        // --- FIM DA LÓGICA ---
+
+        // 4. Redirecionamento com mensagem de sucesso.
         return Redirect::route('portal.meu-painel')->with('success', 'Obrigado pela sua avaliação!');
     }
 }

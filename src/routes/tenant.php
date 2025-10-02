@@ -16,6 +16,7 @@ use App\Http\Controllers\Tenant\LegislaturaController;
 use App\Http\Controllers\Tenant\MandatoController;
 use App\Http\Controllers\Tenant\MemoriaLegislativaController;
 use App\Http\Controllers\Tenant\MeuPainelController;
+use App\Http\Controllers\Tenant\NotificationController;
 use App\Http\Controllers\Tenant\ParametroController;
 use App\Http\Controllers\Tenant\PermissionController;
 use App\Http\Controllers\Tenant\PesquisaSatisfacaoController;
@@ -137,6 +138,10 @@ Route::middleware([
         Route::get('/profile/export-data', [ProfileController::class, 'exportData'])->name('profile.export-data');
         Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
         Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+        // MÓDULO DE NOTIFICAÇÕES
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
         // --- ROTAS DO PAINEL ADMINISTRATIVO ---
         Route::prefix('admin')->as('admin.')->group(function () {

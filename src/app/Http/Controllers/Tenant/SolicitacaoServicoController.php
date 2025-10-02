@@ -10,6 +10,7 @@ use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
 use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
+use App\Notifications\Tenant\SolicitacaoStatusAlterado;
 use App\Services\Tenant\SolicitacaoService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -211,6 +212,8 @@ class SolicitacaoServicoController extends Controller
             'observacoes' => 'nullable|string',
         ]);
 
+        $statusAntigoId = $solicitacao->status_id;
+
         $dadosParaAtualizar = $validatedData;
         $novoStatus = StatusSolicitacao::find($validatedData['status_id']);
 
@@ -226,6 +229,13 @@ class SolicitacaoServicoController extends Controller
         }
 
         $solicitacao->update($dadosParaAtualizar);
+
+        if ($statusAntigoId != $validatedData['status_id']) {
+            // Carregamos a relação 'cidadao' para ter o objeto do utilizador a quem notificar.
+            $solicitacao->load('cidadao');
+            // Passamos a solicitação e o NOME do novo status diretamente.
+            $solicitacao->cidadao->notify(new SolicitacaoStatusAlterado($solicitacao, $novoStatus->nome));
+        }
 
         return Redirect::route('admin.solicitacoes.show', $solicitacao->id)->with('success', 'Solicitação atualizada com sucesso.');
     }

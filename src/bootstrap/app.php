@@ -1,5 +1,7 @@
 <?php
 
+use App\Console\Commands\VerificarSolicitacoesParadas; // <-- ADICIONADO
+use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -63,6 +65,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
         ]);
     })
+    // --- ADICIONADO O BLOCO DE AGENDAMENTO AQUI ---
+    ->withSchedule(function (Schedule $schedule) {
+        // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
+        $schedule->command(VerificarSolicitacoesParadas::class)->dailyAt('09:00');
+    })
+    // --- FIM DO BLOCO ---
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e) {
             return redirect('/');

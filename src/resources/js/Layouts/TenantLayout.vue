@@ -7,8 +7,9 @@ import Banner from '@/Components/Banner.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import OnboardingTour from '@/Components/OnboardingTour.vue';
-import Spinner from '@/Components/Spinner.vue'; // 1. Importar o componente Spinner
+import Spinner from '@/Components/Spinner.vue';
 import { Menu, Search, Bell, HelpCircle } from 'lucide-vue-next';
+import axios from 'axios'; // <-- NOVO: Importar o axios
 
 // --- Props ---
 defineProps({
@@ -17,15 +18,14 @@ defineProps({
 
 // --- Lógica Principal ---
 const page = usePage();
-const isNavigating = ref(false); // 2. Criar estado para controlar o loading
+const isNavigating = ref(false);
 
-// Ouve os eventos do Inertia para mostrar/esconder o spinner durante a navegação
 router.on('start', () => {
-  isNavigating.value = true;
+    isNavigating.value = true;
 });
 
 router.on('finish', () => {
-  isNavigating.value = false;
+    isNavigating.value = false;
 });
 
 const isAdminTenant = computed(() => {
@@ -36,9 +36,7 @@ const logout = () => {
     router.post(route('logout'));
 };
 
-// Função para reiniciar o tour
 const restartOnboardingTour = () => {
-    // Dispara um evento global que o componente do tour pode ouvir
     window.dispatchEvent(new CustomEvent('restart-onboarding-tour'));
 };
 
@@ -68,8 +66,43 @@ function toggleMobileSidebar() {
     isSidebarOpenOnMobile.value = !isSidebarOpenOnMobile.value;
 }
 
-onMounted(() => window.addEventListener('resize', updateMobileStatus));
-onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
+// --- NOVO: Lógica de Notificações ---
+const notifications = ref([]);
+const showNotifications = ref(false);
+
+const fetchNotifications = async () => {
+    try {
+        const response = await axios.get(route('notifications.index'));
+        notifications.value = response.data;
+    } catch (error) {
+        console.error('Erro ao buscar notificações:', error);
+    }
+};
+
+const markAsRead = async (notification) => {
+    try {
+        await axios.patch(`/notifications/${notification.id}/read`);
+        // Remove a notificação da lista após ser lida para atualizar a UI
+        notifications.value = notifications.value.filter(n => n.id !== notification.id);
+    } catch (error) {
+        console.error('Erro ao marcar notificação como lida:', error);
+    }
+};
+// --- FIM: Lógica de Notificações ---
+
+
+onMounted(() => {
+    window.addEventListener('resize', updateMobileStatus);
+
+    // --- NOVO: Buscar notificações ao montar e a cada 1 minuto ---
+    fetchNotifications();
+    setInterval(fetchNotifications, 60000);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', updateMobileStatus);
+    // Idealmente, o intervalo deve ser limpo também, mas para o layout principal pode não ser necessário.
+});
 </script>
 
 <template>
@@ -77,7 +110,6 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
         <Head :title="title" />
         <Banner />
 
-        <!-- 3. Adicionar a sobreposição de loading -->
         <div v-if="isNavigating" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex justify-center items-center z-[100]">
             <Spinner />
         </div>
@@ -123,11 +155,37 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
                                 </div>
                             </div>
 
-                            <button class="header-icon-btn">
-                                <Bell class="h-6 w-6" />
-                            </button>
+                            <div class="relative">
+                                <button @click="showNotifications = !showNotifications" class="header-icon-btn relative">
+                                    <Bell class="h-6 w-6" />
+                                    <span v-if="notifications.length > 0" class="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                                        {{ notifications.length }}
+                                    </span>
+                                </button>
 
-                            <ThemeToggle />
+                                <div v-if="showNotifications" @click.away="showNotifications = false" class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 dark:bg-gray-800 border dark:border-gray-700">
+                                    <div class="py-2">
+                                        <div class="flex justify-between items-center px-4 py-2 border-b dark:border-gray-700">
+                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">Notificações</span>
+                                            </div>
+
+                                        <div class="max-h-80 overflow-y-auto">
+                                            <div v-if="notifications.length > 0">
+                                                <div v-for="notification in notifications" :key="notification.id" class="border-b dark:border-gray-700/50 last:border-b-0">
+                                                    <Link :href="notification.data.url" @click="markAsRead(notification)" class="block px-4 py-3 text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                                                        <p class="font-semibold">{{ notification.data.titulo }}</p>
+                                                        <p class="text-xs">{{ notification.data.mensagem }}</p>
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                            <div v-else class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                Nenhuma nova notificação.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <ThemeToggle />
 
                             <div class="relative user-menu">
                                 <Dropdown align="right" width="48">
@@ -172,7 +230,7 @@ onUnmounted(() => window.removeEventListener('resize', updateMobileStatus));
 
 <style scoped>
 .main-header {
-    @apply flex h-16 shrink-0 items-center justify-between border-b px-4 sm:px-6 lg:px-8;
+    @apply flex h-16 shrink-0 items-center justify-between border-b px-4 sm:px-6 lg:p-8;
     @apply bg-white/70 dark:bg-[#0D2C2A]/50 border-gray-200 dark:border-gray-800;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -188,6 +246,7 @@ html {
     /*
       O valor padrão da fonte na maioria dos navegadores é 16px.
       Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+      fiquem proporcionalmente menores, resultando em um layout mais denso.
 
       - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
       - 15px: Redução mais sutil.
