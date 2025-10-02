@@ -21,12 +21,12 @@ import {
     UserSquare,
     BarChart3,
     Star,
-    // --- Ícones para o novo módulo ---
     Briefcase,
     Building2,
-    // --- ÍCONES NOVOS PARA RELATÓRIOS ESTRATÉGICOS ---
     MapPin,
     TrendingUp,
+    MessageSquare,
+    Send
 } from 'lucide-vue-next';
 
 /**
@@ -41,6 +41,20 @@ const coreNav = [
         permission: null // Acessível a todos
     },
 ];
+
+/**
+ * @description Rotas do cidadão.
+ */
+const citizenNav = [
+    {
+        name: 'Fale com o Presidente',
+        icon: MessageSquare,
+        permission: 'ver portal', // Apenas cidadãos
+        href: route('gabinete-virtual.index'),
+        current: 'gabinete-virtual.*',
+    },
+];
+
 
 /**
  * @description Rotas públicas visíveis apenas para o Cidadão logado.
@@ -125,6 +139,33 @@ const lostAndFoundNav = [
 ];
 
 /**
+ * @description Novo menu combinado para Comunicação e Gabinete Virtual.
+ */
+const comunicacaoGabineteNav = [
+    {
+        name: 'Gabinete Virtual',
+        icon: MessageSquare,
+        permission: null, // O menu pai será exibido se algum filho tiver permissão
+        children: [
+            {
+                name: 'Gabinete Virtual',
+                icon: MessageSquare,
+                permission: 'gerenciar gabinete virtual',
+                href: route('admin.gabinete-virtual.index'),
+                current: 'admin.gabinete-virtual.*',
+            },
+            {
+                name: 'Comunicação',
+                icon: Send,
+                permission: 'gerenciar campanhas',
+                href: route('admin.campanhas.index'),
+                current: 'admin.campanhas.*',
+            },
+        ]
+    },
+];
+
+/**
  * @description Rotas para a seção de Relatórios.
  */
 const reportsNav = [
@@ -165,11 +206,13 @@ const settingsNav = [
 // Montagem final do menu de navegação
 export const navigation = [
     ...coreNav,
+    ...citizenNav,
     ...publicNav,
     ...managementNav,
     ...jobsNav,
     ...memoriaLegislativaNav,
     ...lostAndFoundNav,
+    ...comunicacaoGabineteNav, // <-- NOVO MENU COMBINADO AQUI
     ...reportsNav,
     ...settingsNav,
 ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tenant\AchadoEPerdidoDocumentoController;
 use App\Http\Controllers\Tenant\ActivityLogController;
 use App\Http\Controllers\Tenant\Auth\VerificationController;
+use App\Http\Controllers\Tenant\CampanhaController;
 use App\Http\Controllers\Tenant\CandidaturaController;
 use App\Http\Controllers\Tenant\CidadaoController;
 use App\Http\Controllers\Tenant\ConvenioController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Tenant\DocumentoController;
 use App\Http\Controllers\Tenant\EmpresaController;
 use App\Http\Controllers\Tenant\EntidadeController;
 use App\Http\Controllers\Tenant\FuncionarioController;
+use App\Http\Controllers\Tenant\GabineteVirtualController;
 use App\Http\Controllers\Tenant\LegislaturaController;
 use App\Http\Controllers\Tenant\MandatoController;
 use App\Http\Controllers\Tenant\MemoriaLegislativaController;
@@ -119,10 +121,8 @@ Route::middleware([
         'verified',
     ])->group(function () {
 
-        // --- CORREÇÃO APLICADA ---
         // A rota do dashboard agora aponta diretamente para o DashboardController.
         // O próprio controller tem a lógica para decidir qual view mostrar (Cidadão ou Admin),
-        // e o Laravel irá injetar as dependências (como o RelatorioService) corretamente.
         Route::get('/dashboard', DashboardController::class)->name('tenant.dashboard');
 
         // --- ROTAS DO CIDADÃO ---
@@ -139,6 +139,13 @@ Route::middleware([
         Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
         Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+        // GABINETE VIRTUAL (CIDADÃO)
+        Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
+            Route::get('/', [GabineteVirtualController::class, 'citizenIndex'])->name('index');
+            Route::post('/', [GabineteVirtualController::class, 'storeMensagem'])->name('store');
+            Route::get('/{mensagem}', [GabineteVirtualController::class, 'citizenShow'])->name('show');
+        });
+
         // MÓDULO DE NOTIFICAÇÕES
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -151,6 +158,22 @@ Route::middleware([
             Route::post('solicitacoes/{solicitacao}/documentos', [DocumentoController::class, 'store'])->name('documentos.store');
             Route::get('documentos/{documento}/download', [DocumentoController::class, 'download'])->name('documentos.download');
             Route::delete('documentos/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');
+
+            // GABINETE VIRTUAL (ADMIN)
+            Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
+                Route::get('/', [GabineteVirtualController::class, 'adminIndex'])->name('index');
+                Route::get('/{mensagem}', [GabineteVirtualController::class, 'adminShow'])->name('show');
+                Route::patch('/{mensagem}/status', [GabineteVirtualController::class, 'updateStatus'])->name('updateStatus'); // Changed
+                Route::post('/{mensagem}/responder', [GabineteVirtualController::class, 'storeResposta'])->name('storeResposta'); // Changed
+            });
+
+            // CAMPANHAS (ADMIN)
+            Route::prefix('campanhas')->as('campanhas.')->group(function () {
+                Route::get('/', [CampanhaController::class, 'index'])->name('index');
+                Route::get('/nova', [CampanhaController::class, 'create'])->name('create');
+                Route::post('/', [CampanhaController::class, 'store'])->name('store');
+                Route::post('/calcular-publico', [CampanhaController::class, 'calcularPublico'])->name('calcular-publico');
+            });
 
             // MÓDULO DE GESTÃO DE UTILIZADORES
             Route::middleware('can:gerenciar funcionarios')->group(function () {

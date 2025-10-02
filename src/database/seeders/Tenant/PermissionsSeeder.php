@@ -47,6 +47,9 @@ class PermissionsSeeder extends Seeder
             // Relatório para Admin
             'viewDemandasPorBairro',
             'viewAnaliseDeTendencias',
+            // Gabinete Virtual para Admin
+            'gerenciar gabinete virtual',
+            'gerenciar campanhas',
         ];
 
         foreach ($permissions as $permission) {

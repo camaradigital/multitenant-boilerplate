@@ -3,8 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { navigation as rawNavigation } from '@/menu.js';
-import ThemeToggle from '@/Components/ThemeToggle.vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue'; // <-- 1. Importado aqui
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { LogOut, UserCircle, ChevronDown, CircleDot } from 'lucide-vue-next';
 
 const page = usePage();
@@ -47,40 +46,58 @@ function toggleSubmenu(name) {
     openSubmenu.value = openSubmenu.value === name ? '' : name;
 }
 
+// ####################################################################
+// #           INÍCIO DA SEÇÃO CORRIGIDA E ATUALIZADA                 #
+// ####################################################################
 const navigation = computed(() => {
+    // A lista de permissões já vem correta do back-end
     const userPermissions = page.props.auth.user?.permissions || [];
-    const userRoles = page.props.auth.user?.roles || [];
 
+    // Função de verificação SIMPLIFICADA E CORRIGIDA
     const hasPermission = (permission) => {
-        if (!permission) return true;
-
-        if (permission === 'ver portal') {
-            return userRoles.some(role => role.name === 'Cidadao');
+        // Se o item de menu não exige permissão, sempre mostra.
+        if (!permission) {
+            return true;
         }
-
+        // A verificação agora é única e vale para TODOS os casos.
         return userPermissions.includes(permission);
     };
 
+    // Lógica de filtragem recursiva para garantir que pais sem filhos visíveis não apareçam
     const filterItems = (items) => {
         return items
-            .filter(item => hasPermission(item.permission))
             .map(item => {
+                // Primeiro, verifica se o item PAI tem permissão para ser exibido
+                if (!hasPermission(item.permission)) {
+                    return null;
+                }
+
+                // Se o item tem filhos, filtra os filhos recursivamente
                 if (item.children) {
                     const filteredChildren = filterItems(item.children);
+                    // Só retorna o item pai se ele ainda tiver filhos visíveis após o filtro
                     if (filteredChildren.length > 0) {
                         return { ...item, children: filteredChildren };
                     }
+                    // Se não sobraram filhos, não mostra o item pai
                     return null;
                 }
+
+                // Se não tem filhos e passou na verificação de permissão, retorna o item
                 return item;
             })
+            // Remove todos os itens que se tornaram nulos (sem permissão ou sem filhos)
             .filter(Boolean);
     };
 
     return filterItems(rawNavigation);
 });
+// ####################################################################
+// #             FIM DA SEÇÃO CORRIGIDA E ATUALIZADA                  #
+// ####################################################################
 
 onMounted(() => {
+    // Mantém o submenu aberto se uma de suas rotas filhas estiver ativa
     for (const item of navigation.value) {
         if (item.children && isRouteActive(item)) {
             openSubmenu.value = item.name;
@@ -96,7 +113,6 @@ const logout = () => {
 
 <template>
     <div class="flex h-full flex-col bg-white px-4 py-4 dark:bg-[#0A1E1C] dark:border-r dark:border-gray-800">
-        <!-- 2. Logotipo substituído e centralizado -->
         <Link :href="route('tenant.dashboard')" class="mb-6 flex items-center justify-center px-2">
             <ApplicationLogo class="h-full w-full p-1" />
         </Link>
@@ -148,8 +164,7 @@ const logout = () => {
                                 <Link :href="route('profile.show')" class="text-xs text-[var(--color-primary)] hover:underline">Ver Perfil</Link>
                            </div>
                       </div>
-                      <ThemeToggle />
-                 </div>
+                      </div>
                  <form @submit.prevent="logout" class="w-full mt-2">
                       <button type="submit" class="logout-button">
                            <LogOut class="h-5 w-5" :stroke-width="1.5" />
@@ -171,7 +186,7 @@ const logout = () => {
     @apply bg-gray-100 dark:bg-gray-800/60 text-gray-900 dark:text-white;
 }
 
-/* MUDANÇA: Estilo para Itens Ativos agora usa a variável primária */
+/* Estilo para Itens Ativos */
 .nav-link-active {
     background-color: var(--color-primary);
     color: white;
@@ -183,7 +198,7 @@ const logout = () => {
     color: white;
 }
 
-/* Estilo para Grupos de Menu Ativos (quando um filho está ativo mas o grupo está fechado) */
+/* Estilo para Grupos de Menu Ativos */
 .nav-link-active-parent {
     @apply bg-gray-100 dark:bg-gray-800/60;
 }
@@ -192,7 +207,6 @@ const logout = () => {
 .nav-link-child {
     @apply h-9 text-gray-500 dark:text-gray-400;
 }
-/* MUDANÇA: Estilo para filho ativo agora usa a variável primária */
 .nav-link-child-active {
     color: var(--color-primary);
     @apply font-semibold;
@@ -201,7 +215,6 @@ const logout = () => {
     @apply text-gray-900 dark:text-white;
 }
 
-/* MUDANÇA: Borda do submenu agora usa a variável primária com opacidade */
 .submenu-container {
     @apply mt-1 ml-4 pl-4 border-l-2 space-y-1;
     border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
@@ -215,7 +228,6 @@ const logout = () => {
     @apply flex items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-800/60;
 }
 
-/* MUDANÇA: Botão de logout agora usa a variável primária para o anel de foco */
 .logout-button {
     @apply w-full flex items-center h-11 px-3 mt-1 rounded-lg transition-colors duration-200 ease-in-out;
     @apply text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60;

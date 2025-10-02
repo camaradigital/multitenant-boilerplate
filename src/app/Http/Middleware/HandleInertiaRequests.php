@@ -52,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'roles' => $user->getRoleNames(),
+                    'permissions' => $request->user()->getAllPermissions()->pluck('name'),
                 ], function (&$data) use ($user) {
                     // Adiciona dados específicos do tenant apenas se for o tipo de usuário correto.
                     if ($user instanceof \App\Models\Tenant\User) {
