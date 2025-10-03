@@ -1,14 +1,12 @@
 <script setup>
 import { ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
-import { useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import InputError from '@/Components/InputError.vue';
-import Spinner from '@/Components/Spinner.vue';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
-import { FilePlus, ArrowLeft, LoaderCircle } from 'lucide-vue-next';
+import { FilePlus, ArrowLeft, LoaderCircle, Users } from 'lucide-vue-next';
 
 const props = defineProps({
     bairros: Array,
@@ -38,7 +36,7 @@ const calcularPublico = async () => {
         totalPublico.value = response.data.total;
     } catch (error) {
         console.error("Erro ao calcular público:", error);
-        // Opcional: Adicionar um feedback de erro para o usuário
+        totalPublico.value = 'N/A'; // Feedback de erro
     } finally {
         calculating.value = false;
     }
@@ -54,142 +52,168 @@ const submit = () => {
 <template>
     <Head title="Nova Campanha de Comunicação" />
 
-    <TenantLayout title="Nova Campanha de Comunicação">
+    <TenantLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Nova Campanha de Comunicação
             </h2>
         </template>
 
-        <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-7xl">
-                <div class="form-icon"><FilePlus :size="32" class="icon-in-badge" /></div>
-
-                <form @submit.prevent="submit">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
-                        <div>
-                            <h2 class="header-title">Nova Campanha</h2>
-                            <p class="form-subtitle">Preencha os detalhes, segmente o público e envie sua mensagem.</p>
-                        </div>
-                        <Link :href="route('admin.campanhas.index')" class="btn-secondary flex-shrink-0">
-                            <ArrowLeft class="w-4 h-4 mr-2"/>
-                            Voltar
-                        </Link>
+        <div class="py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto">
+                 <!-- Card Principal -->
+                <div class="relative bg-white dark:bg-gray-900/70 dark:backdrop-blur-sm border border-gray-200 dark:border-white/10 shadow-lg rounded-2xl">
+                     <!-- Ícone no Topo -->
+                    <div class="absolute -top-7 left-1/2 -translate-x-1/2 w-16 h-16 bg-emerald-600 dark:bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <FilePlus :size="32" class="text-white" />
                     </div>
 
-                    <div class="p-4 md:p-6">
-                        <h3 class="role-name mb-4">1. Detalhes da Campanha</h3>
-                        <div class="space-y-4">
+                    <form @submit.prevent="submit">
+                        <!-- Cabeçalho -->
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-12 p-6 border-b border-gray-200 dark:border-white/10">
                             <div>
-                                <label for="titulo" class="input-label">Título da Campanha</label>
-                                <input id="titulo" v-model="form.titulo" type="text" class="mt-1 input-form" required />
-                                <InputError :message="form.errors.titulo" class="mt-2" />
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Nova Campanha</h2>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Preencha os detalhes, segmente o público e envie sua mensagem.</p>
                             </div>
-                            <div>
-                                <label for="mensagem" class="input-label">Mensagem</label>
-                                <textarea id="mensagem" v-model="form.mensagem" rows="6" class="mt-1 input-form" required></textarea>
-                                <InputError :message="form.errors.mensagem" class="mt-2" />
-                            </div>
+                            <Link :href="route('admin.campanhas.index')" class="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                                <ArrowLeft class="w-4 h-4 mr-2"/>
+                                Voltar
+                            </Link>
                         </div>
-                    </div>
 
-                    <div class="p-4 md:p-6 border-t-dynamic">
-                        <h3 class="role-name mb-4">2. Segmentação do Público</h3>
-                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div>
-                                <label class="input-label">Faixa Etária</label>
-                                <div class="flex items-center space-x-2 mt-1">
-                                    <input v-model="form.segmentacao.idade_min" type="number" placeholder="De" class="input-form w-full" />
-                                    <span class="text-gray-500 dark:text-gray-400">-</span>
-                                    <input v-model="form.segmentacao.idade_max" type="number" placeholder="Até" class="input-form w-full" />
+                        <!-- Layout em Grid -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+                            <!-- Coluna Esquerda: Detalhes da Campanha -->
+                            <div class="lg:col-span-2 space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300 mb-4">1. Detalhes da Campanha</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="titulo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Título da Campanha</label>
+                                            <input id="titulo" v-model="form.titulo" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" required />
+                                            <InputError :message="form.errors.titulo" class="mt-2" />
+                                        </div>
+                                        <div>
+                                            <label for="mensagem" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mensagem</label>
+                                            <textarea id="mensagem" v-model="form.mensagem" rows="12" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" required></textarea>
+                                            <InputError :message="form.errors.mensagem" class="mt-2" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <label for="genero" class="input-label">Gênero</label>
-                                <select id="genero" v-model="form.segmentacao.genero" class="mt-1 input-form">
-                                    <option value="">Todos</option>
-                                    <option value="Masculino">Masculino</option>
-                                    <option value="Feminino">Feminino</option>
-                                    <option value="Outro">Outro</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="input-label">Renda Familiar (R$)</label>
-                                <div class="flex items-center space-x-2 mt-1">
-                                    <input v-model="form.segmentacao.renda_min" type="number" placeholder="De" class="input-form w-full" />
-                                    <span class="text-gray-500 dark:text-gray-400">-</span>
-                                    <input v-model="form.segmentacao.renda_max" type="number" placeholder="Até" class="input-form w-full" />
+
+                            <!-- Coluna Direita: Segmentação -->
+                            <div class="lg:col-span-1 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border dark:border-white/10 space-y-6">
+                                <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300">2. Segmentação</h3>
+                                <div class="space-y-4">
+                                     <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Faixa Etária</label>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <input v-model="form.segmentacao.idade_min" type="number" placeholder="De" class="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                            <span class="text-gray-500 dark:text-gray-400">-</span>
+                                            <input v-model="form.segmentacao.idade_max" type="number" placeholder="Até" class="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="genero" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gênero</label>
+                                        <select id="genero" v-model="form.segmentacao.genero" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500">
+                                            <option value="">Todos</option>
+                                            <option value="Masculino">Masculino</option>
+                                            <option value="Feminino">Feminino</option>
+                                            <option value="Outro">Outro</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Renda Familiar (R$)</label>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <input v-model="form.segmentacao.renda_min" type="number" placeholder="De" class="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                            <span class="text-gray-500 dark:text-gray-400">-</span>
+                                            <input v-model="form.segmentacao.renda_max" type="number" placeholder="Até" class="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="bairros" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bairros</label>
+                                        <v-select multiple v-model="form.segmentacao.bairros" :options="bairros" class="v-select-style mt-1" placeholder="Selecione os bairros"></v-select>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label for="bairros" class="input-label">Bairros (selecione um ou mais)</label>
-                                <v-select multiple v-model="form.segmentacao.bairros" :options="bairros" class="v-select-style mt-1" placeholder="Selecione os bairros"></v-select>
+
+                                <div class="border-t border-gray-200 dark:border-white/10 pt-6 space-y-4">
+                                     <button type="button" @click="calcularPublico" :disabled="calculating" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 disabled:opacity-50">
+                                        <LoaderCircle class="mr-2 h-4 w-4" :class="{ 'animate-spin': calculating }" />
+                                        Calcular Público
+                                    </button>
+                                     <div class="relative min-h-[80px] flex items-center justify-center bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 transition-all duration-300">
+                                         <div v-if="calculating" class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                            <LoaderCircle class="h-5 w-5 animate-spin" />
+                                            <span class="text-sm font-medium">Calculando...</span>
+                                        </div>
+                                         <div v-else-if="totalPublico !== null" class="flex items-center gap-4 text-emerald-800 dark:text-emerald-300">
+                                            <Users class="h-8 w-8 flex-shrink-0" />
+                                            <div class="text-left">
+                                                <span class="font-bold text-3xl">{{ totalPublico }}</span>
+                                                <p class="text-xs font-medium">cidadãos estimados</p>
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-center text-sm text-gray-500 dark:text-gray-400">
+                                            Clique em "Calcular Público" para ver a estimativa.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                         <div class="mt-6 flex items-center space-x-4">
-                            <button type="button" @click="calcularPublico" :disabled="calculating" class="btn-secondary">
-                                <Spinner v-if="calculating" class="mr-2 h-4 w-4" />
-                                <LoaderCircle v-else class="mr-2 h-4 w-4" />
-                                Calcular Público
+
+                        <!-- Rodapé com Ação Principal -->
+                        <div class="p-6 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 flex items-center justify-end rounded-b-2xl">
+                            <button type="submit" class="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold text-sm transition-all bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 disabled:opacity-50" :class="{ 'opacity-50': form.processing }" :disabled="form.processing || totalPublico === null">
+                                Agendar e Enviar Campanha
                             </button>
-                            <div v-if="totalPublico !== null" class="text-sm text-gray-600 dark:text-gray-300 transition-opacity duration-300">
-                                Público estimado: <span class="font-bold text-lg text-emerald-700 dark:text-emerald-300">{{ totalPublico }}</span> cidadãos.
-                            </div>
                         </div>
-                    </div>
-
-                    <div class="p-4 md:p-6 border-t-dynamic flex items-center justify-end">
-                        <button type="submit" class="btn-primary" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                            Agendar e Enviar Campanha
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </TenantLayout>
 </template>
 
-<style scoped>
-/* Estilos unificados do modelo */
-.content-container { @apply relative w-full pt-16 rounded-3xl shadow-xl transition-all duration-300 bg-white border border-gray-200 dark:bg-[#102C26]/60 dark:border-2 dark:border-green-400/25 dark:backdrop-blur-sm; }
-.border-b-dynamic { @apply border-b border-gray-200 dark:border-green-400/10; }
-.border-t-dynamic { @apply border-t border-gray-200 dark:border-green-400/10; }
-.form-icon { @apply absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full flex justify-center items-center shadow-lg bg-emerald-600 shadow-emerald-500/30 dark:bg-[#43DB9E] dark:shadow-green-400/30; }
-.icon-in-badge { @apply text-white; }
-.header-title { @apply text-2xl font-bold text-gray-900 dark:text-white; }
-.form-subtitle { @apply text-sm mt-1 text-gray-500 dark:text-gray-400; }
-.role-name { @apply text-lg font-bold text-emerald-800 dark:text-emerald-300; }
-.input-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300; }
-
-/* Estilos de botões */
-.btn-base { @apply flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 disabled:opacity-50; }
-.btn-primary { @apply btn-base bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400; }
-.btn-secondary { @apply btn-base bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-500; }
-
-/* Estilo para inputs e selects do formulário */
-.input-form { @apply block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500; }
-
-/* Estilização para o vue-select */
+<style>
+/* Estilização customizada para o vue-select para se adequar ao tema */
 .v-select-style {
-  --vs-colors--lightest: theme('colors.emerald.100');
-  --vs-colors--light: theme('colors.emerald.300');
-  --vs-colors--dark: theme('colors.emerald.600');
-  --vs-colors--darkest: theme('colors.emerald.800');
+    --vs-colors--lightest: #d1fae5; /* emerald-100 */
+    --vs-colors--light: #6ee7b7; /* emerald-300 */
+    --vs-colors--dark: #059669; /* emerald-600 */
+    --vs-colors--darkest: #047857; /* emerald-700 */
 
-  --vs-border-color: theme('colors.gray.300');
-  --vs-border-radius: theme('borderRadius.md');
-  --vs-font-size: theme('fontSize.sm');
+    --vs-border-color: #d1d5db; /* gray-300 */
+    --vs-border-radius: 0.375rem; /* rounded-md */
+    --vs-font-size: 0.875rem; /* text-sm */
+    --vs-line-height: 1.25rem;
+    --vs-search-input-placeholder-color: #6b7280; /* gray-500 */
 }
 
 .dark .v-select-style {
-    --vs-border-color: theme('colors.gray.600');
-    --vs-dropdown-bg: theme('colors.gray.700');
-    --vs-dropdown-color: theme('colors.white');
-    --vs-dropdown-option-color: theme('colors.white');
-    --vs-selected-bg: theme('colors.emerald.600');
-    --vs-selected-color: theme('colors.white');
-    --vs-search-input-color: theme('colors.white');
-    --vs-dropdown-option--active-bg: theme('colors.emerald.600');
-    --vs-dropdown-option--active-color: theme('colors.white');
+    --vs-border-color: #4b5563; /* gray-600 */
+    --vs-dropdown-bg: #374151; /* gray-700 */
+    --vs-dropdown-color: #f9fafb; /* gray-50 */
+    --vs-dropdown-option-color: #f9fafb;
+    --vs-selected-bg: var(--vs-colors--dark);
+    --vs-selected-color: #ffffff;
+    --vs-search-input-color: #f9fafb;
+    --vs-search-input-placeholder-color: #9ca3af; /* gray-400 */
+    --vs-dropdown-option--active-bg: var(--vs-colors--dark);
+    --vs-dropdown-option--active-color: #ffffff;
+    --vs-clear-button-color: #9ca3af;
+    --vs-open-indicator-color: #9ca3af;
+}
+
+.v-select-style .vs__dropdown-toggle {
+    background-color: transparent;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.dark .v-select-style .vs__dropdown-toggle {
+    background-color: #1f2937; /* gray-800 */
+}
+.dark .v-select-style.vs--open .vs__dropdown-toggle {
+     background-color: #374151; /* gray-700 */
 }
 </style>

@@ -1,92 +1,117 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, Head, usePage } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { MessageSquare } from 'lucide-vue-next';
+import { MessageSquare, ArrowLeft, Hourglass } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 const props = defineProps({
     mensagem: Object,
 });
 
+const page = usePage();
+const currentUser = computed(() => page.props.auth.user);
+
 const getStatusClass = (status) => {
     switch (status) {
         case 'Pendente':
-            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
         case 'Resolvido':
-            return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
         case 'Sem Solução':
-            return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
         default:
-            return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            return 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300';
     }
+};
+
+const getInitials = (name) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+};
+
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 };
 </script>
 
 <template>
     <Head :title="`Mensagem: ${mensagem.assunto}`" />
 
-    <TenantLayout :title="`Mensagem: ${mensagem.assunto}`">
+    <TenantLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Detalhes da Mensagem
             </h2>
         </template>
 
-        <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-4xl">
-                <div class="form-icon"><MessageSquare :size="32" class="icon-in-badge" /></div>
+        <div class="py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                 <div class="relative pt-16 bg-white dark:bg-gray-900/70 dark:backdrop-blur-sm border border-gray-200 dark:border-white/10 shadow-lg rounded-2xl">
 
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
-                    <div>
-                        <h2 class="header-title">{{ mensagem.assunto }}</h2>
-                        <p class="form-subtitle">
-                            Sua mensagem enviada em: {{ new Date(mensagem.created_at).toLocaleString('pt-BR') }}
-                        </p>
+                    <div class="absolute -top-7 left-1/2 -translate-x-1/2 w-16 h-16 bg-emerald-600 dark:bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <MessageSquare :size="32" class="text-white" />
                     </div>
-                    <Link :href="route('gabinete-virtual.index')" class="btn-secondary flex-shrink-0">Voltar</Link>
-                </div>
 
-                <div class="p-4 md:p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="role-name">Sua Mensagem Original</h3>
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusClass(mensagem.status)">
-                            {{ mensagem.status }}
-                        </span>
-                    </div>
-                    <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{{ mensagem.mensagem }}</p>
-                </div>
-
-                <div class="p-4 md:p-6 border-t-dynamic">
-                    <h3 class="role-name mb-4">Respostas do Gabinete</h3>
-                    <div v-if="mensagem.respostas.length === 0" class="text-center py-10">
-                        <p class="text-gray-500 dark:text-gray-400">Nenhuma resposta recebida ainda.</p>
-                    </div>
-                    <div v-else class="space-y-4">
-                        <div v-for="resposta in mensagem.respostas" :key="resposta.id" class="bg-gray-100 dark:bg-white/5 rounded-lg p-4">
-                            <div class="flex justify-between items-center">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Respondido por: {{ resposta.user.name }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ new Date(resposta.created_at).toLocaleString('pt-BR') }}</p>
-                            </div>
-                            <p class="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{{ resposta.resposta }}</p>
+                    <div class="flex items-center justify-between gap-4 p-6 border-b border-gray-200 dark:border-white/10">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ mensagem.assunto }}</h2>
+                            <span class="mt-1 sm:mt-0 px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusClass(mensagem.status)">
+                                {{ mensagem.status }}
+                            </span>
                         </div>
+                        <Link :href="route('gabinete-virtual.index')" class="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <ArrowLeft class="h-5 w-5" />
+                        </Link>
+                    </div>
+
+                    <div class="p-4 md:p-6 space-y-6">
+
+                        <div class="flex items-start gap-3 justify-end">
+                             <div class="w-full max-w-lg text-right">
+                                 <div class="bg-emerald-600 text-white rounded-b-lg rounded-l-lg p-4 inline-block text-left">
+                                    <p class="whitespace-pre-wrap leading-relaxed">{{ mensagem.mensagem }}</p>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                    Você • {{ formatDate(mensagem.created_at) }}
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+                                <span class="font-semibold text-emerald-700 dark:text-emerald-300">{{ getInitials(currentUser.name) }}</span>
+                            </div>
+                        </div>
+
+
+                        <div v-if="mensagem.respostas.length === 0" class="text-center py-10 my-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                            <Hourglass class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                            <h3 class="mt-4 text-md font-semibold text-gray-900 dark:text-white">Aguardando Resposta</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Sua mensagem foi recebida e será respondida em breve.</p>
+                        </div>
+
+                        <div v-else class="space-y-6">
+                             <div v-for="resposta in mensagem.respostas" :key="resposta.id" class="flex items-start gap-3 justify-start">
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                    <span class="font-semibold text-gray-600 dark:text-gray-300">{{ getInitials(resposta.user.name) }}</span>
+                                </div>
+                                <div class="w-full max-w-lg">
+                                    <div class="bg-gray-100 dark:bg-white/5 rounded-b-lg rounded-r-lg p-4">
+                                        <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{{ resposta.resposta }}</p>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                        {{ resposta.user.name }} • {{ formatDate(resposta.created_at) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
     </TenantLayout>
 </template>
-
-<style scoped>
-/* Estilos unificados do modelo */
-.content-container { @apply relative w-full pt-16 rounded-3xl shadow-xl transition-all duration-300 bg-white border border-gray-200 dark:bg-[#102C26]/60 dark:border-2 dark:border-green-400/25 dark:backdrop-blur-sm; }
-.border-b-dynamic { @apply border-b border-gray-200 dark:border-green-400/10; }
-.border-t-dynamic { @apply border-t border-gray-200 dark:border-green-400/10; }
-.form-icon { @apply absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full flex justify-center items-center shadow-lg bg-emerald-600 shadow-emerald-500/30 dark:bg-[#43DB9E] dark:shadow-green-400/30; }
-.icon-in-badge { @apply text-white; }
-.header-title { @apply text-2xl font-bold text-gray-900 dark:text-white; }
-.form-subtitle { @apply text-sm mt-1 text-gray-500 dark:text-gray-400; }
-.role-name { @apply text-lg font-bold text-emerald-800 dark:text-emerald-300; }
-
-/* Estilos de botões */
-.btn-base { @apply flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 disabled:opacity-50; }
-.btn-secondary { @apply btn-base bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-500; }
-</style>

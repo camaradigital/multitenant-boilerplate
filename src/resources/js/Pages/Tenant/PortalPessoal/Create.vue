@@ -1,10 +1,11 @@
 <script setup>
-// SUGESTÃO: Importar o 'router' do Inertia para fazer a navegação manual.
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, useForm, Link, router } from '@inertiajs/vue3';
+// Assumindo que TenantLayout e a rotação de ícones estão disponíveis
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { ArrowLeft, Send, Check, FileUp, X, Sparkles, ShieldAlert } from 'lucide-vue-next';
+import { ArrowLeft, Send, Check, FileUp, X, Sparkles, ShieldAlert, FileText, Loader2 } from 'lucide-vue-next';
 
+// Definição das props, usando sintaxe de objeto JS para máxima compatibilidade no ambiente de compilação.
 const props = defineProps({
     servicos: Array,
 });
@@ -12,10 +13,18 @@ const props = defineProps({
 const etapa = ref(1);
 const servicoSelecionado = ref(null);
 
+// Definição do formulário Inertia
 const form = useForm({
     servico_id: null,
     observacoes: '',
     documentos: [],
+});
+
+// Calcula o nome completo do serviço para exibição no Stepper/Resumo
+const servicoNomeCompleto = computed(() => {
+    if (!servicoSelecionado.value) return 'Nenhum Serviço';
+    const tipo = servicoSelecionado.value.tipo_servico?.nome || 'Serviço';
+    return `${tipo}: ${servicoSelecionado.value.nome}`;
 });
 
 const selecionarServico = (servico) => {
@@ -28,32 +37,56 @@ const voltarEtapa = (passo) => {
     etapa.value = passo;
     if (passo === 1) {
         servicoSelecionado.value = null;
-        form.reset();
+        form.reset('servico_id', 'observacoes', 'documentos'); // Resetar campos específicos
     }
 };
 
 const prepararConfirmacao = () => {
+    // Validação simples antes de ir para a confirmação
+    if (!form.observacoes.trim() && form.documentos.length === 0) {
+        // SUGESTÃO: Aqui você poderia exibir um toast/notificação informando
+        // que é recomendado adicionar observações ou anexos.
+    }
     etapa.value = 3;
 };
 
 const handleFileUpload = (event) => {
-    form.documentos = Array.from(event.target.files);
+    // Adicionar novos arquivos aos existentes
+    const newFiles = Array.from(event.target.files);
+    form.documentos = [...form.documentos, ...newFiles];
+
+    // Limpar o valor do input para permitir o upload dos mesmos arquivos novamente se necessário
+    event.target.value = null;
 };
 
 const removeFile = (indexToRemove) => {
     form.documentos = form.documentos.filter((_, index) => index !== indexToRemove);
 };
 
+// Função de utilidade para formatar o tamanho do arquivo
+const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+
+// Função principal de envio
 const submit = () => {
     form.post(route('portal.solicitacoes.store'), {
-        // SUGESTÃO: Adicionar a navegação manual no callback onSuccess.
+        forceFormData: true, // Garante que arquivos sejam enviados corretamente
         onSuccess: () => {
-            // Como o backend não está redirecionando, nós navegamos
-            // para o painel manualmente após o sucesso.
+            // Navegação manual após o sucesso
             router.visit(route('portal.meu-painel'));
         },
-        onError: () => {
-            // A mensagem de erro será exibida no novo bloco de alerta.
+        onError: (errors) => {
+            // Voltar para a etapa 2 se o erro for de validação de observações/documentos
+            if (errors.observacoes || errors.documentos) {
+                 voltarEtapa(2);
+            }
+            // A mensagem de erro será exibida no bloco de alerta na etapa 3
         }
     });
 };
@@ -63,54 +96,90 @@ const submit = () => {
     <Head title="Nova Solicitação" />
     <TenantLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Nova Solicitação de Serviço
-            </h2>
+            <!-- Título com um visual mais robusto -->
+            <div class="flex items-center">
+                <FileText class="w-6 h-6 mr-3 text-emerald-600 dark:text-emerald-400" />
+                <h2 class="font-bold text-2xl text-gray-800 dark:text-gray-100 leading-tight">
+                    Nova Solicitação de Serviço
+                </h2>
+            </div>
         </template>
 
-        <div class="py-12">
+        <div class="py-12 bg-gray-50 dark:bg-gray-900 min-h-screen">
             <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800/50 dark:border dark:border-gray-700 overflow-hidden shadow-xl sm:rounded-2xl p-6 md:p-8">
+                <div class="bg-white dark:bg-gray-800 border dark:border-gray-700/80 overflow-hidden shadow-2xl sm:rounded-2xl p-6 md:p-10 transition-all duration-500">
 
-                    <!-- Indicador de Etapas -->
-                    <div class="flex items-center justify-center mb-8">
-                        <div class="flex items-center" :class="{'opacity-50': etapa !== 1}">
-                            <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="etapa >= 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700'">
-                                <Check v-if="etapa > 1" class="w-6 h-6" />
+                    <!-- Indicador de Etapas (Stepper) -->
+                    <div class="flex items-center justify-center mb-10 relative">
+                        <!-- Linha de Progresso -->
+                        <div class="absolute inset-x-12 top-1/2 h-0.5 transform -translate-y-1/2 bg-gray-200 dark:bg-gray-700 z-0">
+                            <div class="h-full bg-emerald-500 transition-all duration-500" :style="{ width: `${(etapa - 1) * 50}%` }"></div>
+                        </div>
+
+                        <!-- Etapa 1: Serviço -->
+                        <div class="flex flex-col items-center z-10 w-1/3">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300"
+                                 :class="etapa >= 1 ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">
+                                <Check v-if="etapa > 1" class="w-5 h-5" />
                                 <span v-else class="text-lg font-bold">1</span>
                             </div>
-                            <span class="ml-3 font-medium" :class="etapa >= 1 ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500'">Serviço</span>
+                            <span class="mt-2 text-sm font-medium text-center"
+                                  :class="etapa >= 1 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-500'">Serviço</span>
                         </div>
-                        <div class="flex-auto border-t-2 mx-4" :class="etapa >= 2 ? 'border-emerald-500' : 'border-gray-200 dark:border-gray-600'"></div>
-                        <div class="flex items-center" :class="{'opacity-50': etapa < 2}">
-                             <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="etapa >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700'">
-                                <Check v-if="etapa > 2" class="w-6 h-6" />
+
+                        <!-- Etapa 2: Detalhes -->
+                        <div class="flex flex-col items-center z-10 w-1/3">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300"
+                                 :class="etapa >= 2 ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">
+                                <Check v-if="etapa > 2" class="w-5 h-5" />
                                 <span v-else class="text-lg font-bold">2</span>
                             </div>
-                            <span class="ml-3 font-medium" :class="etapa >= 2 ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500'">Detalhes</span>
+                            <span class="mt-2 text-sm font-medium text-center"
+                                  :class="etapa >= 2 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-500'">Detalhes</span>
                         </div>
-                        <div class="flex-auto border-t-2 mx-4" :class="etapa >= 3 ? 'border-emerald-500' : 'border-gray-200 dark:border-gray-600'"></div>
-                        <div class="flex items-center" :class="{'opacity-50': etapa < 3}">
-                            <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="etapa >= 3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700'">
+
+                        <!-- Etapa 3: Confirmar -->
+                        <div class="flex flex-col items-center z-10 w-1/3">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300"
+                                 :class="etapa >= 3 ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">
                                 <Send class="w-5 h-5" />
                             </div>
-                            <span class="ml-3 font-medium" :class="etapa >= 3 ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500'">Confirmar</span>
+                            <span class="mt-2 text-sm font-medium text-center"
+                                  :class="etapa >= 3 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-500'">Confirmar</span>
                         </div>
                     </div>
 
+
+                    <!-- Bloco de Título Dinâmico -->
+                    <div class="text-center mb-8 pb-4 border-b dark:border-gray-700">
+                        <h3 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white transition-opacity duration-300">
+                            {{ etapa === 1 ? 'Qual serviço você precisa?' : (etapa === 2 ? 'Adicione os detalhes necessários' : 'Revise e Envie') }}
+                        </h3>
+                        <p v-if="etapa === 2" class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                             <strong class="text-emerald-600 dark:text-emerald-400">{{ servicoNomeCompleto }}</strong> selecionado.
+                        </p>
+                    </div>
+
                     <!-- Etapa 1: Selecionar Serviço -->
-                    <div v-if="etapa === 1">
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white text-center">Qual serviço você precisa?</h3>
-                        <p class="text-center text-gray-500 mt-2">Escolha uma das opções abaixo para começar.</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                            <div v-for="servico in servicos" :key="servico.id" @click="selecionarServico(servico)" class="p-6 border dark:border-gray-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/50 hover:border-emerald-500 dark:hover:border-emerald-400 cursor-pointer transition-all duration-300 transform hover:scale-105">
-                                <p class="font-semibold text-lg text-emerald-700 dark:text-emerald-400">{{ servico.tipo_servico?.nome }}</p>
-                                <h4 class="font-bold text-xl text-gray-800 dark:text-white mt-1">{{ servico.nome }}</h4>
-                                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">{{ servico.descricao || 'Serviço padrão oferecido pela câmara.' }}</p>
+                    <div v-if="etapa === 1" class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                            <div v-for="servico in props.servicos" :key="servico.id" @click="selecionarServico(servico)"
+                                 class="p-5 border dark:border-gray-700 rounded-xl cursor-pointer transition-all duration-300
+                                        hover:bg-emerald-50 dark:hover:bg-gray-700/70 hover:border-emerald-500 dark:hover:border-emerald-400
+                                        shadow-sm hover:shadow-lg hover:ring-2 hover:ring-emerald-200 dark:hover:ring-emerald-500/50">
+
+                                <div class="flex items-center mb-3">
+                                     <Sparkles class="w-6 h-6 text-emerald-500 flex-shrink-0 mr-3" />
+                                     <p class="font-semibold text-sm text-emerald-700 dark:text-emerald-400">{{ servico.tipo_servico?.nome || 'Serviço' }}</p>
+                                </div>
+
+                                <h4 class="font-bold text-xl text-gray-800 dark:text-white">{{ servico.nome }}</h4>
+                                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm line-clamp-2">{{ servico.descricao || 'Serviço padrão oferecido. Clique para continuar.' }}</p>
                             </div>
                         </div>
-                         <div class="mt-8 text-center">
-                            <Link :href="route('portal.meu-painel')" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500">
+
+                        <div class="mt-10 text-center">
+                            <Link :href="route('portal.meu-painel')" class="inline-flex items-center button-secondary">
                                 <ArrowLeft class="w-4 h-4 mr-2" />
                                 Voltar ao Painel
                             </Link>
@@ -118,104 +187,116 @@ const submit = () => {
                     </div>
 
                     <!-- Etapa 2: Detalhes e Documentos -->
-                    <div v-if="etapa === 2">
-                         <h3 class="text-2xl font-bold text-gray-900 dark:text-white text-center">Detalhes da sua Solicitação</h3>
-                         <p class="text-center text-gray-500 mt-2">Serviço selecionado: <strong class="text-emerald-600 dark:text-emerald-400">{{ servicoSelecionado.nome }}</strong></p>
+                    <form v-if="etapa === 2" @submit.prevent="prepararConfirmacao" class="animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-                         <div class="mt-8">
-                             <label for="observacoes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Observações</label>
-                             <textarea id="observacoes" v-model="form.observacoes" rows="4" class="form-input mt-1" placeholder="Descreva aqui sua necessidade. Quanto mais detalhes, melhor."></textarea>
-                             <div v-if="form.errors.observacoes" class="text-sm text-red-500 mt-1">{{ form.errors.observacoes }}</div>
-                         </div>
+                        <div class="space-y-6">
+                            <!-- Campo Observações -->
+                            <div>
+                                <label for="observacoes" class="label-input">Observações <span class="text-gray-500 dark:text-gray-400 font-normal">(Opcional)</span></label>
+                                <textarea id="observacoes" v-model="form.observacoes" rows="5" class="form-input" placeholder="Descreva aqui sua necessidade em detalhes (máximo 500 caracteres, por exemplo)."></textarea>
+                                <div v-if="form.errors.observacoes" class="error-message">{{ form.errors.observacoes }}</div>
+                            </div>
 
-                         <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Anexar Documentos (Opcional)</label>
-                             <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 dark:border-gray-600 px-6 py-10">
-                                 <div class="text-center">
-                                    <FileUp class="mx-auto h-12 w-12 text-gray-400" />
-                                    <div class="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
-                                        <label for="file-upload" class="relative cursor-pointer rounded-md bg-white dark:bg-gray-800 font-semibold text-emerald-600 dark:text-emerald-400 focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-600 focus-within:ring-offset-2 dark:focus-within:ring-offset-gray-900 hover:text-emerald-500">
-                                            <span>Selecione os arquivos</span>
-                                            <input id="file-upload" name="file-upload" type="file" @change="handleFileUpload" multiple class="sr-only">
-                                        </label>
-                                        <p class="pl-1">ou arraste e solte aqui</p>
+                            <!-- Bloco de Upload -->
+                            <div>
+                                <label class="label-input mb-2">Anexar Documentos <span class="text-gray-500 dark:text-gray-400 font-normal">(Opcional)</span></label>
+                                <div class="p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 transition duration-300 hover:border-emerald-500">
+                                    <div class="text-center">
+                                        <FileUp class="mx-auto h-12 w-12 text-emerald-500" />
+                                        <div class="mt-4 flex flex-col sm:flex-row justify-center items-center text-sm leading-6 text-gray-600 dark:text-gray-400">
+                                            <label for="file-upload" class="relative cursor-pointer rounded-md font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors">
+                                                <span>Clique para selecionar</span>
+                                                <input id="file-upload" name="file-upload" type="file" @change="handleFileUpload" multiple class="sr-only" :disabled="form.processing">
+                                            </label>
+                                            <p class="sm:ml-1 mt-1 sm:mt-0">ou arraste e solte seus arquivos</p>
+                                        </div>
+                                        <p class="text-xs leading-5 text-gray-600 dark:text-gray-400 mt-1">PNG, JPG, PDF (Limite de tamanho por arquivo/total a ser definido pelo backend)</p>
+                                        <div v-if="form.errors.documentos" class="error-message mt-2">{{ form.errors.documentos }}</div>
                                     </div>
-                                    <p class="text-xs leading-5 text-gray-600 dark:text-gray-400">PNG, JPG, PDF até 10MB</p>
                                 </div>
-                             </div>
+                            </div>
+
+                            <!-- Lista de Arquivos Selecionados -->
+                            <div v-if="form.documentos.length > 0">
+                                <p class="label-input mb-2">Arquivos selecionados ({{ form.documentos.length }})</p>
+                                <ul class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                    <li v-for="(file, index) in form.documentos" :key="index" class="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded-lg shadow-sm">
+                                        <div class="flex items-center truncate">
+                                            <FileText class="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                            <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{{ file.name }}</span>
+                                            <span class="text-xs ml-2 text-gray-500 dark:text-gray-400 flex-shrink-0">({{ formatFileSize(file.size) }})</span>
+                                        </div>
+                                        <button type="button" @click="removeFile(index)" class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition duration-150" aria-label="Remover arquivo">
+                                            <X class="w-4 h-4"/>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
 
-                        <div v-if="form.documentos.length > 0" class="mt-4">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Arquivos selecionados:</p>
-                            <ul class="mt-2 space-y-2">
-                                <li v-for="(file, index) in form.documentos" :key="index" class="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded-md">
-                                    <span class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ file.name }}</span>
-                                    <button @click="removeFile(index)" class="text-red-500 hover:text-red-700">
-                                        <X class="w-4 h-4"/>
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-
-
-                         <div class="mt-8 flex justify-between items-center">
-                            <button @click="voltarEtapa(1)" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500">
+                        <!-- Ações Etapa 2 -->
+                        <div class="mt-10 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                            <button type="button" @click="voltarEtapa(1)" class="button-secondary">
                                 <ArrowLeft class="w-4 h-4 mr-2" />
                                 Trocar Serviço
                             </button>
-                             <button @click="prepararConfirmacao" class="action-button">
+                            <button type="submit" class="button-primary" :disabled="form.processing">
                                 Ir para Confirmação
                                 <Check class="w-4 h-4 ml-2" />
                             </button>
-                         </div>
-                    </div>
+                        </div>
+                    </form>
 
                     <!-- Etapa 3: Confirmar e Enviar -->
-                    <div v-if="etapa === 3">
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white text-center">Revise sua Solicitação</h3>
-                        <p class="text-center text-gray-500 mt-2">Confira os dados abaixo antes de enviar.</p>
+                    <div v-if="etapa === 3" class="animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-                        <div class="mt-8 p-6 bg-gray-50 dark:bg-gray-900/50 rounded-lg border dark:border-gray-700 space-y-4">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Serviço Solicitado</p>
-                                <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ servicoSelecionado.nome }}</p>
+                        <div class="mt-4 p-6 bg-gray-50 dark:bg-gray-900/60 rounded-xl border-t-4 border-emerald-500 space-y-6 shadow-md">
+                            <div class="border-b dark:border-gray-700 pb-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Serviço Solicitado</p>
+                                <p class="text-xl font-bold text-gray-900 dark:text-white mt-1">{{ servicoSelecionado.nome }}</p>
+                                <p class="text-sm text-emerald-600 dark:text-emerald-400">{{ servicoSelecionado.tipo_servico?.nome }}</p>
                             </div>
+
                             <div v-if="form.observacoes">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Observações</p>
-                                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ form.observacoes }}</p>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observações Detalhadas</p>
+                                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1 p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">{{ form.observacoes }}</p>
                             </div>
-                             <div v-if="form.documentos.length > 0">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Documentos Anexados</p>
-                                <ul class="list-disc list-inside text-gray-700 dark:text-gray-300">
-                                    <li v-for="(file, index) in form.documentos" :key="`confirm-${index}`">{{ file.name }}</li>
-                                </ul>
-                            </div>
-                            <div v-else>
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Documentos Anexados</p>
-                                <p class="text-gray-700 dark:text-gray-300">Nenhum documento anexado.</p>
-                            </div>
-                        </div>
 
-                        <!-- Bloco de Alerta de Erro -->
-                        <div v-if="form.errors.servico_id || form.errors.servico" class="mt-6 flex items-start space-x-3 p-4 bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg">
-                            <ShieldAlert class="w-6 h-6 flex-shrink-0" />
                             <div>
-                                <h4 class="font-bold">Não foi possível enviar a solicitação</h4>
-                                <p class="text-sm">{{ form.errors.servico_id || form.errors.servico }}</p>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentos Anexados ({{ form.documentos.length }})</p>
+                                <ul v-if="form.documentos.length > 0" class="mt-2 space-y-2">
+                                    <li v-for="(file, index) in form.documentos" :key="`confirm-${index}`" class="text-gray-700 dark:text-gray-300 flex items-center">
+                                        <FileText class="w-4 h-4 mr-2 text-emerald-500 flex-shrink-0" />
+                                        <span>{{ file.name }}</span>
+                                        <span class="text-xs ml-2 text-gray-500 dark:text-gray-400">({{ formatFileSize(file.size) }})</span>
+                                    </li>
+                                </ul>
+                                <p v-else class="text-gray-700 dark:text-gray-300 mt-1">Nenhum documento anexado.</p>
+                            </div>
+                        </div>
+
+                        <!-- Bloco de Alerta de Erro - Mais destacado -->
+                        <div v-if="form.errors.servico_id || form.errors.servico" class="mt-8 flex items-start space-x-3 p-4 bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg shadow-lg" role="alert">
+                            <ShieldAlert class="w-6 h-6 flex-shrink-0 text-red-500" />
+                            <div>
+                                <h4 class="font-bold text-lg">Erro ao Enviar</h4>
+                                <p class="text-sm">{{ form.errors.servico_id || form.errors.servico || 'Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.' }}</p>
                             </div>
                         </div>
 
 
-                         <div class="mt-8 flex justify-between items-center">
-                            <button @click="voltarEtapa(2)" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500">
+                        <!-- Ações Etapa 3 -->
+                        <div class="mt-10 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                            <button type="button" @click="voltarEtapa(2)" class="button-secondary">
                                 <ArrowLeft class="w-4 h-4 mr-2" />
                                 Editar Detalhes
                             </button>
-                             <button @click="submit" class="action-button bg-green-600 hover:bg-green-500" :disabled="form.processing">
-                                <Sparkles v-if="!form.processing" class="w-5 h-5 mr-2" />
-                                {{ form.processing ? 'Enviando...' : 'Confirmar e Enviar Solicitação' }}
+                            <button type="button" @click="submit" class="button-primary bg-emerald-600 hover:bg-emerald-700" :disabled="form.processing">
+                                <Loader2 v-if="form.processing" class="w-5 h-5 mr-2 animate-spin" />
+                                <Send v-else class="w-5 h-5 mr-2" />
+                                {{ form.processing ? 'Enviando Solicitação...' : 'Confirmar e Enviar Solicitação' }}
                             </button>
-                         </div>
+                        </div>
                     </div>
 
                 </div>
@@ -225,18 +306,42 @@ const submit = () => {
 </template>
 
 <style scoped>
+/* Estilos globais para padronização e profissionalismo */
+.label-input {
+    @apply block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1;
+}
 .form-input {
-    @apply block w-full text-sm rounded-xl transition-all h-12 py-3.5 px-4;
-    @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400;
-    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
+    /* Base para inputs e textareas */
+    @apply block w-full text-base rounded-xl py-3 px-4 transition-all duration-200;
+    /* Tema Claro */
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-500 shadow-sm;
+    @apply focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500;
+    /* Tema Escuro */
     @apply dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400;
-    @apply dark:focus:ring-green-500 dark:focus:border-green-500;
+    @apply dark:focus:ring-emerald-500 dark:focus:border-emerald-500;
 }
 textarea.form-input {
-    @apply h-auto;
+    /* Ajuste específico para textarea */
+    @apply h-auto min-h-[120px] resize-y;
 }
-.action-button {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-500 active:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 disabled:opacity-50;
+
+/* Botão Principal (Ação/Avançar) */
+.button-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-emerald-600 border border-transparent
+           rounded-xl font-bold text-sm text-white uppercase tracking-wider
+           shadow-md hover:bg-emerald-700 active:bg-emerald-800
+           focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900
+           transition ease-in-out duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Botão Secundário (Voltar/Cancelar) */
+.button-secondary {
+    @apply inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300
+           bg-gray-200 dark:bg-gray-700 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600
+           transition ease-in-out duration-150 shadow-sm hover:shadow-md;
+}
+
+.error-message {
+    @apply text-sm text-red-500 mt-1 font-medium;
 }
 </style>
-

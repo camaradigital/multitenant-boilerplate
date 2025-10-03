@@ -1,27 +1,35 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, Head } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import Pagination from '@/Components/Pagination.vue';
-import { Send, Plus, X } from 'lucide-vue-next';
+import { Send, Plus, X, ArrowRight, Mailbox } from 'lucide-vue-next';
 
 const props = defineProps({
     mensagens: Object,
 });
 
-const showForm = ref(false);
+const isModalOpen = ref(false);
 
 const form = useForm({
     assunto: '',
     mensagem: '',
 });
 
+const openModal = () => {
+    form.reset();
+    isModalOpen.value = true;
+};
+
+const closeModal = () => {
+    isModalOpen.value = false;
+};
+
 const submit = () => {
     form.post(route('gabinete-virtual.store'), {
         onSuccess: () => {
-            form.reset();
-            showForm.value = false;
+            closeModal();
         },
         preserveScroll: true,
     });
@@ -30,118 +38,153 @@ const submit = () => {
 const getStatusClass = (status) => {
     switch (status) {
         case 'Pendente':
-            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
         case 'Resolvido':
-            return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
         case 'Sem Solução':
-            return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
         default:
-            return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            return 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300';
     }
+};
+
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: 'short', year: 'numeric'
+    });
 };
 </script>
 
 <template>
     <Head title="Gabinete Virtual" />
 
-    <TenantLayout title="Gabinete Virtual">
+    <TenantLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Fale com o Presidente
             </h2>
         </template>
 
-        <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-7xl">
-                <div class="form-icon"><Send :size="32" class="icon-in-badge" /></div>
+        <div class="py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto">
+                <!-- Card Principal -->
+                <div class="relative bg-white dark:bg-gray-900/70 dark:backdrop-blur-sm border border-gray-200 dark:border-white/10 shadow-lg rounded-2xl">
 
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
-                    <div>
-                        <h2 class="header-title">Fale com o Presidente</h2>
-                        <p class="form-subtitle">Envie sua mensagem, sugestão ou solicitação diretamente.</p>
+                    <!-- Ícone no Topo -->
+                    <div class="absolute -top-7 left-1/2 -translate-x-1/2 w-16 h-16 bg-emerald-600 dark:bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <Send :size="32" class="text-white" />
                     </div>
-                    <button @click="showForm = !showForm" :class="showForm ? 'btn-secondary' : 'btn-primary'" class="flex-shrink-0">
-                        <X v-if="showForm" class="w-4 h-4 mr-2"/>
-                        <Plus v-else class="w-4 h-4 mr-2"/>
-                        {{ showForm ? 'Cancelar' : 'Nova Mensagem' }}
-                    </button>
-                </div>
 
-                <div v-if="showForm" class="p-4 md:p-6">
-                    <form @submit.prevent="submit">
-                        <h3 class="role-name mb-4">Enviar Nova Mensagem</h3>
+                    <!-- Cabeçalho do Card -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-12 p-6 border-b border-gray-200 dark:border-white/10">
                         <div>
-                            <label for="assunto" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Assunto</label>
-                            <input id="assunto" v-model="form.assunto" type="text" class="mt-1 input-form" required />
-                            <InputError class="mt-2" :message="form.errors.assunto" />
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Fale com o Presidente</h2>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Envie sua mensagem, sugestão ou solicitação diretamente.</p>
+                        </div>
+                        <button @click="openModal" class="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus:ring-offset-gray-900">
+                            <Plus class="w-4 h-4 mr-2"/>
+                            Nova Mensagem
+                        </button>
+                    </div>
+
+                    <!-- Lista de Mensagens e Estado Vazio -->
+                    <div class="p-4 md:p-6">
+                        <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300 mb-4">Suas Mensagens</h3>
+
+                        <!-- Estado Vazio -->
+                        <div v-if="mensagens.data.length === 0" class="text-center py-16">
+                            <Mailbox class="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500" />
+                            <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Nenhuma mensagem enviada</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Clique em "Nova Mensagem" para enviar sua primeira solicitação.</p>
                         </div>
 
-                        <div class="mt-4">
-                            <label for="mensagem" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mensagem</label>
-                            <textarea id="mensagem" v-model="form.mensagem" class="mt-1 input-form" rows="6" required></textarea>
-                            <InputError class="mt-2" :message="form.errors.mensagem" />
+                        <!-- Lista de Cards de Mensagens -->
+                        <div v-else class="space-y-3">
+                            <Link v-for="mensagem in mensagens.data" :key="mensagem.id" :href="route('gabinete-virtual.show', mensagem.id)" class="block p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 group">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div class="flex-grow">
+                                        <div class="flex items-center gap-3">
+                                            <span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusClass(mensagem.status)">
+                                                {{ mensagem.status }}
+                                            </span>
+                                             <p class="text-sm text-gray-500 dark:text-gray-400">{{ formatDate(mensagem.created_at) }}</p>
+                                        </div>
+                                        <p class="mt-2 font-semibold text-gray-900 dark:text-white group-hover:text-emerald-800 dark:group-hover:text-emerald-300">{{ mensagem.assunto }}</p>
+                                    </div>
+                                    <div class="flex-shrink-0 flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Ver Detalhes
+                                        <ArrowRight class="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </Link>
                         </div>
 
-                        <div class="flex items-center justify-end mt-4">
-                             <button type="submit" class="btn-primary" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                        <Pagination class="pt-6" :links="mensagens.links" v-if="mensagens.data.length > 0"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Nova Mensagem -->
+        <Transition name="modal-fade">
+            <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div @click.self="closeModal" class="absolute inset-0"></div>
+                <div class="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl transform transition-all">
+                    <form @submit.prevent="submit">
+                        <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Enviar Nova Mensagem</h3>
+                            <button @click="closeModal" type="button" class="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-200">
+                                <X class="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <label for="assunto" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Assunto</label>
+                                <input id="assunto" v-model="form.assunto" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" required />
+                                <InputError class="mt-2" :message="form.errors.assunto" />
+                            </div>
+
+                            <div>
+                                <label for="mensagem" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mensagem</label>
+                                <textarea id="mensagem" v-model="form.mensagem" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" rows="6" required></textarea>
+                                <InputError class="mt-2" :message="form.errors.mensagem" />
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3 p-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-white/10 rounded-b-2xl">
+                            <button @click="closeModal" type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-600">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 disabled:opacity-50" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                                 Enviar Mensagem
                             </button>
                         </div>
                     </form>
                 </div>
-
-                <div class="p-4 md:p-6" :class="{ 'border-t-dynamic' : showForm }">
-                    <h3 class="role-name mb-4">Suas Mensagens</h3>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">
-                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-white/5">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">Assunto</th>
-                                    <th scope="col" class="px-6 py-3">Data de Envio</th>
-                                    <th scope="col" class="px-6 py-3">Status</th>
-                                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Ações</span></th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white dark:bg-gray-800/50 divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-if="mensagens.data.length === 0">
-                                    <td colspan="4" class="px-6 py-10 text-center">Você ainda não enviou nenhuma mensagem.</td>
-                                </tr>
-                                <tr v-for="mensagem in mensagens.data" :key="mensagem.id">
-                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ mensagem.assunto }}</td>
-                                    <td class="px-6 py-4">{{ new Date(mensagem.created_at).toLocaleDateString('pt-BR') }}</td>
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusClass(mensagem.status)">{{ mensagem.status }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-right">
-                                        <Link :href="route('gabinete-virtual.show', mensagem.id)" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Ver Detalhes</Link>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <Pagination class="pt-6" :links="mensagens.links" v-if="mensagens.data.length > 0"/>
-                </div>
             </div>
-        </div>
+        </Transition>
+
     </TenantLayout>
 </template>
 
-<style scoped>
-/* Estilos unificados do modelo */
-.content-container { @apply relative w-full pt-16 rounded-3xl shadow-xl transition-all duration-300 bg-white border border-gray-200 dark:bg-[#102C26]/60 dark:border-2 dark:border-green-400/25 dark:backdrop-blur-sm; }
-.border-b-dynamic { @apply border-b border-gray-200 dark:border-green-400/10; }
-.border-t-dynamic { @apply border-t border-gray-200 dark:border-green-400/10; }
-.form-icon { @apply absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full flex justify-center items-center shadow-lg bg-emerald-600 shadow-emerald-500/30 dark:bg-[#43DB9E] dark:shadow-green-400/30; }
-.icon-in-badge { @apply text-white; }
-.header-title { @apply text-2xl font-bold text-gray-900 dark:text-white; }
-.form-subtitle { @apply text-sm mt-1 text-gray-500 dark:text-gray-400; }
-.role-name { @apply text-lg font-bold text-emerald-800 dark:text-emerald-300; }
+<style>
+/* Estilos para a transição do modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.modal-fade-enter-active .transform,
+.modal-fade-leave-active .transform {
+    transition: transform 0.3s ease;
+}
 
-/* Estilos de botões */
-.btn-base { @apply flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 disabled:opacity-50; }
-.btn-primary { @apply btn-base bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400; }
-.btn-secondary { @apply btn-base bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-500; }
-
-/* Estilo para inputs e selects do formulário */
-.input-form { @apply block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500; }
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+.modal-fade-enter-from .transform,
+.modal-fade-leave-to .transform {
+    transform: scale(0.95) translateY(20px);
+}
 </style>

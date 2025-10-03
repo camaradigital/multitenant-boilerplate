@@ -173,6 +173,7 @@ Route::middleware([
                 Route::get('/nova', [CampanhaController::class, 'create'])->name('create');
                 Route::post('/', [CampanhaController::class, 'store'])->name('store');
                 Route::post('/calcular-publico', [CampanhaController::class, 'calcularPublico'])->name('calcular-publico');
+                Route::get('/{campanha}', [CampanhaController::class, 'show'])->name('show');
             });
 
             // MÓDULO DE GESTÃO DE UTILIZADORES

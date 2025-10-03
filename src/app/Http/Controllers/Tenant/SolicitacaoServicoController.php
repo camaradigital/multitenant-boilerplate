@@ -12,13 +12,14 @@ use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Notifications\Tenant\SolicitacaoStatusAlterado;
 use App\Services\Tenant\SolicitacaoService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rule; // Importação necessária para tipagem de Closure
 
 class SolicitacaoServicoController extends Controller
 {
@@ -32,34 +33,44 @@ class SolicitacaoServicoController extends Controller
     }
 
     /**
-     * Exibe a fila de solicitações.
+     * Constrói a query base com base nos filtros e permissões.
      */
-    public function index(Request $request)
+    protected function buildBaseQuery(Request $request): Builder
     {
-        $this->authorize('viewAny', SolicitacaoServico::class);
-
         $user = Auth::user();
-        $query = SolicitacaoServico::with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
+        $query = SolicitacaoServico::query();
 
+        // 1. Filtro por Categoria (TipoServico)
         if ($request->filled('categoria') && $request->input('categoria') !== 'Todos') {
             $query->whereHas('servico.categoria', function ($q) use ($request) {
                 $q->where('nome', $request->input('categoria'));
             });
         }
-        // Adicionado: Filtro de busca por nome do cidadão
+
+        // 2. Filtro de busca por nome do cidadão (e outros campos se necessário)
         if ($request->filled('search')) {
-            $query->whereHas('cidadao', function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->input('search').'%');
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('cidadao', function ($q) use ($search) {
+                    $q->where('name', 'like', '%'.$search.'%');
+                })
+                    ->orWhereHas('servico', function ($q) use ($search) {
+                        $q->where('nome', 'like', '%'.$search.'%');
+                    })
+                    ->orWhereHas('atendente', function ($q) use ($search) {
+                        $q->where('name', 'like', '%'.$search.'%');
+                    });
             });
         }
-        // Adicionado: Filtro por status
+
+        // 3. Filtro por status
         if ($request->filled('status')) {
             $query->whereHas('status', function ($q) use ($request) {
                 $q->where('nome', $request->input('status'));
             });
         }
-        // --- FIM DAS ALTERAÇÕES ---
 
+        // 4. Filtros de Permissão
         if ($user->can('supervisionar solicitacoes juridicas')) {
             $query->whereHas('servico', function ($q) {
                 $q->where('is_juridico', true);
@@ -67,6 +78,66 @@ class SolicitacaoServicoController extends Controller
         } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && ! $user->hasRole('Admin Tenant')) {
             $query->where('atendente_id', $user->id);
         }
+
+        return $query;
+    }
+
+    // --- NOVO: Mapeamento de Status para Ícones ---
+    protected function getStatusIcon(string $statusNome): string
+    {
+        // Você pode ajustar a lógica aqui para mapear seus status específicos
+        return match ($statusNome) {
+            'Pendente', 'Em Análise' => 'Hourglass',
+            'Finalizado', 'Resolvido' => 'CheckCircle',
+            'Aguardando Documentos' => 'FileText',
+            'Cancelado', 'Sem Solução' => 'XCircle',
+            default => 'Loader', // Ícone padrão
+        };
+    }
+    // --- FIM NOVO ---
+
+    /**
+     * Exibe a fila de solicitações.
+     */
+    public function index(Request $request)
+    {
+        $this->authorize('viewAny', SolicitacaoServico::class);
+
+        $user = Auth::user();
+
+        // --- NOVO: Cálculo de Estatísticas ---
+        $statsQueryBase = $this->buildBaseQuery($request);
+        $totalCount = $statsQueryBase->count();
+
+        $statusStats = SolicitacaoServico::select('status_id', DB::raw('count(*) as contagem'))
+            ->whereIn('id', $statsQueryBase->select('id')) // Aplica os mesmos filtros de permissão/query base
+            ->groupBy('status_id')
+            ->get();
+
+        $estatisticas = [
+            [
+                'nome' => 'Total',
+                'contagem' => $totalCount,
+                'cor' => '#0e7490', // Ciano escuro
+                'icone' => 'ListChecks',
+            ],
+        ];
+
+        foreach ($statusStats as $stat) {
+            $status = StatusSolicitacao::find($stat->status_id);
+            if ($status) {
+                $estatisticas[] = [
+                    'nome' => $status->nome,
+                    'contagem' => (int) $stat->contagem,
+                    'cor' => $status->cor, // Assumindo que a cor está na Model StatusSolicitacao
+                    'icone' => $this->getStatusIcon($status->nome),
+                ];
+            }
+        }
+        // --- FIM NOVO ---
+
+        // Configura a query para a listagem principal
+        $query = $this->buildBaseQuery($request)->with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
 
         $solicitacoes = $query->latest()->paginate(15)->withQueryString();
 
@@ -85,6 +156,7 @@ class SolicitacaoServicoController extends Controller
             'categorias' => TipoServico::orderBy('nome')->get(),
             'statuses' => StatusSolicitacao::orderBy('nome')->get(),
             'filters' => $request->only(['categoria', 'search', 'status']),
+            'estatisticas' => $estatisticas, // NOVO: Passando as estatísticas para a view
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CampanhaComunicacaoResource;
 use App\Jobs\Tenant\SendCampanhaEmailJob;
 use App\Models\Tenant\CampanhaComunicacao;
 use App\Models\Tenant\User;
@@ -12,14 +13,19 @@ use Inertia\Inertia;
 
 class CampanhaController extends Controller
 {
+    /**
+     * O construtor agora está limpo, a autorização será feita em cada método.
+     */
     public function __construct()
     {
-        // Garante que apenas usuários com a permissão correta possam acessar
-        $this->middleware('can:gerenciar campanhas');
+        // O middleware foi removido daqui e a lógica foi para a Policy.
     }
 
     public function index(Request $request)
     {
+        // Autorização com a Policy para listar campanhas
+        $this->authorize('viewAny', CampanhaComunicacao::class);
+
         $campanhas = CampanhaComunicacao::with('createdBy')
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('titulo', 'like', "%{$search}%");
@@ -34,8 +40,24 @@ class CampanhaController extends Controller
         ]);
     }
 
+    public function show(CampanhaComunicacao $campanha)
+    {
+        // Autorização com a Policy para ver uma campanha específica
+        $this->authorize('view', $campanha);
+
+        // Carrega o relacionamento, se não for carregado por padrão
+        $campanha->load('createdBy');
+
+        return inertia('Tenant/Campanhas/Show', [
+            'campanha' => CampanhaComunicacaoResource::make($campanha),
+        ]);
+    }
+
     public function create()
     {
+        // Autorização com a Policy para criar uma nova campanha
+        $this->authorize('create', CampanhaComunicacao::class);
+
         // Obter todos os bairros distintos dos usuários para o filtro
         $bairros = User::whereNotNull('bairro')->distinct()->orderBy('bairro')->pluck('bairro');
 
@@ -46,6 +68,9 @@ class CampanhaController extends Controller
 
     public function store(Request $request)
     {
+        // Autorização com a Policy antes de salvar
+        $this->authorize('create', CampanhaComunicacao::class);
+
         $request->validate([
             'titulo' => 'required|string|max:255',
             'mensagem' => 'required|string',
@@ -67,6 +92,9 @@ class CampanhaController extends Controller
 
     public function calcularPublico(Request $request)
     {
+        // A lógica para calcular o público está atrelada à permissão de criar a campanha
+        $this->authorize('create', CampanhaComunicacao::class);
+
         $segmentacao = $request->input('segmentacao', []);
 
         $query = User::query()->whereHas('roles', function ($q) {

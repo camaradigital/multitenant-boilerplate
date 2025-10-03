@@ -15,6 +15,8 @@ class GabineteVirtualController extends Controller
      */
     public function citizenIndex()
     {
+        $this->authorize('viewAny', GabineteVirtualMensagem::class);
+
         $mensagens = GabineteVirtualMensagem::where('user_id', Auth::id())
             ->latest()
             ->paginate(10);
@@ -29,10 +31,8 @@ class GabineteVirtualController extends Controller
      */
     public function citizenShow(GabineteVirtualMensagem $mensagem)
     {
-        // Garante que o cidadão só possa ver suas próprias mensagens
-        if ($mensagem->user_id !== Auth::id()) {
-            abort(403);
-        }
+        // A Policy verifica se o usuário é o dono ou um admin.
+        $this->authorize('view', $mensagem);
 
         $mensagem->load('user', 'respostas.user');
 
@@ -46,6 +46,8 @@ class GabineteVirtualController extends Controller
      */
     public function storeMensagem(Request $request)
     {
+        $this->authorize('create', GabineteVirtualMensagem::class);
+
         $request->validate([
             'assunto' => 'required|string|max:255',
             'mensagem' => 'required|string',
@@ -63,6 +65,9 @@ class GabineteVirtualController extends Controller
     // Para o Admin (Presidente)
     public function adminIndex(Request $request)
     {
+        // Autorização específica para a visão do admin
+        $this->authorize('viewAnyAdmin', GabineteVirtualMensagem::class);
+
         $mensagens = GabineteVirtualMensagem::with('user')
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('assunto', 'like', "%{$search}%")
@@ -87,6 +92,9 @@ class GabineteVirtualController extends Controller
 
     public function adminShow(GabineteVirtualMensagem $mensagem)
     {
+        // A mesma policy 'view' funciona aqui, pois ela permite admins também.
+        $this->authorize('view', $mensagem);
+
         $mensagem->load('user', 'respostas.user');
 
         return Inertia::render('Tenant/GabineteVirtual/Admin/Show', [
@@ -96,6 +104,9 @@ class GabineteVirtualController extends Controller
 
     public function storeResposta(Request $request, GabineteVirtualMensagem $mensagem)
     {
+        // Autorização para responder
+        $this->authorize('reply', $mensagem);
+
         $request->validate([
             'resposta' => 'required|string',
         ]);
@@ -110,6 +121,9 @@ class GabineteVirtualController extends Controller
 
     public function updateStatus(Request $request, GabineteVirtualMensagem $mensagem)
     {
+        // Autorização para atualizar (status)
+        $this->authorize('update', $mensagem);
+
         $request->validate([
             'status' => 'required|in:Pendente,Resolvido,Sem Solução',
         ]);
