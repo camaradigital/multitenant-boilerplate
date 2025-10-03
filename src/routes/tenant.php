@@ -155,6 +155,7 @@ Route::middleware([
 
             // MÓDULO DE ATENDIMENTO
             Route::resource('solicitacoes', SolicitacaoServicoController::class)->parameters(['solicitacoes' => 'solicitacao']);
+            Route::post('solicitacoes/{solicitacao}/atender', [SolicitacaoServicoController::class, 'atender'])->name('solicitacoes.atender');
             Route::post('solicitacoes/{solicitacao}/documentos', [DocumentoController::class, 'store'])->name('documentos.store');
             Route::get('documentos/{documento}/download', [DocumentoController::class, 'download'])->name('documentos.download');
             Route::delete('documentos/{documento}', [DocumentoController::class, 'destroy'])->name('documentos.destroy');

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule; // Importação necessária para tipagem de Closure
+use Illuminate\Validation\Rule;
 
 class SolicitacaoServicoController extends Controller
 {
@@ -76,72 +76,106 @@ class SolicitacaoServicoController extends Controller
                 $q->where('is_juridico', true);
             });
         } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && ! $user->hasRole('Admin Tenant')) {
-            $query->where('atendente_id', $user->id);
+            // Esta condição original foi removida da query base para a lista principal,
+            // pois agora a lógica de "atendimento atual" cuida disso de forma mais explícita.
+            // Se precisar forçar a visualização apenas dos próprios atendimentos em outras
+            // circunstâncias, a lógica pode ser reintroduzida aqui ou ajustada.
         }
 
         return $query;
     }
 
-    // --- NOVO: Mapeamento de Status para Ícones ---
     protected function getStatusIcon(string $statusNome): string
     {
         // Você pode ajustar a lógica aqui para mapear seus status específicos
         return match ($statusNome) {
-            'Pendente', 'Em Análise' => 'Hourglass',
-            'Finalizado', 'Resolvido' => 'CheckCircle',
-            'Aguardando Documentos' => 'FileText',
-            'Cancelado', 'Sem Solução' => 'XCircle',
-            default => 'Loader', // Ícone padrão
+            'Andamento' => 'Hourglass',
+            'Concluído' => 'CheckCircle',
+            'Cancelado' => 'XCircle',
+            'Aguardando' => 'FileText',
+            default => 'ListChecks',
         };
     }
-    // --- FIM NOVO ---
 
     /**
      * Exibe a fila de solicitações.
+     * MÉTODO TOTALMENTE ATUALIZADO PARA LÓGICA DE FILA
      */
     public function index(Request $request)
     {
         $this->authorize('viewAny', SolicitacaoServico::class);
 
         $user = Auth::user();
+        $categoriaNome = $request->query('categoria');
 
-        // --- NOVO: Cálculo de Estatísticas ---
-        $statsQueryBase = $this->buildBaseQuery($request);
-        $totalCount = $statsQueryBase->count();
+        // --- LÓGICA DE FILA ---
 
-        $statusStats = SolicitacaoServico::select('status_id', DB::raw('count(*) as contagem'))
-            ->whereIn('id', $statsQueryBase->select('id')) // Aplica os mesmos filtros de permissão/query base
+        // Buscando os status-chave. Adicione `firstOrFail()` para garantir que eles existam.
+        $statusEmAndamento = StatusSolicitacao::where('nome', 'Andamento')->firstOrFail();
+        $statusInicial = StatusSolicitacao::where('is_default_abertura', true)->firstOrFail();
+
+        // 1. VERIFICAR SE O USUÁRIO JÁ TEM UM ATENDIMENTO ATIVO
+        $atendimentoAtualQuery = SolicitacaoServico::where('atendente_id', $user->id)
+            ->where('status_id', $statusEmAndamento->id);
+
+        if ($categoriaNome && $categoriaNome !== 'Todos') {
+            $atendimentoAtualQuery->whereHas('servico.categoria', fn ($q) => $q->where('nome', $categoriaNome));
+        }
+
+        $atendimentoAtual = $atendimentoAtualQuery->with([
+            'cidadao:id,name', 'servico:id,nome', 'status',
+        ])->first();
+
+        // 2. ENCONTRAR O PRÓXIMO DA FILA (APENAS SE O USUÁRIO NÃO TIVER UM ATENDIMENTO ATIVO E UMA CATEGORIA ESTIVER SELECIONADA)
+        $proximaSolicitacao = null;
+        if (! $atendimentoAtual && $categoriaNome && $categoriaNome !== 'Todos') {
+            $proximaSolicitacao = SolicitacaoServico::whereNull('atendente_id')
+                ->where('status_id', $statusInicial->id)
+                ->whereHas('servico.categoria', fn ($q) => $q->where('nome', $categoriaNome))
+                ->orderBy('created_at', 'asc') // LÓGICA FIFO: O mais antigo primeiro
+                ->with(['cidadao:id,name', 'servico:id,nome', 'status'])
+                ->first();
+        }
+
+        // --- LÓGICA DE LISTAGEM E ESTATÍSTICAS (MANTIDA E ADAPTADA) ---
+
+        // 3. CÁLCULO DE ESTATÍSTICAS
+        $statsQueryBase = $this->buildBaseQuery(new Request($request->except(['categoria']))); // Estatísticas não devem ser filtradas por categoria
+        $totalCount = (clone $statsQueryBase)->count();
+        $statusStats = (clone $statsQueryBase)
+            ->select('status_id', DB::raw('count(*) as contagem'))
             ->groupBy('status_id')
             ->get();
 
-        $estatisticas = [
-            [
-                'nome' => 'Total',
-                'contagem' => $totalCount,
-                'cor' => '#0e7490', // Ciano escuro
-                'icone' => 'ListChecks',
-            ],
-        ];
-
+        $estatisticas = [['nome' => 'Total', 'contagem' => $totalCount, 'cor' => '#0e7490', 'icone' => 'ListChecks']];
         foreach ($statusStats as $stat) {
             $status = StatusSolicitacao::find($stat->status_id);
             if ($status) {
                 $estatisticas[] = [
                     'nome' => $status->nome,
                     'contagem' => (int) $stat->contagem,
-                    'cor' => $status->cor, // Assumindo que a cor está na Model StatusSolicitacao
+                    'cor' => $status->cor,
                     'icone' => $this->getStatusIcon($status->nome),
                 ];
             }
         }
-        // --- FIM NOVO ---
 
-        // Configura a query para a listagem principal
-        $query = $this->buildBaseQuery($request)->with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
+        // 4. MONTAR A QUERY PARA O RESTANTE DA FILA
+        $queryFilaRestante = $this->buildBaseQuery($request)
+            ->with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
 
-        $solicitacoes = $query->latest()->paginate(15)->withQueryString();
+        // Excluir os itens que já estão sendo exibidos nos cards principais
+        if ($atendimentoAtual) {
+            $queryFilaRestante->where('id', '!=', $atendimentoAtual->id);
+        }
+        if ($proximaSolicitacao) {
+            $queryFilaRestante->where('id', '!=', $proximaSolicitacao->id);
+        }
 
-        $solicitacoes->getCollection()->transform(function ($solicitacao) use ($user) {
+        // Ordena a fila restante por ordem de chegada
+        $filaRestante = $queryFilaRestante->orderBy('created_at', 'asc')->paginate(10)->withQueryString();
+
+        $filaRestante->getCollection()->transform(function ($solicitacao) use ($user) {
             $solicitacao->can = [
                 'view' => $user->can('view', $solicitacao),
                 'delete' => $user->can('delete', $solicitacao),
@@ -151,12 +185,15 @@ class SolicitacaoServicoController extends Controller
             return $solicitacao;
         });
 
+        // 5. RENDERIZA A VIEW COM OS NOVOS PROPS
         return inertia('Tenant/Solicitacoes/Index', [
-            'solicitacoes' => $solicitacoes,
+            'atendimentoAtual' => $atendimentoAtual,
+            'proximaSolicitacao' => $proximaSolicitacao,
+            'filaRestante' => $filaRestante, // Prop renomeado para maior clareza
             'categorias' => TipoServico::orderBy('nome')->get(),
             'statuses' => StatusSolicitacao::orderBy('nome')->get(),
             'filters' => $request->only(['categoria', 'search', 'status']),
-            'estatisticas' => $estatisticas, // NOVO: Passando as estatísticas para a view
+            'estatisticas' => $estatisticas,
         ]);
     }
 
@@ -303,9 +340,7 @@ class SolicitacaoServicoController extends Controller
         $solicitacao->update($dadosParaAtualizar);
 
         if ($statusAntigoId != $validatedData['status_id']) {
-            // Carregamos a relação 'cidadao' para ter o objeto do utilizador a quem notificar.
             $solicitacao->load('cidadao');
-            // Passamos a solicitação e o NOME do novo status diretamente.
             $solicitacao->cidadao->notify(new SolicitacaoStatusAlterado($solicitacao, $novoStatus->nome));
         }
 
@@ -322,5 +357,54 @@ class SolicitacaoServicoController extends Controller
         $solicitacao->delete();
 
         return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação excluída.');
+    }
+
+    /**
+     * NOVO MÉTODO: Atribui a solicitação ao atendente logado.
+     * Lembre-se de adicionar a rota para este método.
+     * Ex: Route::post('solicitacoes/{solicitacao}/atender', [SolicitacaoServicoController::class, 'atender'])->name('solicitacoes.atender');
+     */
+    public function atender(Request $request, SolicitacaoServico $solicitacao)
+    {
+        $this->authorize('update', $solicitacao);
+
+        $statusEmAndamento = StatusSolicitacao::where('nome', 'Andamento')->firstOrFail();
+        $user = Auth::user();
+
+        // TRANSAÇÃO PARA EVITAR RACE CONDITION (dois atendentes pegando ao mesmo tempo)
+        try {
+            DB::transaction(function () use ($solicitacao, $statusEmAndamento, $user) {
+                // Bloqueia a linha no banco para garantir que ninguém mais a altere
+                $solicitacaoParaAtender = SolicitacaoServico::where('id', $solicitacao->id)->lockForUpdate()->first();
+
+                // Verifica se outro atendente não pegou a solicitação no último segundo
+                if ($solicitacaoParaAtender->atendente_id !== null) {
+                    throw new \Exception('Esta solicitação já foi atribuída a outro atendente.');
+                }
+
+                // Verifica se o atendente já não possui outra em andamento na mesma categoria
+                $categoriaId = $solicitacaoParaAtender->servico->tipo_servico_id;
+                $atendimentoExistente = SolicitacaoServico::where('atendente_id', $user->id)
+                    ->where('status_id', $statusEmAndamento->id)
+                    ->whereHas('servico', fn ($q) => $q->where('tipo_servico_id', $categoriaId))
+                    ->exists();
+
+                if ($atendimentoExistente) {
+                    throw new \Exception('Você já possui um atendimento em andamento nesta categoria.');
+                }
+
+                $solicitacaoParaAtender->update([
+                    'atendente_id' => $user->id,
+                    'status_id' => $statusEmAndamento->id,
+                ]);
+            });
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['message' => $e->getMessage()]);
+        }
+
+        // Redireciona para a página de detalhes do atendimento
+        return Redirect::route('admin.solicitacoes.show', $solicitacao->id)
+            ->with('success', 'Atendimento iniciado com sucesso!');
     }
 }

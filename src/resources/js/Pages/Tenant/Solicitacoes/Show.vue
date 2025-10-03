@@ -1,17 +1,19 @@
 <script setup lang="ts">
-
 import { ref, computed, type Ref } from 'vue';
 import { Head, useForm, Link, router, usePage, type InertiaForm } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { ArrowLeft, UploadCloud, File, Trash2, Download, AlertTriangle, User, Briefcase, Calendar, Star, Info } from 'lucide-vue-next';
+// Ícones adicionados para a Linha do Tempo e melhorias visuais
+import {
+    ArrowLeft, UploadCloud, File, Trash2, Download, AlertTriangle, User, Briefcase, Calendar, Star, Info, MessageSquare, CheckCircle, CircleDotDashed
+} from 'lucide-vue-next';
 import {
     Dialog, DialogPanel, DialogTitle, DialogDescription, TransitionRoot, TransitionChild,
 } from '@headlessui/vue';
 
-// --- TIPAGENS (MANTIDAS) ---
+// --- TIPAGENS ---
 interface User {
     id: number;
     name: string;
@@ -30,6 +32,7 @@ interface Status {
     nome: string;
     cor: string;
     is_final?: boolean;
+    is_default_abertura?: boolean; // Adicionado para lógica da timeline
 }
 
 interface Atendente {
@@ -58,7 +61,7 @@ interface Solicitacao {
     pesquisa_satisfacao?: {
         nota: number;
         comentario: string;
-    }; // Detalhamento da tipagem para facilitar
+    };
 }
 
 const props = defineProps<{
@@ -69,10 +72,9 @@ const props = defineProps<{
 
 const page = usePage<PageProps>();
 const user = computed(() => page.props.auth.user);
-
 const isCidadao = computed(() => user.value?.roles?.includes('Cidadao'));
 
-// --- FORMS (MANTIDOS) ---
+// --- FORMS ---
 const formStatus = useForm<{
     status_id: number | null;
     atendente_id: number | null;
@@ -83,29 +85,17 @@ const formStatus = useForm<{
     observacoes: '',
 });
 
-const formDocumento: InertiaForm<{
-    documento: File | null;
-}> = useForm<{
-    documento: File | null;
-}>({
-    documento: null,
-});
+const formDocumento: InertiaForm<{ documento: File | null; }> = useForm({ documento: null });
 
-const formAvaliacao = useForm<{
-    nota: number;
-    comentario: string;
-}>({
-    nota: 0,
-    comentario: '',
-});
+const formAvaliacao = useForm({ nota: 0, comentario: '' });
 
-// --- ESTADOS (MANTIDOS) ---
+// --- ESTADOS ---
 const hoverRating = ref(0);
 const isDeleteModalOpen = ref(false);
 const documentoParaExcluir: Ref<Documento | null> = ref(null);
 const fileInput: Ref<HTMLInputElement | null> = ref(null);
 
-// --- LÓGICA DE MODAL E ARQUIVO (MANTIDAS) ---
+// --- LÓGICA DE MODAL E ARQUIVO ---
 const openDeleteModal = (documento: Documento) => {
     documentoParaExcluir.value = documento;
     isDeleteModalOpen.value = true;
@@ -114,57 +104,80 @@ const closeDeleteModal = () => {
     isDeleteModalOpen.value = false;
     documentoParaExcluir.value = null;
 };
-
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
         formDocumento.documento = target.files[0];
     }
 };
-
 const handleFileDrop = (event: DragEvent) => {
     if (event.dataTransfer?.files[0]) {
         formDocumento.documento = event.dataTransfer.files[0];
     }
 };
 
-// --- SUBMISSIONS (MANTIDAS) ---
+// --- SUBMISSIONS ---
 const submitStatus = () => formStatus.put(route('admin.solicitacoes.update', props.solicitacao.id), { onSuccess: () => formStatus.reset('observacoes'), preserveScroll: true });
 const submitDocumento = () => formDocumento.post(route('admin.documentos.store', props.solicitacao.id), { onSuccess: () => formDocumento.reset(), preserveScroll: true });
 const deleteDocumento = () => {
     if (!documentoParaExcluir.value) return;
     router.delete(route('admin.documentos.destroy', documentoParaExcluir.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
 };
-const submitAvaliacao = () => formAvaliacao.post(route('solicitacoes.avaliar', props.solicitacao.id), { preserveScroll: true });
+const submitAvaliacao = () => formAvaliacao.post(route('portal.solicitacoes.avaliar', props.solicitacao.id), { preserveScroll: true });
 
-// --- COMPUTED / HELPERS (MANTIDAS) ---
+
+// --- COMPUTED / HELPERS ---
 const podeAvaliar = computed(() => {
     if (!isCidadao.value) return false;
-    // O cidadão só pode avaliar sua própria solicitação se ela estiver finalizada e ainda não avaliada.
     return props.solicitacao.user_id === user.value.id && props.solicitacao.status?.is_final && !props.solicitacao.pesquisa_satisfacao;
 });
 
-const formatarObservacoes = (texto: string) => !texto ? 'Nenhuma observação registrada.' : texto.replace(/\n/g, '<br />');
+// Lógica para a Linha do Tempo do Cidadão
+const timelineSteps = computed(() => {
+    const statusAtual = props.solicitacao.status;
+    const isEmAndamento = statusAtual && !statusAtual.is_default_abertura && !statusAtual.is_final;
+    const isFinalizado = statusAtual && statusAtual.is_final;
+
+    return [
+        { name: 'Solicitado', status: 'complete', date: props.solicitacao.created_at },
+        { name: 'Em Atendimento', status: isFinalizado ? 'complete' : (isEmAndamento ? 'current' : 'upcoming'), date: isEmAndamento || isFinalizado ? props.solicitacao.created_at : null },
+        { name: 'Finalizado', status: isFinalizado ? 'complete' : 'upcoming', date: props.solicitacao.finalizado_em },
+    ];
+});
+
+const formatarHistorico = (texto: string) => {
+    if (!texto) return '<p class="text-gray-500 italic">Nenhuma observação registrada.</p>';
+    // Adiciona classes para estilizar os cabeçalhos das anotações
+    return texto
+        .replace(/\n/g, '<br />')
+        .replace(/--- (.*?) em (.*?) ---/g, '<strong class="block text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-4 pt-2 border-t border-gray-200 dark:border-gray-700/50 first:mt-0 first:pt-0 first:border-0">$&</strong>');
+};
+
 const formatarTamanho = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'], i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
+
 const getStatusTextColor = (cor: string) => {
     if (!cor) return '#1f2937';
     const hex = cor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
-    // Lógica para determinar se o texto deve ser claro ou escuro com base no brilho do fundo
-    return ((r * 299 + g * 587 + b * 114) / 1000) > 125 ? '#1f2937' : '#ffffff';
+    return ((r * 299 + g * 587 + b * 114) / 1000) > 180 ? '#1f2937' : '#ffffff';
+};
+
+const formatarData = (data: string | null | undefined) => {
+    if (!data) return '';
+    return new Date(data).toLocaleString('pt-BR');
 };
 </script>
 
 <template>
-    <Head :title="`Solicitação #${solicitacao.id}`" />
+    <Head :title="`Atendimento: ${solicitacao.servico?.nome || 'N/A'}`" />
     <TenantLayout>
         <template #header>
             <div class="flex items-center space-x-4">
-                <Link :href="isCidadao ? route('gabinete-virtual.index') : route('admin.solicitacoes.index')" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 transition-colors">
+                <Link :href="isCidadao ? route('portal.meu-painel') : route('admin.solicitacoes.index')" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 transition-colors">
                     <ArrowLeft class="w-5 h-5" />
                 </Link>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
@@ -178,15 +191,44 @@ const getStatusTextColor = (cor: string) => {
 
                 <div class="lg:col-span-2 space-y-8">
                     <div class="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-3">Informações Gerais</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                            <div class="flex items-start gap-3"><User class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cidadão</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ solicitacao.cidadao?.name || 'N/A' }}</span></div></div>
-                            <div class="flex items-start gap-3"><Briefcase class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Serviço Solicitado</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ solicitacao.servico?.nome || 'N/A' }}</span></div></div>
-                            <div class="flex items-start gap-3"><Info class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status Atual</span><span v-if="solicitacao.status" class="px-3 py-1 inline-flex text-sm leading-5 font-bold rounded-full w-fit shadow-md" :style="{ backgroundColor: solicitacao.status.cor, color: getStatusTextColor(solicitacao.status.cor) }">{{ solicitacao.status.nome }}</span><span v-else class="font-semibold text-red-500">Não definido</span></div></div>
-                            <div class="flex items-start gap-3"><User class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atendente</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ solicitacao.atendente?.name || 'Não atribuído' }}</span></div></div>
-                            <div class="flex items-start gap-3"><Calendar class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Abertura</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ new Date(solicitacao.created_at).toLocaleString('pt-BR') }}</span></div></div>
-                            <div v-if="solicitacao.finalizado_em" class="flex items-start gap-3"><Calendar class="w-5 h-5 mt-0.5 text-emerald-500"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finalização</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ new Date(solicitacao.finalizado_em).toLocaleString('pt-BR') }}</span></div></div>
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ solicitacao.servico?.nome || 'Serviço não informado' }}</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Solicitado por: <span class="font-medium text-gray-700 dark:text-gray-300">{{ solicitacao.cidadao?.name || 'Cidadão não informado' }}</span></p>
+                            </div>
+                            <div v-if="solicitacao.status" class="mt-3 sm:mt-0 px-3 py-1 inline-flex text-sm leading-5 font-bold rounded-full w-fit shadow-md" :style="{ backgroundColor: solicitacao.status.cor, color: getStatusTextColor(solicitacao.status.cor) }">
+                                {{ solicitacao.status.nome }}
+                            </div>
                         </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                            <div class="flex items-start gap-3"><User class="w-5 h-5 mt-0.5 text-emerald-500 flex-shrink-0"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atendente</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ solicitacao.atendente?.name || 'Não atribuído' }}</span></div></div>
+                            <div class="flex items-start gap-3"><Calendar class="w-5 h-5 mt-0.5 text-emerald-500 flex-shrink-0"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data de Abertura</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ formatarData(solicitacao.created_at) }}</span></div></div>
+                            <div v-if="solicitacao.finalizado_em" class="flex items-start gap-3"><CheckCircle class="w-5 h-5 mt-0.5 text-emerald-500 flex-shrink-0"/><div class="flex flex-col"><span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data de Finalização</span><span class="font-semibold text-gray-800 dark:text-gray-200">{{ formatarData(solicitacao.finalizado_em) }}</span></div></div>
+                        </div>
+                    </div>
+
+                    <div v-if="isCidadao" class="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Progresso do Atendimento</h3>
+                        <nav aria-label="Progress">
+                            <ol role="list" class="space-y-6">
+                                <li v-for="(step, stepIdx) in timelineSteps" :key="step.name" class="relative flex-1">
+                                    <div v-if="step.status === 'complete' && stepIdx !== timelineSteps.length -1" class="absolute left-4 top-5 -ml-px mt-0.5 h-full w-0.5 bg-emerald-600" aria-hidden="true" />
+                                    <div class="flex items-start group">
+                                        <span class="h-9 flex items-center">
+                                            <span class="relative z-10 flex h-8 w-8 items-center justify-center rounded-full" :class="step.status === 'complete' ? 'bg-emerald-600' : (step.status === 'current' ? 'border-2 border-emerald-600 bg-white dark:bg-gray-800' : 'border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800')">
+                                                <CheckCircle v-if="step.status === 'complete'" class="h-5 w-5 text-white" />
+                                                <CircleDotDashed v-else-if="step.status === 'current'" class="h-5 w-5 text-emerald-600 animate-spin" />
+                                                <div v-else class="h-2.5 w-2.5 rounded-full bg-transparent" />
+                                            </span>
+                                        </span>
+                                        <span class="ml-4 flex min-w-0 flex-col">
+                                            <span class="text-sm font-bold" :class="step.status !== 'upcoming' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400'">{{ step.name }}</span>
+                                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ formatarData(step.date) }}</span>
+                                        </span>
+                                    </div>
+                                </li>
+                            </ol>
+                        </nav>
                     </div>
 
                     <div class="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
@@ -233,8 +275,8 @@ const getStatusTextColor = (cor: string) => {
                     </div>
 
                     <div class="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-3">Histórico de Observações</h3>
-                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg font-mono leading-relaxed max-h-96 overflow-y-auto" v-html="formatarObservacoes(solicitacao.observacoes)"></div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2"><MessageSquare class="w-5 h-5 text-emerald-500"/>Histórico de Observações</h3>
+                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg font-mono leading-relaxed max-h-96 overflow-y-auto" v-html="formatarHistorico(solicitacao.observacoes)"></div>
                     </div>
 
                     <div v-if="podeAvaliar" class="p-6 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg">
@@ -259,66 +301,61 @@ const getStatusTextColor = (cor: string) => {
                         </form>
                     </div>
 
-                    <div v-else-if="solicitacao.pesquisa_satisfacao && isCidadao" class="p-6 rounded-xl bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 shadow-lg">
+                    <div v-else-if="solicitacao.pesquisa_satisfacao" class="p-6 rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30 shadow-lg">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-green-800 dark:text-green-200">Avaliação Enviada</h3>
+                            <h3 class="text-lg font-bold text-green-800 dark:text-green-200">{{ isCidadao ? 'Avaliação Enviada' : 'Avaliação Recebida' }}</h3>
                             <div class="flex items-center space-x-1">
                                 <Star v-for="n in 5" :key="n" class="w-5 h-5" :class="solicitacao.pesquisa_satisfacao.nota >= n ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'" />
                             </div>
                         </div>
-                        <p class="mt-2 text-sm text-green-700 dark:text-green-300">Obrigado por compartilhar sua opinião! Sua nota foi **{{ solicitacao.pesquisa_satisfacao.nota }}/5**.</p>
-                        <div v-if="solicitacao.pesquisa_satisfacao.comentario" class="mt-4 p-3 text-sm rounded-lg bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                             "{{ solicitacao.pesquisa_satisfacao.comentario }}"
-                        </div>
-                    </div>
-
-                    <div v-else-if="solicitacao.pesquisa_satisfacao && !isCidadao" class="p-6 rounded-xl bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 shadow-lg">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-green-800 dark:text-green-200">Avaliação Recebida do Cidadão</h3>
-                            <div class="flex items-center space-x-1">
-                                <Star v-for="n in 5" :key="n" class="w-5 h-5" :class="solicitacao.pesquisa_satisfacao.nota >= n ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'" />
-                            </div>
-                        </div>
-                        <p class="mt-2 text-sm text-green-700 dark:text-green-300">O cidadão avaliou o atendimento com a nota **{{ solicitacao.pesquisa_satisfacao.nota }}/5**.</p>
+                        <p class="mt-2 text-sm text-green-700 dark:text-green-300">
+                            {{ isCidadao ? `Obrigado por compartilhar sua opinião! Sua nota foi ${solicitacao.pesquisa_satisfacao.nota}/5.` : `O cidadão avaliou o atendimento com a nota ${solicitacao.pesquisa_satisfacao.nota}/5.` }}
+                        </p>
                         <div v-if="solicitacao.pesquisa_satisfacao.comentario" class="mt-4">
-                            <p class="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Comentário:</p>
+                            <p v-if="!isCidadao" class="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Comentário:</p>
                             <div class="p-3 text-sm rounded-lg bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                                 "{{ solicitacao.pesquisa_satisfacao.comentario }}"
+                                "{{ solicitacao.pesquisa_satisfacao.comentario }}"
                             </div>
                         </div>
                     </div>
-
                 </div>
 
-                <div v-if="!isCidadao" class="lg:col-span-1 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg h-fit sticky top-24">
-                    <form @submit.prevent="submitStatus">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-3">Atualizar Solicitação</h3>
-                        <div class="space-y-6">
-                            <div>
-                                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alterar Status</label>
-                                <select v-model="formStatus.status_id" id="status" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500">
-                                    <option v-for="s in statusDisponiveis" :key="s.id" :value="s.id">{{ s.nome }}</option>
-                                </select>
-                                <div v-if="formStatus.errors.status_id" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.status_id }}</div>
+                <div v-if="!isCidadao" class="lg:col-span-1 h-fit sticky top-24">
+                    <div v-if="!solicitacao.status?.is_final" class="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+                        <form @submit.prevent="submitStatus">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-3">Painel de Ação</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alterar Status</label>
+                                    <select v-model="formStatus.status_id" id="status" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500">
+                                        <option v-for="s in statusDisponiveis" :key="s.id" :value="s.id">{{ s.nome }}</option>
+                                    </select>
+                                    <div v-if="formStatus.errors.status_id" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.status_id }}</div>
+                                </div>
+                                <div>
+                                    <label for="atendente" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Atribuir Atendente</label>
+                                    <select v-model="formStatus.atendente_id" id="atendente" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500">
+                                        <option :value="null">Ninguém</option>
+                                        <option v-for="a in atendentesDisponiveis" :key="a.id" :value="a.id">{{ a.name }}</option>
+                                    </select>
+                                    <div v-if="formStatus.errors.atendente_id" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.atendente_id }}</div>
+                                </div>
+                                <div>
+                                    <label for="observacoes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adicionar Observação</label>
+                                    <textarea v-model="formStatus.observacoes" id="observacoes" rows="4" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" placeholder="Digite uma nova anotação..."></textarea>
+                                    <div v-if="formStatus.errors.observacoes" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.observacoes }}</div>
+                                </div>
                             </div>
-                            <div>
-                                <label for="atendente" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Atribuir Atendente</label>
-                                <select v-model="formStatus.atendente_id" id="atendente" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500">
-                                    <option :value="null">Ninguém</option>
-                                    <option v-for="a in atendentesDisponiveis" :key="a.id" :value="a.id">{{ a.name }}</option>
-                                </select>
-                                <div v-if="formStatus.errors.atendente_id" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.atendente_id }}</div>
+                            <div class="mt-6">
+                                <PrimaryButton class="w-full" :class="{ 'opacity-50': formStatus.processing }" :disabled="formStatus.processing">Salvar Alterações</PrimaryButton>
                             </div>
-                            <div>
-                                <label for="observacoes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adicionar Observação</label>
-                                <textarea v-model="formStatus.observacoes" id="observacoes" rows="4" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" placeholder="Digite uma nova anotação..."></textarea>
-                                <div v-if="formStatus.errors.observacoes" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formStatus.errors.observacoes }}</div>
-                            </div>
-                        </div>
-                        <div class="mt-6">
-                            <PrimaryButton class="w-full" :class="{ 'opacity-50': formStatus.processing }" :disabled="formStatus.processing">Salvar Alterações</PrimaryButton>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
+                    <div v-else class="p-6 rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30 shadow-lg text-center">
+                         <CheckCircle class="h-12 w-12 text-green-500 mx-auto mb-3" />
+                         <h3 class="text-xl font-bold text-green-800 dark:text-green-200">Atendimento Finalizado</h3>
+                         <p class="mt-1 text-sm text-green-700 dark:text-green-300">Este atendimento foi concluído em {{ formatarData(solicitacao.finalizado_em) }}.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -355,3 +392,14 @@ const getStatusTextColor = (cor: string) => {
         </TransitionRoot>
     </TenantLayout>
 </template>
+
+<style>
+/* Estilos para o histórico de observações. O v-html impede o uso de classes do Tailwind diretamente. */
+.font-mono strong {
+  font-weight: 700;
+  color: #6b7280; /* text-gray-500 */
+}
+.dark .font-mono strong {
+  color: #9ca3af; /* dark:text-gray-400 */
+}
+</style>
