@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\FuncionarioRequest;
 use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
+use App\Models\Tenant\TipoServico;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
@@ -46,6 +48,8 @@ class FuncionarioController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'is_active' => $validatedData['is_active'],
+            'tipos_servico_ids' => 'nullable|array',
+            'tipos_servico_ids.*' => 'exists:tenant.tipos_servico,id',
         ]);
 
         $user->assignRole($validatedData['roles']);

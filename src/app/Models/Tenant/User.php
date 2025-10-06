@@ -177,4 +177,12 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(\App\Models\Tenant\PesquisaSatisfacao::class, 'user_id', 'id');
     }
+
+    /**
+    * Os tipos de serviço que o funcionário está autorizado a atender.
+    */
+    public function tiposDeServicoAtendidos()
+    {
+        return $this->belongsToMany(TipoServico::class, 'funcionario_tipo_servico', 'user_id', 'tipo_servico_id');
+    }
 }

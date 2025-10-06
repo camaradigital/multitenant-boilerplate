@@ -52,4 +52,12 @@ class TipoServico extends Model
     {
         return $this->hasMany(Servico::class);
     }
+
+    /**
+     * Os funcionários que podem atender este tipo de serviço.
+     */
+    public function funcionarios()
+    {
+        return $this->belongsToMany(User::class, 'funcionario_tipo_servico', 'tipo_servico_id', 'user_id');
+    }
 }
