@@ -7,7 +7,6 @@ use App\Http\Requests\Tenant\FuncionarioRequest;
 use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
 use App\Models\Tenant\TipoServico;
-use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
@@ -25,12 +24,14 @@ class FuncionarioController extends Controller
 
         return inertia('Tenant/Funcionarios/Index', [
             'funcionarios' => User::whereHas('roles', fn ($q) => $q->where('name', '!=', 'Cidadao'))
-                ->with('roles:id,name')
+                ->with(['roles:id,name', 'tiposDeServicoAtendidos:id,nome']) // Carrega os relacionamentos
                 ->latest()
                 ->paginate(10),
             'rolesDisponiveis' => Role::where('guard_name', 'tenant')
                 ->where('name', '!=', 'Cidadao')
                 ->get(['id', 'name']),
+            // Adiciona a lista de tipos de serviço para o formulário no frontend
+            'tiposDeServico' => TipoServico::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -48,11 +49,12 @@ class FuncionarioController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'is_active' => $validatedData['is_active'],
-            'tipos_servico_ids' => 'nullable|array',
-            'tipos_servico_ids.*' => 'exists:tenant.tipos_servico,id',
         ]);
 
         $user->assignRole($validatedData['roles']);
+
+        // Sincroniza os tipos de serviço selecionados na tabela pivo
+        $user->tiposDeServicoAtendidos()->sync($validatedData['tipos_servico_ids'] ?? []);
 
         return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário criado com sucesso.');
     }
@@ -79,6 +81,9 @@ class FuncionarioController extends Controller
         $funcionario->update($dataToUpdate);
         $funcionario->syncRoles($validatedData['roles']);
 
+        // Sincroniza os tipos de serviço selecionados na tabela pivo
+        $funcionario->tiposDeServicoAtendidos()->sync($validatedData['tipos_servico_ids'] ?? []);
+
         return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário atualizado com sucesso.');
     }
 
@@ -90,7 +95,6 @@ class FuncionarioController extends Controller
         $this->authorize('deleteFuncionario', $funcionario);
 
         // A lógica que impedia a auto-exclusão foi movida para a UserPolicy.
-
         $funcionario->delete();
 
         return Redirect::route('admin.funcionarios.index')->with('success', 'Funcionário excluído com sucesso.');

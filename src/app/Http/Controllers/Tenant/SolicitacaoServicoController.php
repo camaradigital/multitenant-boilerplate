@@ -34,6 +34,7 @@ class SolicitacaoServicoController extends Controller
 
     /**
      * Constrói a query base com base nos filtros e permissões.
+     * ESTE MÉTODO ESTÁ CORRETO.
      */
     protected function buildBaseQuery(Request $request): Builder
     {
@@ -47,19 +48,13 @@ class SolicitacaoServicoController extends Controller
             });
         }
 
-        // 2. Filtro de busca por nome do cidadão (e outros campos se necessário)
+        // 2. Filtro de busca
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->whereHas('cidadao', function ($q) use ($search) {
-                    $q->where('name', 'like', '%'.$search.'%');
-                })
-                    ->orWhereHas('servico', function ($q) use ($search) {
-                        $q->where('nome', 'like', '%'.$search.'%');
-                    })
-                    ->orWhereHas('atendente', function ($q) use ($search) {
-                        $q->where('name', 'like', '%'.$search.'%');
-                    });
+                $q->whereHas('cidadao', fn ($sub) => $sub->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('servico', fn ($sub) => $sub->where('nome', 'like', "%{$search}%"))
+                  ->orWhereHas('atendente', fn ($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -70,16 +65,18 @@ class SolicitacaoServicoController extends Controller
             });
         }
 
-        // 4. Filtros de Permissão
-        if ($user->can('supervisionar solicitacoes juridicas')) {
-            $query->whereHas('servico', function ($q) {
-                $q->where('is_juridico', true);
-            });
-        } elseif ($user->hasAnyRole(['Funcionario', 'Advogado Coordenador']) && ! $user->hasRole('Admin Tenant')) {
-            // Esta condição original foi removida da query base para a lista principal,
-            // pois agora a lógica de "atendimento atual" cuida disso de forma mais explícita.
-            // Se precisar forçar a visualização apenas dos próprios atendimentos em outras
-            // circunstâncias, a lógica pode ser reintroduzida aqui ou ajustada.
+        // 4. Filtro por Permissão de Serviço
+        if (! $user->hasRole('Admin Tenant')) {
+            if ($user->can('supervisionar solicitacoes juridicas')) {
+                $query->whereHas('servico', function ($q) {
+                    $q->where('is_juridico', true);
+                });
+            } else {
+                $tiposDeServicoPermitidosIds = $user->tiposDeServicoAtendidos()->pluck('id');
+                $query->whereHas('servico.categoria', function (Builder $q) use ($tiposDeServicoPermitidosIds) {
+                    $q->whereIn('id', $tiposDeServicoPermitidosIds);
+                });
+            }
         }
 
         return $query;
@@ -87,7 +84,6 @@ class SolicitacaoServicoController extends Controller
 
     protected function getStatusIcon(string $statusNome): string
     {
-        // Você pode ajustar a lógica aqui para mapear seus status específicos
         return match ($statusNome) {
             'Andamento' => 'Hourglass',
             'Concluído' => 'CheckCircle',
@@ -99,7 +95,7 @@ class SolicitacaoServicoController extends Controller
 
     /**
      * Exibe a fila de solicitações.
-     * MÉTODO TOTALMENTE ATUALIZADO PARA LÓGICA DE FILA
+     * MÉTODO 'INDEX' CORRIGIDO E OTIMIZADO
      */
     public function index(Request $request)
     {
@@ -108,39 +104,34 @@ class SolicitacaoServicoController extends Controller
         $user = Auth::user();
         $categoriaNome = $request->query('categoria');
 
-        // --- LÓGICA DE FILA ---
+        // --- BUSCA DE DADOS PRINCIPAIS ---
 
-        // Buscando os status-chave. Adicione `firstOrFail()` para garantir que eles existam.
         $statusEmAndamento = StatusSolicitacao::where('nome', 'Andamento')->firstOrFail();
         $statusInicial = StatusSolicitacao::where('is_default_abertura', true)->firstOrFail();
 
-        // 1. VERIFICAR SE O USUÁRIO JÁ TEM UM ATENDIMENTO ATIVO
-        $atendimentoAtualQuery = SolicitacaoServico::where('atendente_id', $user->id)
-            ->where('status_id', $statusEmAndamento->id);
+        // ATENDIMENTO ATUAL: Busca um atendimento em andamento para o usuário, respeitando a query base de permissões
+        $atendimentoAtual = $this->buildBaseQuery($request)
+            ->where('atendente_id', $user->id)
+            ->where('status_id', $statusEmAndamento->id)
+            ->with(['cidadao:id,name', 'servico:id,nome', 'status'])
+            ->first();
 
-        if ($categoriaNome && $categoriaNome !== 'Todos') {
-            $atendimentoAtualQuery->whereHas('servico.categoria', fn ($q) => $q->where('nome', $categoriaNome));
-        }
-
-        $atendimentoAtual = $atendimentoAtualQuery->with([
-            'cidadao:id,name', 'servico:id,nome', 'status',
-        ])->first();
-
-        // 2. ENCONTRAR O PRÓXIMO DA FILA (APENAS SE O USUÁRIO NÃO TIVER UM ATENDIMENTO ATIVO E UMA CATEGORIA ESTIVER SELECIONADA)
+        // PRÓXIMA SOLICITAÇÃO: Apenas se o usuário estiver livre e uma categoria estiver selecionada
         $proximaSolicitacao = null;
-        if (! $atendimentoAtual && $categoriaNome && $categoriaNome !== 'Todos') {
-            $proximaSolicitacao = SolicitacaoServico::whereNull('atendente_id')
+        if (!$atendimentoAtual && $categoriaNome && $categoriaNome !== 'Todos') {
+            // Reutiliza a query base para garantir que o funcionário só veja o próximo de uma fila que ele pode atender
+            $proximaSolicitacao = $this->buildBaseQuery($request)
+                ->whereNull('atendente_id')
                 ->where('status_id', $statusInicial->id)
-                ->whereHas('servico.categoria', fn ($q) => $q->where('nome', $categoriaNome))
-                ->orderBy('created_at', 'asc') // LÓGICA FIFO: O mais antigo primeiro
+                ->orderBy('created_at', 'asc')
                 ->with(['cidadao:id,name', 'servico:id,nome', 'status'])
                 ->first();
         }
 
-        // --- LÓGICA DE LISTAGEM E ESTATÍSTICAS (MANTIDA E ADAPTADA) ---
+        // --- CÁLCULO DE ESTATÍSTICAS (CORRIGIDO) ---
 
-        // 3. CÁLCULO DE ESTATÍSTICAS
-        $statsQueryBase = $this->buildBaseQuery(new Request($request->except(['categoria']))); // Estatísticas não devem ser filtradas por categoria
+        // A query base já contém as permissões do usuário, garantindo que as estatísticas sejam corretas para ele.
+        $statsQueryBase = $this->buildBaseQuery($request);
         $totalCount = (clone $statsQueryBase)->count();
         $statusStats = (clone $statsQueryBase)
             ->select('status_id', DB::raw('count(*) as contagem'))
@@ -160,11 +151,11 @@ class SolicitacaoServicoController extends Controller
             }
         }
 
-        // 4. MONTAR A QUERY PARA O RESTANTE DA FILA
+        // --- FILA RESTANTE E DADOS PARA A VIEW ---
+
         $queryFilaRestante = $this->buildBaseQuery($request)
             ->with(['cidadao:id,name', 'servico:id,nome,tipo_servico_id', 'status', 'atendente:id,name']);
 
-        // Excluir os itens que já estão sendo exibidos nos cards principais
         if ($atendimentoAtual) {
             $queryFilaRestante->where('id', '!=', $atendimentoAtual->id);
         }
@@ -172,7 +163,6 @@ class SolicitacaoServicoController extends Controller
             $queryFilaRestante->where('id', '!=', $proximaSolicitacao->id);
         }
 
-        // Ordena a fila restante por ordem de chegada
         $filaRestante = $queryFilaRestante->orderBy('created_at', 'asc')->paginate(10)->withQueryString();
 
         $filaRestante->getCollection()->transform(function ($solicitacao) use ($user) {
@@ -181,16 +171,21 @@ class SolicitacaoServicoController extends Controller
                 'delete' => $user->can('delete', $solicitacao),
                 'update' => $user->can('update', $solicitacao),
             ];
-
             return $solicitacao;
         });
 
-        // 5. RENDERIZA A VIEW COM OS NOVOS PROPS
+        // CATEGORIAS DISPONÍVEIS: Filtra as abas de categorias que o funcionário pode ver.
+        if ($user->hasRole('Admin Tenant')) {
+            $categoriasDisponiveis = TipoServico::orderBy('nome')->get();
+        } else {
+            $categoriasDisponiveis = $user->tiposDeServicoAtendidos()->orderBy('nome')->get();
+        }
+
         return inertia('Tenant/Solicitacoes/Index', [
             'atendimentoAtual' => $atendimentoAtual,
             'proximaSolicitacao' => $proximaSolicitacao,
-            'filaRestante' => $filaRestante, // Prop renomeado para maior clareza
-            'categorias' => TipoServico::orderBy('nome')->get(),
+            'filaRestante' => $filaRestante,
+            'categorias' => $categoriasDisponiveis, // Envia apenas as categorias permitidas
             'statuses' => StatusSolicitacao::orderBy('nome')->get(),
             'filters' => $request->only(['categoria', 'search', 'status']),
             'estatisticas' => $estatisticas,
@@ -260,7 +255,7 @@ class SolicitacaoServicoController extends Controller
                 'user_id' => $cidadao->id,
                 'servico_id' => $servico->id,
                 'status_id' => $statusInicial->id,
-                'atendente_id' => $user->hasRole('Cidadao') ? null : $user->id,
+                'atendente_id' => null,
                 'observacoes' => $validatedData['observacoes'] ?? null,
             ]);
 

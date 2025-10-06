@@ -15,6 +15,7 @@ import { Plus, Pencil, Trash2, Users, X } from 'lucide-vue-next';
 const props = defineProps({
     funcionarios: Object, // Objeto de paginação
     rolesDisponiveis: Array,
+    tiposDeServico: Array, // Propriedade adicionada para receber os tipos de serviço
 });
 
 const isModalOpen = ref(false);
@@ -27,7 +28,8 @@ const form = useForm({
     roles: [], // Será um array de IDs
     password: '',
     password_confirmation: '',
-    is_active: true, // Campo de status adicionado
+    is_active: true,
+    tipos_servico_ids: [], // Novo campo para os IDs dos tipos de serviço
 });
 
 const openModal = () => {
@@ -43,6 +45,8 @@ const editFuncionario = (funcionario) => {
     form.email = funcionario.email;
     form.roles = funcionario.roles.map(role => role.id);
     form.is_active = funcionario.is_active;
+    // Carrega os tipos de serviço já associados ao funcionário
+    form.tipos_servico_ids = funcionario.tipos_de_servico_atendidos ? funcionario.tipos_de_servico_atendidos.map(ts => ts.id) : [];
     form.password = '';
     form.password_confirmation = '';
     isModalOpen.value = true;
@@ -123,8 +127,8 @@ const deleteFuncionario = (funcionario) => {
                         </div>
                     </div>
                      <div v-else class="text-center py-10">
-                        <p class="text-gray-500 dark:text-gray-400">Nenhum funcionário encontrado.</p>
-                    </div>
+                         <p class="text-gray-500 dark:text-gray-400">Nenhum funcionário encontrado.</p>
+                     </div>
                 </div>
 
                 <div class="px-6 pb-4">
@@ -165,12 +169,28 @@ const deleteFuncionario = (funcionario) => {
                                                 <div class="md:col-span-2">
                                                     <label class="form-label">Papéis (Funções)</label>
                                                      <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                                         <label v-for="role in rolesDisponiveis" :key="role.id" class="flex items-center">
-                                                             <input type="checkbox" v-model="form.roles" :value="role.id" class="form-checkbox">
-                                                             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ role.name }}</span>
-                                                         </label>
+                                                          <label v-for="role in rolesDisponiveis" :key="role.id" class="flex items-center">
+                                                               <input type="checkbox" v-model="form.roles" :value="role.id" class="form-checkbox">
+                                                               <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ role.name }}</span>
+                                                          </label>
                                                      </div>
                                                     <div v-if="form.errors.roles" class="form-error">{{ form.errors.roles }}</div>
+                                                </div>
+
+                                                <div class="md:col-span-2">
+                                                    <label class="form-label">Filas de Atendimento Permitidas</label>
+                                                    <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+                                                        <label v-for="tipo in tiposDeServico" :key="tipo.id" class="flex items-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                :value="tipo.id"
+                                                                v-model="form.tipos_servico_ids"
+                                                                class="form-checkbox"
+                                                            >
+                                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ tipo.nome }}</span>
+                                                        </label>
+                                                    </div>
+                                                    <div v-if="form.errors.tipos_servico_ids" class="form-error">{{ form.errors.tipos_servico_ids }}</div>
                                                 </div>
                                                 <div>
                                                     <label for="password" class="form-label">{{ isEditing ? 'Nova Senha (Opcional)' : 'Senha' }}</label>

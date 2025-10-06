@@ -38,6 +38,9 @@ class FuncionarioRequest extends FormRequest
             'roles' => 'required|array|min:1',
             'roles.*' => 'exists:tenant.roles,id',
             'is_active' => 'required|boolean',
+            // Validação para os novos campos
+            'tipos_servico_ids' => 'nullable|array',
+            'tipos_servico_ids.*' => 'exists:tenant.tipos_servico,id',
         ];
 
         // A senha só é obrigatória na criação (método POST).
