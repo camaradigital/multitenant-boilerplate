@@ -39,6 +39,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'bairro',
         'terms_accepted_at',
         'privacy_accepted_at',
+        'engagement_score',
     ];
 
     protected $hidden = [
@@ -179,10 +180,33 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-    * Os tipos de serviço que o funcionário está autorizado a atender.
-    */
-    public function tiposDeServicoAtendidos()
+     * Candidaturas a vagas de emprego feitas por este usuário. (ADICIONADO)
+     */
+    public function candidaturas(): HasMany
+    {
+        return $this->hasMany(Candidatura::class, 'user_id');
+    }
+
+    /**
+     * Os tipos de serviço que o funcionário está autorizado a atender.
+     */
+    public function tiposDeServicoAtendidos(): BelongsToMany
     {
         return $this->belongsToMany(TipoServico::class, 'funcionario_tipo_servico', 'user_id', 'tipo_servico_id');
+    }
+
+    public function notas(): HasMany
+    {
+        return $this->hasMany(NotaCidadao::class, 'user_id');
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'user_tags');
+    }
+
+    public function gabineteMessages(): HasMany
+    {
+        return $this->hasMany(GabineteVirtualMensagem::class, 'user_id');
     }
 }

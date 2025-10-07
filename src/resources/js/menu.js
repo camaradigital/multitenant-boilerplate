@@ -26,7 +26,8 @@ import {
     MapPin,
     TrendingUp,
     MessageSquare,
-    Send
+    Send,
+    BrainCircuit
 } from 'lucide-vue-next';
 
 /**
@@ -180,6 +181,7 @@ const reportsNav = [
             // --- NOVOS RELATÓRIOS ---
             { name: 'Mapeamento de Demandas', href: route('admin.relatorios.demandas-por-bairro'), current: 'admin.relatorios.demandas-por-bairro', icon: MapPin, permission: 'viewDemandasPorBairro' },
             { name: 'Análise de Tendências', href: route('admin.relatorios.analise-de-tendencias'), current: 'admin.relatorios.analise-de-tendencias', icon: TrendingUp, permission: 'viewAnaliseDeTendencias' },
+            { name: 'Lideranças por Bairro', href: route('admin.mapeamento-politico.index'), current: 'admin.mapeamento-politico.index', icon: BrainCircuit, permission: 'visualizar relatorios' },
         ]
     },
 ];

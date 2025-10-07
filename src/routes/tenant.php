@@ -6,6 +6,7 @@ use App\Http\Controllers\Tenant\Auth\VerificationController;
 use App\Http\Controllers\Tenant\CampanhaController;
 use App\Http\Controllers\Tenant\CandidaturaController;
 use App\Http\Controllers\Tenant\CidadaoController;
+use App\Http\Controllers\Tenant\CidadaoRelacionamentoController;
 use App\Http\Controllers\Tenant\ConvenioController;
 use App\Http\Controllers\Tenant\CustomFieldController;
 use App\Http\Controllers\Tenant\DashboardController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
 use App\Http\Controllers\Tenant\TipoServicoController;
 use App\Http\Controllers\Tenant\VagaController;
+use App\Http\Controllers\Tenant\MapeamentoPoliticoController;
 use App\Models\Tenant\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -177,14 +179,28 @@ Route::middleware([
                 Route::get('/{campanha}', [CampanhaController::class, 'show'])->name('show');
             });
 
-            // MÓDULO DE GESTÃO DE UTILIZADORES
+            // MÓDULO DE GESTÃO DE FUNCIONÁRIOS
             Route::middleware('can:gerenciar funcionarios')->group(function () {
                 Route::resource('funcionarios', FuncionarioController::class)->except(['create', 'edit']);
             });
+
+            // MÓDULO DE GESTÃO DE CIDADÃOS
             Route::middleware('can:gerenciar cidadaos')->group(function () {
-                Route::resource('cidadaos', CidadaoController::class);
+                // Rotas CRUD continuam no CidadaoController
+                Route::get('/cidadaos', [CidadaoController::class, 'index'])->name('cidadaos.index');
+                Route::get('/cidadaos/create', [CidadaoController::class, 'create'])->name('cidadaos.create');
+                Route::post('/cidadaos', [CidadaoController::class, 'store'])->name('cidadaos.store');
+                Route::get('/cidadaos/{cidadao}/edit', [CidadaoController::class, 'edit'])->name('cidadaos.edit');
+                Route::put('/cidadaos/{cidadao}', [CidadaoController::class, 'update'])->name('cidadaos.update');
+                Route::delete('/cidadaos/{cidadao}', [CidadaoController::class, 'destroy'])->name('cidadaos.destroy');
                 Route::post('/cidadaos/{cidadao}/anonymize', [CidadaoController::class, 'anonymize'])->name('cidadaos.anonymize');
                 Route::get('/cidadaos/{cidadao}/exportar-dados', [CidadaoController::class, 'exportData'])->name('cidadaos.export-data');
+
+                // Rotas do Dossiê/Relacionamento agora apontam para o CidadaoRelacionamentoController
+                Route::get('/cidadaos/{cidadao}', [CidadaoRelacionamentoController::class, 'show'])->name('cidadaos.show');
+                Route::post('/cidadaos/{cidadao}/notas', [CidadaoRelacionamentoController::class, 'storeNota'])->name('cidadaos.notas.store');
+                Route::post('/cidadaos/{cidadao}/tags', [CidadaoRelacionamentoController::class, 'attachTag'])->name('cidadaos.tags.attach');
+                Route::delete('/cidadaos/{cidadao}/tags/{tag}', [CidadaoRelacionamentoController::class, 'detachTag'])->name('cidadaos.tags.detach');
             });
 
             // MÓDULO DE GESTÃO DE SERVIÇOS
@@ -258,6 +274,11 @@ Route::middleware([
                 Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
                 Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
             });
+
+            // [NOVO] Rota para o Painel de Mapeamento Político
+            Route::get('/mapeamento-politico', [MapeamentoPoliticoController::class, 'index'])
+            ->name('mapeamento-politico.index')
+            ->middleware('can:visualizar relatorios'); // Ou uma permissão específica se preferir
         });
 
         // --- ROTAS DE PERFIL DE UTILIZADOR ---
