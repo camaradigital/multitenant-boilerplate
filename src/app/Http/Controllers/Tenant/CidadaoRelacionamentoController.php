@@ -3,25 +3,25 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant\NotaCidadao;
 use App\Models\Tenant\Tag;
-use App\Models\Tenant\User;
+use App\Models\Tenant\User as Cidadao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CidadaoRelacionamentoController extends Controller
 {
-    public function show(User $cidadao)
+    public function show(Cidadao $cidadao)
     {
-        // Carregar todos os relacionamentos necessários
+        // Carregar todos os relacionamentos necessários, incluindo o bairro
         $cidadao->load([
-            'solicitacoes.servico', // Corrigido de solicitacoesServico
-            'pesquisas_satisfacao',  // Corrigido de pesquisasSatisfacao
+            'bairro', // ADICIONADO: Carrega a relação com o bairro
+            'solicitacoes.servico',
+            'pesquisas_satisfacao',
             'gabineteMessages.respostas.user',
             'candidaturas.vaga',
             'notas.registradoPor',
-            'tags'
+            'tags',
         ]);
 
         // KPIs para os cards
@@ -38,7 +38,6 @@ class CidadaoRelacionamentoController extends Controller
         $candidaturas = $cidadao->candidaturas->map(fn ($item) => ['tipo' => 'candidatura', 'descricao' => "Candidatou-se à vaga de {$item->vaga->titulo}", 'data' => $item->created_at]);
         $notas = $cidadao->notas->map(fn ($item) => ['tipo' => 'nota_interna', 'descricao' => "{$item->registradoPor->name} registrou: '{$item->titulo}'", 'detalhes' => $item->nota, 'data' => $item->created_at]);
         $notifications = $cidadao->notifications->map(fn ($item) => ['tipo' => 'notificacao', 'descricao' => "Recebeu a notificação: '{$item->data['mensagem']}'", 'data' => $item->created_at]);
-
 
         // Unir todas as coleções de interações
         $timeline = collect($solicitacoes)
@@ -58,7 +57,7 @@ class CidadaoRelacionamentoController extends Controller
         ]);
     }
 
-    public function storeNota(Request $request, User $cidadao)
+    public function storeNota(Request $request, Cidadao $cidadao)
     {
         $request->validate([
             'titulo' => 'required|string|max:255',
@@ -74,17 +73,18 @@ class CidadaoRelacionamentoController extends Controller
         return back()->with('success', 'Nota adicionada com sucesso.');
     }
 
-    // Renomeado de syncTags para uma abordagem mais granular
-    public function attachTag(Request $request, User $cidadao)
+    public function attachTag(Request $request, Cidadao $cidadao)
     {
-        $request->validate(['tag_id' => 'required|exists:tags,id']);
+        $request->validate(['tag_id' => 'required|exists:tenant.tags,id']);
         $cidadao->tags()->syncWithoutDetaching($request->tag_id);
+
         return redirect()->back()->with('success', 'Tag adicionada.');
     }
 
-    public function detachTag(Request $request, User $cidadao, Tag $tag)
+    public function detachTag(Cidadao $cidadao, Tag $tag)
     {
         $cidadao->tags()->detach($tag->id);
+
         return redirect()->back()->with('success', 'Tag removida.');
     }
 }

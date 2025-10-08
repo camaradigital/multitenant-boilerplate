@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue'; // 1. Import computed
+import { ref, watch, computed } from 'vue';
 import { useForm, Head, Link, router } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import { UserCheck, X } from 'lucide-vue-next';
@@ -8,9 +8,10 @@ import axios from 'axios';
 const props = defineProps({
     cidadao: Object,
     customFields: Array,
+    bairros: Array, // Prop para receber a lista de bairros
 });
 
-// Gera a estrutura do profile_data com campos fixos e personalizados
+// Gera a estrutura do profile_data, removendo o campo de bairro daqui
 const generateProfileDataStructure = (fields, data = {}) => {
     const profileData = {
         telefone: data.telefone || '',
@@ -21,7 +22,7 @@ const generateProfileDataStructure = (fields, data = {}) => {
         endereco_cep: data.endereco_cep || '',
         endereco_logradouro: data.endereco_logradouro || '',
         endereco_numero: data.endereco_numero || '',
-        endereco_bairro: data.endereco_bairro || '',
+        // 'endereco_bairro' foi removido
         endereco_cidade: data.endereco_cidade || '',
         endereco_estado: data.endereco_estado || '',
     };
@@ -38,21 +39,19 @@ const form = useForm({
     name: props.cidadao.name,
     email: props.cidadao.email,
     cpf: props.cidadao.cpf || '',
+    bairro_id: props.cidadao.bairro_id || null, // Adicionado para o ID do bairro
     profile_data: generateProfileDataStructure(props.customFields, props.cidadao.profile_data),
 });
 
-// 2. Add computed property to handle date formatting
 const formattedDataNascimento = computed({
-    // GET: Reads from form model (YYYY-MM-DD) and formats for display (DD/MM/YYYY)
     get() {
         if (!form.profile_data.data_nascimento) return '';
         const parts = form.profile_data.data_nascimento.split('-');
         if (parts.length === 3) {
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
-        return form.profile_data.data_nascimento; // Fallback
+        return form.profile_data.data_nascimento;
     },
-    // SET: Reads from input (DD/MM/YYYY) and formats for form model (YYYY-MM-DD)
     set(value) {
         if (value && value.length === 10) {
             const parts = value.split('/');
@@ -61,10 +60,9 @@ const formattedDataNascimento = computed({
                 return;
             }
         }
-        form.profile_data.data_nascimento = ''; // Clear if format is invalid
+        form.profile_data.data_nascimento = '';
     }
 });
-
 
 const submit = () => {
     form.put(route('admin.cidadaos.update', { cidadao: form.id }), {
@@ -73,9 +71,7 @@ const submit = () => {
     });
 };
 
-// ========================================================================
 // --- LÓGICA DE VALIDAÇÃO EM TEMPO REAL ---
-// ========================================================================
 const realtimeErrors = ref({});
 
 const debounce = (func, delay = 500) => {
@@ -110,7 +106,6 @@ watch(() => form.email, (newValue) => { debouncedValidate('email', newValue) });
 watch(() => form.profile_data.telefone, (newValue) => { debouncedValidate('celular', newValue) });
 watch(() => form.profile_data.endereco_cep, (newValue) => { debouncedValidate('cep', newValue) });
 
-// 4. Update watcher to use the formatted date for validation consistency
 watch(() => formattedDataNascimento.value, (newValue) => {
     if (newValue && newValue.length === 10) {
         debouncedValidate('data_nascimento', newValue);
@@ -131,14 +126,14 @@ const buscarCep = async () => {
         if (data.erro) {
             realtimeErrors.value[fieldName] = 'CEP não encontrado ou inválido.';
             form.profile_data.endereco_logradouro = '';
-            form.profile_data.endereco_bairro = '';
+            // Não limpa o bairro, pois agora é um select
             form.profile_data.endereco_cidade = '';
             form.profile_data.endereco_estado = '';
             return;
         }
 
         form.profile_data.endereco_logradouro = data.logradouro;
-        form.profile_data.endereco_bairro = data.bairro;
+        // A busca de CEP não define o bairro_id, o usuário deve selecionar
         form.profile_data.endereco_cidade = data.localidade;
         form.profile_data.endereco_estado = data.uf;
     } catch (error) {
@@ -158,113 +153,118 @@ const buscarCep = async () => {
             <div class="content-container w-full max-w-4xl">
                 <div class="form-icon"><UserCheck :size="32" class="icon-in-badge" /></div>
                  <form @submit.prevent="submit">
-                     <div class="p-6">
-                           <div class="flex justify-between items-center">
-                                 <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Editar Cidadão</h3>
+                       <div class="p-6">
+                             <div class="flex justify-between items-center">
+                                  <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Editar Cidadão</h3>
                                 <Link :href="route('admin.cidadaos.index')" class="table-action-btn"><X class="w-5 h-5" /></Link>
+                            </div>
+                           <div class="mt-6 space-y-6">
+                                 <div class="section-title">Dados de Acesso</div>
+                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                           <label for="name" class="form-label">Nome Completo</label>
+                                           <input type="text" v-model="form.name" id="name" class="form-input" required>
+                                           <div v-if="form.errors.name" class="form-error">{{ form.errors.name }}</div>
+                                       </div>
+                                       <div>
+                                           <label for="email" class="form-label">Email</label>
+                                           <input id="email" v-model="form.email" type="email" class="form-input" :class="{ 'input-invalid': realtimeErrors.email, 'input-valid': !realtimeErrors.email && form.email }" required />
+                                           <div v-if="form.errors.email" class="form-error">{{ form.errors.email }}</div>
+                                           <div v-if="realtimeErrors.email" class="form-error">{{ realtimeErrors.email }}</div>
+                                       </div>
+                                 </div>
+                                 <div class="section-title pt-4">Dados Pessoais</div>
+                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                           <label for="cpf" class="form-label">CPF</label>
+                                           <input id="cpf" v-model="form.cpf" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.cpf, 'input-valid': !realtimeErrors.cpf && form.cpf }" v-maska data-maska="###.###.###-##" placeholder="000.000.000-00" />
+                                           <div v-if="form.errors.cpf" class="form-error">{{ form.errors.cpf }}</div>
+                                           <div v-if="realtimeErrors.cpf" class="form-error">{{ realtimeErrors.cpf }}</div>
+                                       </div>
+                                       <div>
+                                           <label for="telefone" class="form-label">Telefone</label>
+                                           <input id="telefone" v-model="form.profile_data.telefone" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.celular, 'input-valid': !realtimeErrors.celular && form.profile_data.telefone }" v-maska data-maska="['(##) ####-####', '(##) #####-####']" placeholder="(00) 90000-0000" />
+                                           <div v-if="form.errors['profile_data.telefone']" class="form-error">{{ form.errors['profile_data.telefone'] }}</div>
+                                           <div v-if="realtimeErrors.celular" class="form-error">{{ realtimeErrors.celular }}</div>
+                                       </div>
+                                       <div>
+                                           <label for="data_nascimento" class="form-label">Data de Nascimento</label>
+                                           <input id="data_nascimento" v-model="formattedDataNascimento" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.data_nascimento || form.errors['profile_data.data_nascimento'], 'input-valid': !realtimeErrors.data_nascimento && formattedDataNascimento }" v-maska data-maska="##/##/####" placeholder="DD/MM/AAAA" />
+                                           <div v-if="form.errors['profile_data.data_nascimento']" class="form-error">{{ form.errors['profile_data.data_nascimento'] }}</div>
+                                           <div v-if="realtimeErrors.data_nascimento" class="form-error">{{ realtimeErrors.data_nascimento }}</div>
+                                       </div>
+                                       <div>
+                                           <label for="genero" class="form-label">Gênero</label>
+                                           <select v-model="form.profile_data.genero" id="genero" class="form-input">
+                                               <option value="">Não informar</option>
+                                               <option value="Masculino">Masculino</option>
+                                               <option value="Feminino">Feminino</option>
+                                               <option value="Outro">Outro</option>
+                                           </select>
+                                       </div>
+                                       <div>
+                                           <label for="nome_mae" class="form-label">Nome da Mãe</label>
+                                           <input type="text" v-model="form.profile_data.nome_mae" id="nome_mae" class="form-input">
+                                       </div>
+                                       <div>
+                                           <label for="nome_pai" class="form-label">Nome do Pai</label>
+                                           <input type="text" v-model="form.profile_data.nome_pai" id="nome_pai" class="form-input">
+                                       </div>
+                                 </div>
+                                 <div class="section-title pt-4">Endereço</div>
+                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                       <div class="md:col-span-1">
+                                           <label for="cep" class="form-label">CEP</label>
+                                           <input id="cep" v-model="form.profile_data.endereco_cep" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.cep, 'input-valid': !realtimeErrors.cep && form.profile_data.endereco_cep }" v-maska data-maska="#####-###" @blur="buscarCep" placeholder="00000-000" />
+                                           <div v-if="form.errors['profile_data.endereco_cep']" class="form-error">{{ form.errors['profile_data.endereco_cep'] }}</div>
+                                           <div v-if="realtimeErrors.cep" class="form-error">{{ realtimeErrors.cep }}</div>
+                                       </div>
+                                       <div class="md:col-span-2">
+                                           <label for="logradouro" class="form-label">Logradouro</label>
+                                           <input type="text" v-model="form.profile_data.endereco_logradouro" id="logradouro" class="form-input">
+                                       </div>
+                                       <div>
+                                           <label for="numero" class="form-label">Número</label>
+                                           <input type="text" v-model="form.profile_data.endereco_numero" id="numero" class="form-input">
+                                       </div>
+                                       <div class="md:col-span-2">
+                                            <label for="bairro_id" class="form-label">Bairro</label>
+                                            <select id="bairro_id" v-model="form.bairro_id" class="form-input">
+                                                <option :value="null">Selecione um bairro</option>
+                                                <option v-for="bairro in bairros" :key="bairro.id" :value="bairro.id">
+                                                    {{ bairro.nome }}
+                                                </option>
+                                            </select>
+                                            <div v-if="form.errors.bairro_id" class="form-error">{{ form.errors.bairro_id }}</div>
+                                       </div>
+                                       <div class="md:col-span-2">
+                                           <label for="cidade" class="form-label">Cidade</label>
+                                           <input type="text" v-model="form.profile_data.endereco_cidade" id="cidade" class="form-input" required>
+                                           <div v-if="form.errors['profile_data.endereco_cidade']" class="form-error">{{ form.errors['profile_data.endereco_cidade'] }}</div>
+                                       </div>
+                                       <div>
+                                           <label for="estado" class="form-label">Estado</label>
+                                           <input type="text" v-model="form.profile_data.endereco_estado" id="estado" class="form-input">
+                                       </div>
+                                 </div>
+                                 <div v-if="customFields.length > 0" class="section-title pt-4">Informações Adicionais</div>
+                                 <div v-if="customFields.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div v-for="field in customFields" :key="field.id">
+                                           <label :for="field.name" class="form-label">{{ field.label }}</label>
+                                           <input v-if="['text', 'number', 'date'].includes(field.type)" :type="field.type" v-model="form.profile_data[field.name]" :id="field.name" class="form-input" :required="field.is_required" />
+                                           <select v-if="field.type === 'select'" v-model="form.profile_data[field.name]" :id="field.name" class="form-input" :required="field.is_required">
+                                               <option value="">Selecione</option>
+                                               <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
+                                           </select>
+                                           <div v-if="form.errors[`profile_data.${field.name}`]" class="form-error">{{ form.errors[`profile_data.${field.name}`] }}</div>
+                                       </div>
+                                 </div>
                            </div>
-                         <div class="mt-6 space-y-6">
-                               <div class="section-title">Dados de Acesso</div>
-                               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div>
-                                         <label for="name" class="form-label">Nome Completo</label>
-                                         <input type="text" v-model="form.name" id="name" class="form-input" required>
-                                         <div v-if="form.errors.name" class="form-error">{{ form.errors.name }}</div>
-                                     </div>
-                                     <div>
-                                         <label for="email" class="form-label">Email</label>
-                                         <input id="email" v-model="form.email" type="email" class="form-input" :class="{ 'input-invalid': realtimeErrors.email, 'input-valid': !realtimeErrors.email && form.email }" required />
-                                         <div v-if="form.errors.email" class="form-error">{{ form.errors.email }}</div>
-                                         <div v-if="realtimeErrors.email" class="form-error">{{ realtimeErrors.email }}</div>
-                                     </div>
-                               </div>
-                               <div class="section-title pt-4">Dados Pessoais</div>
-                               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div>
-                                         <label for="cpf" class="form-label">CPF</label>
-                                         <input id="cpf" v-model="form.cpf" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.cpf, 'input-valid': !realtimeErrors.cpf && form.cpf }" v-maska data-maska="###.###.###-##" placeholder="000.000.000-00" />
-                                         <div v-if="form.errors.cpf" class="form-error">{{ form.errors.cpf }}</div>
-                                         <div v-if="realtimeErrors.cpf" class="form-error">{{ realtimeErrors.cpf }}</div>
-                                     </div>
-                                     <div>
-                                         <label for="telefone" class="form-label">Telefone</label>
-                                         <input id="telefone" v-model="form.profile_data.telefone" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.celular, 'input-valid': !realtimeErrors.celular && form.profile_data.telefone }" v-maska data-maska="['(##) ####-####', '(##) #####-####']" placeholder="(00) 90000-0000" />
-                                         <div v-if="form.errors['profile_data.telefone']" class="form-error">{{ form.errors['profile_data.telefone'] }}</div>
-                                         <div v-if="realtimeErrors.celular" class="form-error">{{ realtimeErrors.celular }}</div>
-                                     </div>
-                                     <div>
-                                         <label for="data_nascimento" class="form-label">Data de Nascimento</label>
-                                         <!-- 3. Update v-model to use the computed property -->
-                                         <input id="data_nascimento" v-model="formattedDataNascimento" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.data_nascimento || form.errors['profile_data.data_nascimento'], 'input-valid': !realtimeErrors.data_nascimento && formattedDataNascimento }" v-maska data-maska="##/##/####" placeholder="DD/MM/AAAA" />
-                                         <div v-if="form.errors['profile_data.data_nascimento']" class="form-error">{{ form.errors['profile_data.data_nascimento'] }}</div>
-                                         <div v-if="realtimeErrors.data_nascimento" class="form-error">{{ realtimeErrors.data_nascimento }}</div>
-                                     </div>
-                                     <div>
-                                         <label for="genero" class="form-label">Gênero</label>
-                                         <select v-model="form.profile_data.genero" id="genero" class="form-input">
-                                             <option value="">Não informar</option>
-                                             <option value="Masculino">Masculino</option>
-                                             <option value="Feminino">Feminino</option>
-                                             <option value="Outro">Outro</option>
-                                         </select>
-                                     </div>
-                                     <div>
-                                         <label for="nome_mae" class="form-label">Nome da Mãe</label>
-                                         <input type="text" v-model="form.profile_data.nome_mae" id="nome_mae" class="form-input">
-                                     </div>
-                                     <div>
-                                         <label for="nome_pai" class="form-label">Nome do Pai</label>
-                                         <input type="text" v-model="form.profile_data.nome_pai" id="nome_pai" class="form-input">
-                                     </div>
-                               </div>
-                               <div class="section-title pt-4">Endereço</div>
-                               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                     <div class="md:col-span-1">
-                                         <label for="cep" class="form-label">CEP</label>
-                                         <input id="cep" v-model="form.profile_data.endereco_cep" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.cep, 'input-valid': !realtimeErrors.cep && form.profile_data.endereco_cep }" v-maska data-maska="#####-###" @blur="buscarCep" placeholder="00000-000" />
-                                         <div v-if="form.errors['profile_data.endereco_cep']" class="form-error">{{ form.errors['profile_data.endereco_cep'] }}</div>
-                                         <div v-if="realtimeErrors.cep" class="form-error">{{ realtimeErrors.cep }}</div>
-                                     </div>
-                                     <div class="md:col-span-2">
-                                         <label for="logradouro" class="form-label">Logradouro</label>
-                                         <input type="text" v-model="form.profile_data.endereco_logradouro" id="logradouro" class="form-input">
-                                     </div>
-                                     <div>
-                                         <label for="numero" class="form-label">Número</label>
-                                         <input type="text" v-model="form.profile_data.endereco_numero" id="numero" class="form-input">
-                                     </div>
-                                     <div class="md:col-span-2">
-                                         <label for="bairro" class="form-label">Bairro</label>
-                                         <input type="text" v-model="form.profile_data.endereco_bairro" id="bairro" class="form-input">
-                                     </div>
-                                     <div class="md:col-span-2">
-                                         <label for="cidade" class="form-label">Cidade</label>
-                                         <input type="text" v-model="form.profile_data.endereco_cidade" id="cidade" class="form-input" required>
-                                         <div v-if="form.errors['profile_data.endereco_cidade']" class="form-error">{{ form.errors['profile_data.endereco_cidade'] }}</div>
-                                     </div>
-                                     <div>
-                                         <label for="estado" class="form-label">Estado</label>
-                                         <input type="text" v-model="form.profile_data.endereco_estado" id="estado" class="form-input">
-                                     </div>
-                               </div>
-                               <div v-if="customFields.length > 0" class="section-title pt-4">Informações Adicionais</div>
-                               <div v-if="customFields.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div v-for="field in customFields" :key="field.id">
-                                         <label :for="field.name" class="form-label">{{ field.label }}</label>
-                                         <input v-if="['text', 'number', 'date'].includes(field.type)" :type="field.type" v-model="form.profile_data[field.name]" :id="field.name" class="form-input" :required="field.is_required" />
-                                         <select v-if="field.type === 'select'" v-model="form.profile_data[field.name]" :id="field.name" class="form-input" :required="field.is_required">
-                                             <option value="">Selecione</option>
-                                             <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
-                                         </select>
-                                         <div v-if="form.errors[`profile_data.${field.name}`]" class="form-error">{{ form.errors[`profile_data.${field.name}`] }}</div>
-                                     </div>
-                               </div>
-                         </div>
-                     </div>
-                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end space-x-3 rounded-b-3xl">
-                         <Link :href="route('admin.cidadaos.index')" class="btn-secondary">Cancelar</Link>
-                         <button type="submit" :disabled="form.processing" class="btn-primary">Atualizar</button>
-                     </div>
+                       </div>
+                       <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end space-x-3 rounded-b-3xl">
+                           <Link :href="route('admin.cidadaos.index')" class="btn-secondary">Cancelar</Link>
+                           <button type="submit" :disabled="form.processing" class="btn-primary">Atualizar</button>
+                       </div>
                  </form>
             </div>
         </div>

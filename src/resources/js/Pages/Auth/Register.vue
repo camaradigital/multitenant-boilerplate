@@ -17,6 +17,9 @@ import TermsAndPrivacy from './Partials/TermsAndPrivacy.vue';
 
 const props = defineProps({
     customFields: Array,
+    // ADICIONADO: Recebe a lista de bairros do backend.
+    // Cada bairro deve ser um objeto com 'id' e 'nome'.
+    bairros: Array,
 });
 
 // --- LÓGICA DE ETAPAS ---
@@ -52,6 +55,8 @@ const form = useForm({
     terms: false,
     privacy: false,
     cpf: '',
+    // ADICIONADO: Este campo irá guardar o ID do bairro selecionado.
+    bairro_id: '',
     profile_data: generateProfileDataStructure(props.customFields),
 });
 
@@ -94,9 +99,10 @@ const validateStep2 = () => {
            form.profile_data.data_nascimento && !realtimeErrors.value.data_nascimento;
 };
 
+// ATUALIZADO: Agora valida se um bairro_id foi selecionado.
 const validateStep3 = () => {
     return form.profile_data.endereco_cep && !realtimeErrors.value.cep &&
-           form.profile_data.endereco_cidade;
+           form.profile_data.endereco_cidade && form.bairro_id;
 };
 
 const nextStep = () => {
@@ -107,6 +113,8 @@ const nextStep = () => {
     } else if (currentStep.value === 3 && validateStep3()) {
         currentStep.value++;
     } else {
+        // Força a validação de todos os campos da etapa atual para exibir os erros
+        form.validate();
         console.error("Validação da etapa falhou.");
     }
 };
@@ -188,6 +196,7 @@ const tryOpenModal = (modalType) => {
                         <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
+                            :bairros="props.bairros"
                             @buscar-cep="buscarCep"
                         />
                          <CustomFieldsSection :custom-fields="customFields" :form="form" />
@@ -289,4 +298,3 @@ html {
     font-size: 14px;
 }
 </style>
-

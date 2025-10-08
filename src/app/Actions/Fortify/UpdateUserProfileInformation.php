@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Models\Tenant\CustomField;
 use App\Models\Tenant\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
@@ -14,23 +15,20 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     /**
      * Validate and update the given user's profile information.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, mixed>  $input
      */
     public function update(User $user, array $input): void
     {
         // Pega os nomes dos campos personalizados do banco de dados.
         $customFieldNames = CustomField::pluck('name')->toArray();
 
-        // Define a lista COMPLETA de campos padrão que pertencem ao profile_data.
         $standardProfileFields = [
             'telefone',
             'endereco_cep',
             'endereco_logradouro',
             'endereco_numero',
-            'endereco_bairro',
             'endereco_cidade',
             'endereco_estado',
-            // --- CAMPOS ADICIONADOS PARA CORREÇÃO ---
             'data_nascimento',
             'genero',
             'nome_mae',
@@ -45,6 +43,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
+            'bairro_id' => ['nullable', 'integer', 'exists:tenant.bairros,id'],
 
             // Validações para os campos de profile_data
             'telefone' => ['nullable', 'string', 'max:20'],
@@ -61,21 +60,29 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $user->updateProfilePhoto($input['photo']);
         }
 
-        // Atualiza nome, e-mail e o status de verificação.
-        if ($input['email'] !== $user->email &&
-            $user instanceof MustVerifyEmail) {
-            $this->updateVerifiedUser($user, $input);
-        } else {
-            $user->forceFill([
-                'name' => $input['name'],
-                'email' => $input['email'],
-            ])->save();
-        }
+        // Envolve a atualização em uma transação para garantir a integridade dos dados.
+        DB::transaction(function () use ($user, $input, $allProfileDataKeys) {
+            // Atualiza nome, e-mail e o status de verificação.
+            if ($input['email'] !== $user->email && $user instanceof MustVerifyEmail) {
+                $this->updateVerifiedUser($user, $input);
+            } else {
+                $user->forceFill([
+                    'name' => $input['name'],
+                    'email' => $input['email'],
+                ])->save();
+            }
 
-        // Agrupa e salva todos os dados de 'profile_data'.
-        $profileData = collect($input)->only($allProfileDataKeys)->toArray();
-        $user->profile_data = $profileData;
-        $user->save();
+            // Agrupa e salva os dados de 'profile_data', mesclando com os dados existentes.
+            $currentProfileData = $user->profile_data ?? [];
+            $newProfileData = collect($input)->only($allProfileDataKeys)->toArray();
+            $mergedProfileData = array_merge($currentProfileData, $newProfileData);
+
+            // ATUALIZADO: Salva o `bairro_id` e o `profile_data` mesclado.
+            $user->forceFill([
+                'profile_data' => $mergedProfileData,
+                'bairro_id' => $input['bairro_id'] ?? null,
+            ])->save();
+        });
     }
 
     /**

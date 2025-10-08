@@ -21,7 +21,7 @@ const form = useForm({
 });
 
 const buscarDados = () => {
-    form.get(route('tenant.relatorios.demandas-por-bairro'), {
+    form.get(route('admin.relatorios.demandas-por-bairro'), {
         preserveState: true,
         preserveScroll: true,
     });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\Bairro;
 use App\Models\Tenant\CustomField;
 use App\Models\Tenant\User;
 use App\Notifications\Tenant\SetInitialPassword;
@@ -27,6 +28,7 @@ class CidadaoController extends Controller
 
         return inertia('Tenant/Cidadaos/Create', [
             'customFields' => CustomField::all(),
+            'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -35,7 +37,7 @@ class CidadaoController extends Controller
         $this->authorize('viewAnyCidadao', User::class);
 
         return inertia('Tenant/Cidadaos/Index', [
-            'cidadaos' => User::role('Cidadao')->latest()->paginate(10),
+            'cidadaos' => User::role('Cidadao')->with('bairro')->latest()->paginate(10),
             'customFields' => CustomField::all(),
             'cidadeTenant' => Tenant::current()->endereco_cidade,
         ]);
@@ -48,6 +50,7 @@ class CidadaoController extends Controller
         return inertia('Tenant/Cidadaos/Edit', [
             'cidadao' => $cidadao,
             'customFields' => CustomField::all(),
+            'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -61,6 +64,7 @@ class CidadaoController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:tenant.users,email',
             'cpf' => 'nullable|string|max:14|unique:tenant.users,cpf',
+            'bairro_id' => 'required|integer|exists:tenant.bairros,id',
             'profile_data.telefone' => 'nullable|string|max:20',
             'profile_data.data_nascimento' => 'nullable|date',
             'profile_data.genero' => 'nullable|string|max:50',
@@ -69,7 +73,6 @@ class CidadaoController extends Controller
             'profile_data.endereco_cep' => 'nullable|string|max:9',
             'profile_data.endereco_logradouro' => 'nullable|string|max:255',
             'profile_data.endereco_numero' => 'nullable|string|max:20',
-            'profile_data.endereco_bairro' => 'nullable|string|max:100',
             'profile_data.endereco_cidade' => 'required|string|max:100',
             'profile_data.endereco_estado' => 'nullable|string|max:2',
         ], $customRules));
@@ -87,6 +90,7 @@ class CidadaoController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'cpf' => $request->cpf,
+            'bairro_id' => $request->bairro_id,
             'password' => Hash::make($randomPassword),
             'profile_data' => $request->profile_data,
         ]);
@@ -103,7 +107,7 @@ class CidadaoController extends Controller
     {
         $this->authorize('viewCidadao', $cidadao);
 
-        $cidadao->load(['solicitacoes' => function ($query) {
+        $cidadao->load(['bairro', 'solicitacoes' => function ($query) {
             $query->with(['servico', 'status', 'atendente'])->latest();
         }]);
 
@@ -122,6 +126,7 @@ class CidadaoController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:tenant.users,email,'.$cidadao->id,
             'cpf' => 'nullable|string|max:14|unique:tenant.users,cpf,'.$cidadao->id,
+            'bairro_id' => 'required|integer|exists:tenant.bairros,id',
             'profile_data.telefone' => 'nullable|string|max:20',
             'profile_data.data_nascimento' => 'nullable|date',
             'profile_data.genero' => 'nullable|string|max:50',
@@ -130,12 +135,12 @@ class CidadaoController extends Controller
             'profile_data.endereco_cep' => 'nullable|string|max:9',
             'profile_data.endereco_logradouro' => 'nullable|string|max:255',
             'profile_data.endereco_numero' => 'nullable|string|max:20',
-            'profile_data.endereco_bairro' => 'nullable|string|max:100',
             'profile_data.endereco_cidade' => 'required|string|max:100',
             'profile_data.endereco_estado' => 'nullable|string|max:2',
         ], $customRules));
 
         $data = $request->only('name', 'email', 'cpf', 'profile_data');
+        $data['bairro_id'] = $request->bairro_id;
 
         $cidadao->update($data);
 
@@ -189,6 +194,7 @@ class CidadaoController extends Controller
             'name' => 'Usuário Anônimo #'.$cidadao->id,
             'email' => 'anonymized_'.$cidadao->id.'@'.request()->getHost(),
             'cpf' => null,
+            'bairro_id' => null,
             'profile_data' => null,
             'is_active' => false,
         ]);
@@ -206,6 +212,7 @@ class CidadaoController extends Controller
         $this->authorize('exportDataCidadao', $cidadao);
 
         $cidadao->load([
+            'bairro:id,nome',
             'solicitacoes.servico',
             'solicitacoes.status',
             'solicitacoes.atendente:id,name',

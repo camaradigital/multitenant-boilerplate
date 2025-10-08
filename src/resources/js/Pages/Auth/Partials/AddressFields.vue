@@ -5,6 +5,8 @@ import { MapPin } from 'lucide-vue-next';
 defineProps({
     form: Object,
     realtimeErrors: Object,
+    // ADICIONADO: Prop para receber a lista de bairros do componente pai.
+    bairros: Array,
 });
 
 const emit = defineEmits(['buscar-cep']);
@@ -39,10 +41,24 @@ const emit = defineEmits(['buscar-cep']);
             <label for="numero" class="form-label">Número</label>
             <input id="numero" v-model="form.profile_data.endereco_numero" type="text" class="form-input !pl-5" placeholder="Ex: 123"/>
         </div>
+
+        <!-- MODIFICADO: O campo de texto foi substituído por um campo de seleção (select) -->
         <div class="input-container md:col-span-4">
             <label for="bairro" class="form-label">Bairro/Córrego</label>
-            <input id="bairro" v-model="form.profile_data.endereco_bairro" type="text" class="form-input !pl-5" placeholder="Seu bairro ou córrego"/>
+            <select
+                id="bairro"
+                v-model="form.bairro_id"
+                class="form-input !pl-5"
+                required
+            >
+                <option value="" disabled>Selecione um bairro</option>
+                <option v-for="bairro in bairros" :key="bairro.id" :value="bairro.id">
+                    {{ bairro.nome }}
+                </option>
+            </select>
+            <InputError class="form-error" :message="form.errors.bairro_id" />
         </div>
+
         <div class="input-container md:col-span-4">
             <label for="cidade" class="form-label">Cidade</label>
             <input id="cidade" v-model="form.profile_data.endereco_cidade" type="text" class="form-input !pl-5" placeholder="Sua cidade" required/>

@@ -19,7 +19,7 @@ const form = useForm({
 });
 
 const buscarDados = () => {
-    form.get(route('tenant.relatorios.analise-de-tendencias'), {
+    form.get(route('admin.relatorios.analise-de-tendencias'), {
         preserveState: true,
         preserveScroll: true,
     });

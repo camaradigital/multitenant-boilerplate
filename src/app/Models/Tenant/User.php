@@ -2,16 +2,16 @@
 
 namespace App\Models\Tenant;
 
-// use App\Casts\EncryptedCast; // REMOVIDO - Não é mais necessário
 use App\Notifications\Tenant\VerifyTenantEmail;
 use App\Notifications\TenantResetPasswordNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Crypt; // Adicionado para o Accessor/Mutator
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
@@ -36,7 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'cpf',
         'is_active',
         'profile_data',
-        'bairro',
+        'bairro_id',
         'terms_accepted_at',
         'privacy_accepted_at',
         'engagement_score',
@@ -55,13 +55,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
-            // 'profile_data' => EncryptedCast::class, // REMOVIDO daqui para usar Accessor/Mutator
             'terms_accepted_at' => 'datetime',
             'privacy_accepted_at' => 'datetime',
         ];
     }
-
-    // --- SOLUÇÃO FINAL: Accessor e Mutator para controle total ---
 
     /**
      * Accessor: Garante que os dados sejam descriptografados e convertidos para array ao serem lidos.
@@ -89,15 +86,20 @@ class User extends Authenticatable implements MustVerifyEmail
     public function setProfileDataAttribute($value): void
     {
         if (is_array($value)) {
-            $this->attributes['bairro'] = $value['endereco_bairro'] ?? null;
-            // Continua com a criptografia normal para o profile_data
             $jsonValue = json_encode($value);
             $this->attributes['profile_data'] = Crypt::encryptString($jsonValue);
         } else {
-            // Garante que, se profile_data for nulo, a coluna bairro também seja.
-            $this->attributes['bairro'] = null;
             $this->attributes['profile_data'] = null;
         }
+    }
+
+    /**
+     * ADICIONADO: Relação com o modelo Bairro.
+     * O usuário pertence a um bairro.
+     */
+    public function bairro(): BelongsTo
+    {
+        return $this->belongsTo(Bairro::class);
     }
 
     /**

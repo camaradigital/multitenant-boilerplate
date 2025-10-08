@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('servicos', function (Blueprint $table) {
+        Schema::create('leads', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tipo_servico_id')->constrained('tipos_servico');
             $table->string('nome');
-            $table->text('descricao')->nullable();
-            $table->boolean('is_active')->default(true);
-
-            // Coluna para armazenar as regras de limite (ex: {"limite": 10, "periodo": "semanal"})
-            $table->json('regras_limite')->nullable();
-
+            $table->string('email')->unique();
+            $table->string('telefone')->nullable();
+            $table->string('site')->nullable();
+            $table->text('endereco')->nullable();
+            $table->string('cidade')->nullable(); // Coluna consolidada
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('servicos');
+        Schema::dropIfExists('leads');
     }
 };

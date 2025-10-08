@@ -4,21 +4,16 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
-class Tag extends Model
+class Bairro extends Model
 {
     use HasFactory, LogsActivity, UsesTenantConnection;
 
-    protected $table = 'tags';
-
-    protected $fillable = [
-        'nome_tag',
-        'cor',
-    ];
+    protected $fillable = ['nome'];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -31,8 +26,11 @@ class Tag extends Model
             ->dontSubmitEmptyLogs();
     }
 
-    public function users(): BelongsToMany
+    /**
+     * Um bairro pode ter muitos usuários.
+     */
+    public function users(): HasMany
     {
-        return $this->belongsToMany(User::class, 'user_tags');
+        return $this->hasMany(User::class);
     }
 }

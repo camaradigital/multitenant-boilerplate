@@ -21,12 +21,18 @@ import {
 } from '@headlessui/vue';
 
 // --- INTERFACES PARA TIPAGEM ---
+interface Bairro {
+    id: number;
+    nome: string;
+}
+
 interface User {
     id: number;
     name: string;
     email: string;
-    profile_photo_url?: string; // A URL da foto é opcional
-    profile_data: Record<string, any>; // Objeto com os dados de perfil já descriptografados
+    bairro_id: number | null; // ATUALIZADO: para receber o ID do bairro
+    profile_photo_url?: string;
+    profile_data: Record<string, any>;
 }
 
 interface CustomField {
@@ -39,13 +45,15 @@ interface CustomField {
 interface Props {
     confirmsTwoFactorAuthentication?: boolean;
     sessions?: any[];
-    customFields?: CustomField[]; // Recebe os campos personalizados diretamente do controller
+    customFields?: CustomField[];
+    bairros?: Bairro[]; // ADICIONADO: para receber a lista de bairros
 }
 
 // --- PROPS ---
 const props = withDefaults(defineProps<Props>(), {
     sessions: () => [],
     customFields: () => [],
+    bairros: () => [], // ADICIONADO
 });
 
 // --- ESTADO DO COMPONENTE ---
@@ -68,12 +76,13 @@ const formInfo = useForm({
     name: user.name,
     email: user.email,
     photo: null as File | null,
-    // Campos de endereço
+    // ADICIONADO: campo para o ID do bairro
+    bairro_id: user.bairro_id || null,
+    // Campos de endereço (bairro foi removido do profile_data)
     telefone: user.profile_data?.telefone || '',
     endereco_cep: user.profile_data?.endereco_cep || '',
     endereco_logradouro: user.profile_data?.endereco_logradouro || '',
     endereco_numero: user.profile_data?.endereco_numero || '',
-    endereco_bairro: user.profile_data?.endereco_bairro || '',
     endereco_cidade: user.profile_data?.endereco_cidade || '',
     endereco_estado: user.profile_data?.endereco_estado || '',
     // Campos pessoais
@@ -290,10 +299,16 @@ const tabs = {
                                             <InputError :message="formInfo.errors.endereco_numero" class="mt-2" />
                                         </div>
 
+                                        <!-- MODIFICADO: Campo de bairro agora é um select -->
                                         <div class="col-span-6 sm:col-span-4">
-                                            <InputLabel for="endereco_bairro" value="Bairro" />
-                                            <TextInput id="endereco_bairro" v-model="formInfo.endereco_bairro" type="text" class="mt-1 block w-full" />
-                                            <InputError :message="formInfo.errors.endereco_bairro" class="mt-2" />
+                                            <InputLabel for="bairro_id" value="Bairro" />
+                                            <select id="bairro_id" v-model="formInfo.bairro_id" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-emerald-500 dark:focus:border-emerald-600 focus:ring-emerald-500 dark:focus:ring-emerald-600 rounded-md shadow-sm">
+                                                <option :value="null">Selecione um bairro</option>
+                                                <option v-for="bairro in bairros" :key="bairro.id" :value="bairro.id">
+                                                    {{ bairro.nome }}
+                                                </option>
+                                            </select>
+                                            <InputError :message="formInfo.errors.bairro_id" class="mt-2" />
                                         </div>
 
                                         <div class="col-span-6 sm:col-span-3">
@@ -446,4 +461,3 @@ const tabs = {
 .btn-danger { @apply inline-flex items-center justify-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150; }
 .table-action-btn { @apply p-2 rounded-full transition-colors text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 focus:outline-none; }
 </style>
-

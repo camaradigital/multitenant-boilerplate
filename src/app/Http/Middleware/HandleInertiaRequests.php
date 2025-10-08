@@ -59,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                         $data['permissions'] = $user->getAllPermissions()->pluck('name');
                         $data['cpf'] = $user->cpf;
                         $data['profile_data'] = $user->profile_data;
+                        $data['bairro_id'] = $user->bairro_id;
                     } else {
                         // Garante que 'permissions' seja um array vazio para outros tipos de usuário
                         $data['permissions'] = [];

@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -42,7 +43,7 @@ class CreateNewUser implements CreatesNewUsers
             'profile_data.endereco_cep' => ['nullable', 'string', 'max:9'],
             'profile_data.endereco_logradouro' => ['nullable', 'string', 'max:255'],
             'profile_data.endereco_numero' => ['nullable', 'string', 'max:20'],
-            'profile_data.endereco_bairro' => ['nullable', 'string', 'max:100'],
+            'bairro_id' => ['nullable', 'integer', 'exists:tenant.bairros,id'],
             'profile_data.endereco_cidade' => ['required', 'string', 'max:100'],
             'profile_data.endereco_estado' => ['nullable', 'string', 'max:2'],
 
@@ -60,23 +61,28 @@ class CreateNewUser implements CreatesNewUsers
             }
         }
 
-        $user = User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => Hash::make($input['password']),
-            'cpf' => $input['cpf'] ?? null,
-            'profile_data' => $input['profile_data'] ?? [],
-            // --- REGISTRO DO CONSENTIMENTO LGPD ---
-            'terms_accepted_at' => now(),
-            'privacy_accepted_at' => now(),
-        ]);
+        // MODIFICADO: Utiliza uma transação e o bairro_id diretamente.
+        return DB::transaction(function () use ($input) {
+            // A lógica de firstOrCreate foi removida, pois o ID já vem validado do frontend.
+            $user = User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => Hash::make($input['password']),
+                'cpf' => $input['cpf'] ?? null,
+                'profile_data' => $input['profile_data'] ?? [],
+                'bairro_id' => $input['bairro_id'] ?? null, // Associa diretamente o ID do bairro vindo do formulário
+                // --- REGISTRO DO CONSENTIMENTO LGPD ---
+                'terms_accepted_at' => now(),
+                'privacy_accepted_at' => now(),
+            ]);
 
-        // Atribui o papel de Cidadão ao novo usuário
-        $role = Role::where('name', 'Cidadao')->where('guard_name', 'tenant')->first();
-        if ($role) {
-            $user->assignRole($role);
-        }
+            // Atribui o papel de Cidadão ao novo usuário
+            $role = Role::where('name', 'Cidadao')->where('guard_name', 'tenant')->first();
+            if ($role) {
+                $user->assignRole($role);
+            }
 
-        return $user;
+            return $user;
+        });
     }
 }

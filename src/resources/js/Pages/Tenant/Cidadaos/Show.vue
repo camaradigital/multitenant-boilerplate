@@ -8,8 +8,8 @@ import TextInput from '@/Components/TextInput.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import {
-    ArrowLeft, User, Mail, Phone, Home, FileText, ClipboardX, Star, MessageSquare,
-    Bell, StickyNote, Paperclip, BarChart3, Activity, Award, BrainCircuit, HelpCircle
+    ArrowLeft, User, Mail, Phone, Home, FileText, ClipboardList, Star, MessageSquare,
+    Bell, StickyNote, Paperclip, Activity, Award, ClipboardX // ADICIONADO: Ícone que faltava
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -50,21 +50,21 @@ const tagForm = useForm({
 });
 
 const submitNota = () => {
-    notaForm.post(route('admin.cidadaos.notas.store', props.cidadao.id), {
+    notaForm.post(route('tenant.cidadaos.notas.store', props.cidadao.id), {
         preserveScroll: true,
         onSuccess: () => notaForm.reset(),
     });
 };
 
 const addTag = () => {
-    tagForm.post(route('admin.cidadaos.tags.attach', props.cidadao.id), {
+    tagForm.post(route('tenant.cidadaos.tags.attach', props.cidadao.id), {
         preserveScroll: true,
         onSuccess: () => tagForm.reset(),
     });
 };
 
 const removeTag = (tagId) => {
-    useForm({}).delete(route('admin.cidadaos.tags.detach', [props.cidadao.id, tagId]), {
+    useForm({}).delete(route('tenant.cidadaos.tags.detach', [props.cidadao.id, tagId]), {
         preserveScroll: true,
     });
 };
@@ -101,7 +101,7 @@ const fullAddress = computed(() => {
     const parts = [
         data.endereco_logradouro,
         data.endereco_numero,
-        data.endereco_bairro,
+        props.cidadao.bairro?.nome, // CORRIGIDO: Usa a relação 'bairro'
         data.endereco_cidade ? `${data.endereco_cidade} - ${data.endereco_estado}` : null,
     ].filter(Boolean);
     return parts.join(', ') || 'Não informado';
@@ -194,32 +194,32 @@ const timelineEventMap = {
                          <div class="p-6 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50 shadow-sm">
                              <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4">Registrar Interação</h4>
                              <form @submit.prevent="submitNota">
-                                <div class="space-y-4">
-                                    <div>
-                                        <InputLabel for="titulo" value="Título da Nota" />
-                                        <TextInput id="titulo" v-model="notaForm.titulo" type="text" class="mt-1 block w-full" />
-                                        <InputError :message="notaForm.errors.titulo" class="mt-2" />
-                                    </div>
+                                 <div class="space-y-4">
                                      <div>
-                                        <InputLabel for="nota" value="Descrição (Ligação, Visita, etc.)" />
-                                        <textarea id="nota" v-model="notaForm.nota" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" rows="3"></textarea>
-                                        <InputError :message="notaForm.errors.nota" class="mt-2" />
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-end mt-4">
-                                    <PrimaryButton :class="{ 'opacity-25': notaForm.processing }" :disabled="notaForm.processing">
-                                        Salvar Nota
-                                    </PrimaryButton>
-                                </div>
+                                         <InputLabel for="titulo" value="Título da Nota" />
+                                         <TextInput id="titulo" v-model="notaForm.titulo" type="text" class="mt-1 block w-full" />
+                                         <InputError :message="notaForm.errors.titulo" class="mt-2" />
+                                     </div>
+                                      <div>
+                                         <InputLabel for="nota" value="Descrição (Ligação, Visita, etc.)" />
+                                         <textarea id="nota" v-model="notaForm.nota" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" rows="3"></textarea>
+                                         <InputError :message="notaForm.errors.nota" class="mt-2" />
+                                     </div>
+                                 </div>
+                                 <div class="flex items-center justify-end mt-4">
+                                     <PrimaryButton :class="{ 'opacity-25': notaForm.processing }" :disabled="notaForm.processing">
+                                         Salvar Nota
+                                     </PrimaryButton>
+                                 </div>
                             </form>
-                        </div>
+                         </div>
                     </div>
 
                     <div class="lg:col-span-2 p-6 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50 shadow-sm">
                         <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
                             <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
                                 <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-                                    :class="[activeTab === tab.id ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600', 'whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2']">
+                                        :class="[activeTab === tab.id ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600', 'whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2']">
                                     <component :is="tab.icon" class="w-4 h-4" />
                                     {{ tab.label }}
                                 </button>

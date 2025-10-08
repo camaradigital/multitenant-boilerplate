@@ -36,9 +36,11 @@ class RelatorioService
 
         $query->when($status, fn ($q) => $q->where('status', $status));
 
-        // VERSÃO FINAL E OTIMIZADA: Filtro simplificado usando a nova coluna 'bairro'.
+        // CORRIGIDO: Filtro agora usa a relação 'bairro' do modelo 'cidadao' (User).
         $query->when($bairro, function ($q) use ($bairro) {
-            $q->whereHas('cidadao', fn ($cidadaoQuery) => $cidadaoQuery->where('bairro', $bairro));
+            $q->whereHas('cidadao.bairro', function ($bairroQuery) use ($bairro) {
+                $bairroQuery->where('nome', $bairro);
+            });
         });
 
         return $query->latest('solicitacoes_servico.created_at');
@@ -196,19 +198,19 @@ class RelatorioService
      */
     public function gerarRelatorioDemandasPorBairro(array $filters = [])
     {
-        // VERSÃO FINAL E OTIMIZADA: Usa a nova coluna 'bairro' diretamente.
+        // --- CORREÇÃO APLICADA ---
         $query = DB::connection('tenant')
             ->table('solicitacoes_servico')
             ->join('users', 'solicitacoes_servico.user_id', '=', 'users.id')
+            ->join('bairros', 'users.bairro_id', '=', 'bairros.id') // Adicionado JOIN com a tabela bairros
             ->join('servicos', 'solicitacoes_servico.servico_id', '=', 'servicos.id')
             ->join('tipos_servico', 'servicos.tipo_servico_id', '=', 'tipos_servico.id')
             ->select(
-                'users.bairro', // A MÁGICA ACONTECE AQUI
+                'bairros.nome as bairro', // CORRIGIDO: Seleciona o nome do bairro da tabela 'bairros'
                 'tipos_servico.nome as tipo_servico',
                 DB::raw('COUNT(solicitacoes_servico.id) as total_solicitacoes')
             )
-            ->whereNotNull('users.bairro')
-            ->where('users.bairro', '!=', '');
+            ->whereNotNull('users.bairro_id'); // CORRIGIDO: Verifica se o bairro_id não é nulo
 
         if (! empty($filters['data_inicio']) && ! empty($filters['data_fim'])) {
             $query->whereBetween('solicitacoes_servico.created_at', [
@@ -220,7 +222,7 @@ class RelatorioService
             $query->where('servicos.tipo_servico_id', $filters['tipo_servico_id']);
         }
 
-        return $query->groupBy('users.bairro', 'tipo_servico')
+        return $query->groupBy('bairros.nome', 'tipo_servico') // CORRIGIDO: Agrupa pelo nome do bairro
             ->orderBy('total_solicitacoes', 'desc')
             ->get();
     }

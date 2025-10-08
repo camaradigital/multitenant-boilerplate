@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue'; // 1. Importar 'computed'
+import { ref, watch, computed } from 'vue';
 import { useForm, Head, Link } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import { UserCheck, ArrowLeft } from 'lucide-vue-next';
@@ -7,6 +7,8 @@ import axios from 'axios';
 
 const props = defineProps({
     customFields: Array,
+    // ADICIONADO: Recebe a lista de bairros do controller
+    bairros: Array,
 });
 
 // Gera a estrutura do profile_data com campos fixos e personalizados
@@ -20,7 +22,7 @@ const generateProfileDataStructure = (fields) => {
         endereco_cep: '',
         endereco_logradouro: '',
         endereco_numero: '',
-        endereco_bairro: '',
+        // endereco_bairro: '', // REMOVIDO: Este campo não é mais usado diretamente no form
         endereco_cidade: '',
         endereco_estado: '',
     };
@@ -36,12 +38,12 @@ const form = useForm({
     name: '',
     email: '',
     cpf: '',
+    // ADICIONADO: O ID do bairro agora faz parte do formulário principal
+    bairro_id: null,
     profile_data: generateProfileDataStructure(props.customFields),
 });
 
-// 2. Adicionar a propriedade computed para formatar a data
 const formattedDataNascimento = computed({
-    // Converte o formato do formulário (YYYY-MM-DD) para exibição (DD/MM/YYYY)
     get() {
         if (!form.profile_data.data_nascimento) return '';
         const parts = form.profile_data.data_nascimento.split('-');
@@ -50,7 +52,6 @@ const formattedDataNascimento = computed({
         }
         return form.profile_data.data_nascimento;
     },
-    // Converte a entrada do usuário (DD/MM/YYYY) para o formato do formulário (YYYY-MM-DD)
     set(value) {
         if (value && value.length === 10) {
             const parts = value.split('/');
@@ -107,10 +108,8 @@ watch(() => form.email, (newValue) => { debouncedValidate('email', newValue) });
 watch(() => form.profile_data.telefone, (newValue) => { debouncedValidate('celular', newValue) });
 watch(() => form.profile_data.endereco_cep, (newValue) => { debouncedValidate('cep', newValue) });
 
-// 4. Atualizar o watch para usar o valor formatado
 watch(() => formattedDataNascimento.value, (newValue) => {
     if (newValue && newValue.length === 10) {
-        // Envia a data no formato DD/MM/YYYY para a validação, se o backend esperar assim
         debouncedValidate('data_nascimento', newValue);
     }
 });
@@ -129,16 +128,28 @@ const buscarCep = async () => {
         if (data.erro) {
             realtimeErrors.value[fieldName] = 'CEP não encontrado ou inválido.';
             form.profile_data.endereco_logradouro = '';
-            form.profile_data.endereco_bairro = '';
+            form.bairro_id = null; // Limpa o bairro
             form.profile_data.endereco_cidade = '';
             form.profile_data.endereco_estado = '';
             return;
         }
 
         form.profile_data.endereco_logradouro = data.logradouro;
-        form.profile_data.endereco_bairro = data.bairro;
         form.profile_data.endereco_cidade = data.localidade;
         form.profile_data.endereco_estado = data.uf;
+
+        // ALTERADO: Tenta encontrar e pré-selecionar o bairro
+        if (data.bairro && props.bairros) {
+            const bairroEncontrado = props.bairros.find(
+                b => b.nome.toLowerCase() === data.bairro.toLowerCase()
+            );
+            if (bairroEncontrado) {
+                form.bairro_id = bairroEncontrado.id;
+            } else {
+                form.bairro_id = null;
+            }
+        }
+
     } catch (error) {
         console.error("Erro ao buscar CEP:", error);
         realtimeErrors.value[fieldName] = 'Não foi possível consultar o CEP.';
@@ -200,7 +211,6 @@ const buscarCep = async () => {
                                 </div>
                                 <div>
                                     <label for="data_nascimento" class="form-label">Data de Nascimento</label>
-                                    <!-- 3. Usar v-model com a propriedade computed -->
                                     <input id="data_nascimento" v-model="formattedDataNascimento" type="text" class="form-input" :class="{ 'input-invalid': realtimeErrors.data_nascimento || form.errors['profile_data.data_nascimento'], 'input-valid': !realtimeErrors.data_nascimento && formattedDataNascimento }" v-maska data-maska="##/##/####" placeholder="DD/MM/AAAA" />
                                     <div v-if="form.errors['profile_data.data_nascimento']" class="form-error">{{ form.errors['profile_data.data_nascimento'] }}</div>
                                     <div v-if="realtimeErrors.data_nascimento" class="form-error">{{ realtimeErrors.data_nascimento }}</div>
@@ -239,10 +249,19 @@ const buscarCep = async () => {
                                     <label for="numero" class="form-label">Número</label>
                                     <input type="text" v-model="form.profile_data.endereco_numero" id="numero" class="form-input">
                                 </div>
+
+                                <!-- ALTERADO: Campo de Bairro agora é um select -->
                                 <div class="md:col-span-2">
-                                    <label for="bairro" class="form-label">Bairro</label>
-                                    <input type="text" v-model="form.profile_data.endereco_bairro" id="bairro" class="form-input">
+                                    <label for="bairro_id" class="form-label">Bairro</label>
+                                    <select id="bairro_id" v-model="form.bairro_id" class="form-input" required>
+                                        <option :value="null">Selecione um bairro</option>
+                                        <option v-for="bairro in props.bairros" :key="bairro.id" :value="bairro.id">
+                                            {{ bairro.nome }}
+                                        </option>
+                                    </select>
+                                    <div v-if="form.errors.bairro_id" class="form-error">{{ form.errors.bairro_id }}</div>
                                 </div>
+
                                 <div class="md:col-span-2">
                                     <label for="cidade" class="form-label">Cidade</label>
                                     <input type="text" v-model="form.profile_data.endereco_cidade" id="cidade" class="form-input" required>

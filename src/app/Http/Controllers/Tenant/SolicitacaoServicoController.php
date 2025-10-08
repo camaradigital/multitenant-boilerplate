@@ -53,8 +53,8 @@ class SolicitacaoServicoController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->whereHas('cidadao', fn ($sub) => $sub->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('servico', fn ($sub) => $sub->where('nome', 'like', "%{$search}%"))
-                  ->orWhereHas('atendente', fn ($sub) => $sub->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('servico', fn ($sub) => $sub->where('nome', 'like', "%{$search}%"))
+                    ->orWhereHas('atendente', fn ($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -118,7 +118,7 @@ class SolicitacaoServicoController extends Controller
 
         // PRÓXIMA SOLICITAÇÃO: Apenas se o usuário estiver livre e uma categoria estiver selecionada
         $proximaSolicitacao = null;
-        if (!$atendimentoAtual && $categoriaNome && $categoriaNome !== 'Todos') {
+        if (! $atendimentoAtual && $categoriaNome && $categoriaNome !== 'Todos') {
             // Reutiliza a query base para garantir que o funcionário só veja o próximo de uma fila que ele pode atender
             $proximaSolicitacao = $this->buildBaseQuery($request)
                 ->whereNull('atendente_id')
@@ -171,6 +171,7 @@ class SolicitacaoServicoController extends Controller
                 'delete' => $user->can('delete', $solicitacao),
                 'update' => $user->can('update', $solicitacao),
             ];
+
             return $solicitacao;
         });
 

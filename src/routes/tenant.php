@@ -17,6 +17,7 @@ use App\Http\Controllers\Tenant\FuncionarioController;
 use App\Http\Controllers\Tenant\GabineteVirtualController;
 use App\Http\Controllers\Tenant\LegislaturaController;
 use App\Http\Controllers\Tenant\MandatoController;
+use App\Http\Controllers\Tenant\MapeamentoPoliticoController;
 use App\Http\Controllers\Tenant\MemoriaLegislativaController;
 use App\Http\Controllers\Tenant\MeuPainelController;
 use App\Http\Controllers\Tenant\NotificationController;
@@ -35,7 +36,7 @@ use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
 use App\Http\Controllers\Tenant\TipoServicoController;
 use App\Http\Controllers\Tenant\VagaController;
-use App\Http\Controllers\Tenant\MapeamentoPoliticoController;
+use App\Models\Tenant\Bairro;
 use App\Models\Tenant\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -72,9 +73,12 @@ Route::middleware([
     // --- Rota para a página de registro ---
     Route::get('/register', function () {
         $customFields = CustomField::all();
+        // MODIFICADO: Busca os bairros do banco de dados para enviar ao frontend.
+        $bairros = Bairro::orderBy('nome')->get(['id', 'nome']);
 
         return Inertia::render('Auth/Register', [
             'customFields' => $customFields,
+            'bairros' => $bairros, // Passa a lista de bairros como prop.
         ]);
     })->name('register');
 
@@ -277,13 +281,16 @@ Route::middleware([
 
             // [NOVO] Rota para o Painel de Mapeamento Político
             Route::get('/mapeamento-politico', [MapeamentoPoliticoController::class, 'index'])
-            ->name('mapeamento-politico.index')
-            ->middleware('can:visualizar relatorios'); // Ou uma permissão específica se preferir
+                ->name('mapeamento-politico.index')
+                ->middleware('can:visualizar relatorios'); // Ou uma permissão específica se preferir
         });
 
         // --- ROTAS DE PERFIL DE UTILIZADOR ---
         Route::get('/user/profile', function () {
-            return Inertia::render('Profile/Show');
+            return Inertia::render('Profile/Show', [
+                'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
+                'customFields' => CustomField::all(),
+            ]);
         })->name('profile.show');
 
         Route::put('/user/profile-information', function (Request $request) {

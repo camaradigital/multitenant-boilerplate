@@ -33,6 +33,7 @@ class CalculateEngagementScore extends Command
 
         if ($totalCidadaos === 0) {
             $this->info('No citizens found to process.');
+
             return 0;
         }
 

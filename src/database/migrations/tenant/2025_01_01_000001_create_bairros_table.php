@@ -9,16 +9,11 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    // ..._create_leads_table.php
     public function up(): void
     {
-        Schema::create('leads', function (Blueprint $table) {
+        Schema::create('bairros', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->string('email')->unique();
-            $table->string('telefone')->nullable();
-            $table->string('site')->nullable();
-            $table->text('endereco')->nullable();
+            $table->string('nome')->unique(); // Garante que não haverá nomes duplicados
             $table->timestamps();
         });
     }
@@ -28,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('leads');
+        Schema::dropIfExists('bairros');
     }
 };

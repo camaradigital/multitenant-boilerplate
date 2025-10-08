@@ -12,6 +12,8 @@ use App\Actions\Fortify\UpdateUserProfileInformation;
 use App\Http\Responses\CustomLogoutResponse;
 use App\Http\Responses\TenantLoginResponse;
 use App\Http\Responses\TenantRegisterResponse;
+use App\Models\Tenant\Bairro;
+use App\Models\Tenant\CustomField;
 use App\Models\Tenant\User as TenantUser;
 use App\Models\User as CentralUser;
 use Carbon\Carbon;
@@ -135,17 +137,14 @@ class FortifyServiceProvider extends ServiceProvider
 
             return Inertia::render('Auth/Register', [
                 'tenant' => $processedTenantData,
+                'customFields' => CustomField::all(),
+                'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
             ]);
         });
 
-        // --- ROTAS DE VISUALIZAÇÃO REMOVIDAS ---
         // As rotas de redefinição de senha e verificação de e-mail agora são
         // definidas diretamente em routes/tenant.php para garantir que
         // elas operem dentro do contexto do middleware do tenant.
-        //
-        // Fortify::requestPasswordResetLinkView(fn () => inertia('Auth/ForgotPassword'));
-        // Fortify::resetPasswordView(fn (Request $request) => inertia('Auth/ResetPassword', ['email' => $request->email, 'token' => $request->route('token')]));
-        // Fortify::verifyEmailView(fn () => inertia('Auth/VerifyEmail'));
 
         Fortify::twoFactorChallengeView(fn () => inertia('Auth/TwoFactorChallenge'));
         Fortify::confirmPasswordView(fn () => inertia('Auth/ConfirmPassword'));
