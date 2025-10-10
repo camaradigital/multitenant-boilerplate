@@ -6,51 +6,72 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\Legislatura;
 use App\Models\Tenant\Politico;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class LegislaturaController extends Controller
 {
+    /**
+     * Adiciona o middleware de autorização para o resource.
+     */
+    public function __construct()
+    {
+        // Garante que as permissões (policies) sejam aplicadas a todos os métodos.
+        $this->authorizeResource(Legislatura::class, 'legislatura');
+    }
+
     public function index()
     {
-        return inertia('Tenant/Memoria/Legislaturas/Index', [
+        return Inertia::render('Tenant/Memoria/Legislaturas/Index', [
             'legislaturas' => Legislatura::withCount('mandatos')->orderBy('data_inicio', 'desc')->paginate(10),
         ]);
     }
 
     public function create()
     {
-        // Para a criação, não precisamos passar nenhum dado extra.
-        return inertia('Tenant/Memoria/Legislaturas/Form');
+        return Inertia::render('Tenant/Memoria/Legislaturas/Form', [
+            'politicos' => Politico::orderBy('nome_politico')->get(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validatedData = $request->validate([
             'titulo' => 'required|string|max:255',
             'data_inicio' => 'required|date',
             'data_fim' => 'required|date|after_or_equal:data_inicio',
             'texto_destaque' => 'nullable|string',
             'foto_principal' => 'nullable|image|max:2048',
+            'is_atual' => 'required|boolean',
         ]);
 
-        if ($request->hasFile('foto_principal')) {
-            $validated['foto_principal_path'] = $request->file('foto_principal')->store('legislaturas', 'public');
-        }
+        $legislatura = DB::transaction(function () use ($validatedData, $request) {
+            // Se a nova legislatura for marcada como atual, desmarca todas as outras.
+            if ($validatedData['is_atual']) {
+                Legislatura::where('is_atual', true)->update(['is_atual' => false]);
+            }
 
-        Legislatura::create($validated);
+            if ($request->hasFile('foto_principal')) {
+                $validatedData['foto_principal_path'] = $request->file('foto_principal')->store('legislaturas', 'public');
+            }
+            unset($validatedData['foto_principal']);
 
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Redireciona para a página de listagem com uma mensagem de sucesso.
-        return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura criada com sucesso.');
+            // Cria a nova legislatura
+            return Legislatura::create($validatedData);
+        });
+
+        // Redireciona para a página de edição para que o usuário possa adicionar os membros.
+        return Redirect::route('admin.legislaturas.edit', $legislatura->id)
+            ->with('success', 'Legislatura criada. Adicione agora a composição.');
     }
 
     public function edit(Legislatura $legislatura)
     {
-        // Carrega os relacionamentos necessários para a edição.
         $legislatura->load('mandatos.politico');
 
-        return inertia('Tenant/Memoria/Legislaturas/Form', [
+        return Inertia::render('Tenant/Memoria/Legislaturas/Form', [
             'legislatura' => $legislatura,
             'politicos' => Politico::orderBy('nome_politico')->get(['id', 'nome_politico']),
         ]);
@@ -58,25 +79,36 @@ class LegislaturaController extends Controller
 
     public function update(Request $request, Legislatura $legislatura)
     {
-        $validated = $request->validate([
+        $validatedData = $request->validate([
             'titulo' => 'required|string|max:255',
             'data_inicio' => 'required|date',
             'data_fim' => 'required|date|after_or_equal:data_inicio',
             'texto_destaque' => 'nullable|string',
             'foto_principal' => 'sometimes|nullable|image|max:2048',
+            'is_atual' => 'required|boolean',
         ]);
 
-        if ($request->hasFile('foto_principal')) {
-            if ($legislatura->foto_principal_path) {
-                Storage::disk('public')->delete($legislatura->foto_principal_path);
+        DB::transaction(function () use ($validatedData, $request, $legislatura) {
+            // Se esta legislatura for marcada como atual, desmarca as outras.
+            if ($validatedData['is_atual']) {
+                Legislatura::where('id', '!=', $legislatura->id)
+                    ->where('is_atual', true)
+                    ->update(['is_atual' => false]);
             }
-            $validated['foto_principal_path'] = $request->file('foto_principal')->store('legislaturas', 'public');
-        }
 
-        $legislatura->update($validated);
+            if ($request->hasFile('foto_principal')) {
+                if ($legislatura->foto_principal_path) {
+                    Storage::disk('public')->delete($legislatura->foto_principal_path);
+                }
+                $validatedData['foto_principal_path'] = $request->file('foto_principal')->store('legislaturas', 'public');
+            }
+            unset($validatedData['foto_principal']);
 
-        // Após atualizar, o correto é continuar na mesma página.
-        return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura atualizada.');
+            $legislatura->update($validatedData);
+        });
+
+        // Retorna para a mesma página (edição) com a mensagem de sucesso.
+        return back()->with('success', 'Legislatura atualizada com sucesso.');
     }
 
     public function destroy(Legislatura $legislatura)
@@ -86,6 +118,6 @@ class LegislaturaController extends Controller
         }
         $legislatura->delete();
 
-        return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura excluída.');
+        return Redirect::route('admin.legislaturas.index')->with('success', 'Legislatura excluída com sucesso.');
     }
 }

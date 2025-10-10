@@ -34,7 +34,7 @@ class SolicitacaoStatusAlterado extends Notification
             'solicitacao_id' => $this->solicitacao->id,
             'titulo' => 'Status da Solicitação Alterado',
             'mensagem' => 'O status da sua solicitação #'.$this->solicitacao->id.' foi atualizado para: '.$this->novoStatusNome,
-            'url' => route('portal.solicitacoes.show', $this->solicitacao->id, false),
+            'url' => route('portalcidadao.solicitacoes.show', $this->solicitacao->id, false),
         ];
     }
 }

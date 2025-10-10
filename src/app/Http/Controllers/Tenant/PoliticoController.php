@@ -7,6 +7,7 @@ use App\Models\Tenant\Politico;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule; // Importação da classe Rule
 
 class PoliticoController extends Controller
 {
@@ -28,6 +29,12 @@ class PoliticoController extends Controller
             'partido' => 'nullable|string|max:50',
             'biografia' => 'nullable|string',
             'foto' => 'nullable|image|max:1024',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('tenant.politicos', 'email'),
+            ],
         ]);
 
         if ($request->hasFile('foto')) {
@@ -47,9 +54,26 @@ class PoliticoController extends Controller
             'nome_completo' => 'required|string|max:255',
             'nome_politico' => 'required|string|max:100',
             'partido' => 'nullable|string|max:50',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('tenant.politicos')->ignore($politico->id),
+            ],
             'biografia' => 'nullable|string',
             'foto' => 'nullable|image|max:1024',
         ]);
+
+        // Validação customizada: Impede a remoção do e-mail se o político está na legislatura atual.
+        $isInCurrentLegislatura = $politico->mandatos()->whereHas('legislatura', function ($query) {
+            $query->where('is_atual', true);
+        })->exists();
+
+        if ($isInCurrentLegislatura && empty($validated['email'])) {
+            throw ValidationException::withMessages([
+                'email' => 'O e-mail é obrigatório para políticos que fazem parte da legislatura atual e não pode ser removido.',
+            ]);
+        }
 
         if ($request->hasFile('foto')) {
             if ($politico->foto_path) {

@@ -65,7 +65,7 @@ const formatDate = (dateString) => {
                                 {{ mensagem.status }}
                             </span>
                         </div>
-                        <Link :href="route('gabinete-virtual.index')" class="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                        <Link :href="route('portalcidadao.gabinete-virtual.index')" class="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <ArrowLeft class="h-5 w-5" />
                         </Link>
                     </div>

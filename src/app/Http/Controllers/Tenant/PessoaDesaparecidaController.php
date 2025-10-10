@@ -48,8 +48,9 @@ class PessoaDesaparecidaController extends Controller
 
         $tenantId = Tenant::current()->id;
 
-        // Salva os arquivos no disco 'public', dentro de uma pasta específica do tenant.
+        // A foto é pública para ser exibida no portal.
         $fotoPath = $request->file('foto')->store("tenants/{$tenantId}/pessoas_desaparecidas/fotos", 'public');
+        // O B.O. é privado e salvo no disco padrão (tenant_private).
         $boPath = $request->file('boletim_ocorrencia')->store("tenants/{$tenantId}/pessoas_desaparecidas/boletins");
 
         PessoaDesaparecida::create([
@@ -67,13 +68,14 @@ class PessoaDesaparecidaController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the status of the specified resource in storage.
      *
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, PessoaDesaparecida $pessoaDesaparecida)
     {
-        $this->authorize('update', $pessoaDesaparecida);
+        // AJUSTE: Usando a autorização 'moderate' que é mais específica para esta ação.
+        $this->authorize('moderate', $pessoaDesaparecida);
 
         $validated = $request->validate([
             'status' => 'required|in:Aguardando Aprovação,Publicado,Encontrado',
@@ -96,7 +98,7 @@ class PessoaDesaparecidaController extends Controller
     {
         $this->authorize('delete', $pessoaDesaparecida);
 
-        // Deleta os arquivos do disco público antes de deletar o registro
+        // Deleta os arquivos do disco antes de deletar o registro
         Storage::disk('public')->delete($pessoaDesaparecida->foto_path);
         Storage::delete($pessoaDesaparecida->boletim_ocorrencia_path);
 
@@ -105,6 +107,9 @@ class PessoaDesaparecidaController extends Controller
         return Redirect::route('admin.pessoas-desaparecidas.index')->with('success', 'Registro excluído com sucesso.');
     }
 
+    /**
+     * Download the police report for the specified resource.
+     */
     public function downloadBoletim(PessoaDesaparecida $pessoaDesaparecida): StreamedResponse
     {
         $this->authorize('viewBoletim', $pessoaDesaparecida);

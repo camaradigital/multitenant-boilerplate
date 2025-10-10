@@ -11,82 +11,84 @@ class CampanhaPolicy
     use HandlesAuthorization;
 
     /**
-     * Determina se o usuário pode visualizar qualquer modelo.
+     * Determine whether the user can view any models.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function viewAny(User $user)
     {
-        // Apenas usuários com a permissão 'gerenciar campanhas' podem listar as campanhas.
-        return $user->can('gerenciar campanhas');
+        return $user->can('campanhas.visualizar_todos');
     }
 
     /**
-     * Determina se o usuário pode visualizar o modelo.
+     * Determine whether the user can view the model.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function view(User $user, CampanhaComunicacao $campanhaComunicacao)
     {
-        // A mesma permissão para visualizar a lista serve para ver um item específico.
-        return $user->can('gerenciar campanhas');
+        return $user->can('campanhas.visualizar');
     }
 
     /**
-     * Determina se o usuário pode criar modelos.
+     * Determine whether the user can create models.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function create(User $user)
     {
-        // Apenas usuários com a permissão 'gerenciar campanhas' podem criar.
-        return $user->can('gerenciar campanhas');
+        return $user->can('campanhas.criar');
     }
 
     /**
-     * Determina se o usuário pode atualizar o modelo.
-     * (Método não utilizado no controller atual, mas é uma boa prática tê-lo)
+     * Determine whether the user can update the model.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function update(User $user, CampanhaComunicacao $campanhaComunicacao)
     {
-        // Por padrão, desabilitado. Poderia ser, por exemplo:
-        // return $user->can('gerenciar campanhas');
-        return false;
+        return $user->can('campanhas.atualizar');
     }
 
     /**
-     * Determina se o usuário pode deletar o modelo.
-     * (Método não utilizado no controller atual, mas é uma boa prática tê-lo)
+     * Determine whether the user can delete the model.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function delete(User $user, CampanhaComunicacao $campanhaComunicacao)
     {
-        // Por padrão, desabilitado.
-        return false;
+        return $user->can('campanhas.excluir');
     }
 
     /**
-     * Determina se o usuário pode restaurar o modelo.
+     * Determine whether the user can send the campaign.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
+     */
+    public function send(User $user, CampanhaComunicacao $campanhaComunicacao)
+    {
+        return $user->can('campanhas.enviar');
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     *
+     * @return bool
      */
     public function restore(User $user, CampanhaComunicacao $campanhaComunicacao)
     {
-        //
+        // Esta ação não foi definida no seeder, mantida como false.
         return false;
     }
 
     /**
-     * Determina se o usuário pode deletar permanentemente o modelo.
+     * Determine whether the user can permanently delete the model.
      *
-     * @return \Illuminate\Auth\Access\Response|bool
+     * @return bool
      */
     public function forceDelete(User $user, CampanhaComunicacao $campanhaComunicacao)
     {
-        //
+        // Esta ação não foi definida no seeder, mantida como false.
         return false;
     }
 }

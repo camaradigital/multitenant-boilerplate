@@ -3,21 +3,28 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant\Permission; // CORREÇÃO: Usar o model personalizado
-use App\Models\Tenant\Role;       // CORREÇÃO: Usar o model personalizado
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Models\Tenant\Permission;
+use App\Models\Tenant\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 
 class RolePermissionController extends Controller
 {
-    use AuthorizesRequests;
+    /**
+     * Aplica a RolePolicy aos métodos do resource controller.
+     * O segundo parâmetro 'rolesPermission' deve corresponder ao nome do parâmetro na definição da rota.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Role::class, 'rolesPermission');
+    }
 
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
-        $this->authorize('gerenciar parametros');
-
         $guardName = 'tenant';
 
         return inertia('Tenant/RolesPermissions/Index', [
@@ -26,12 +33,12 @@ class RolePermissionController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        $this->authorize('gerenciar parametros');
-
         $validated = $request->validate([
-            // Validação aprimorada para garantir unicidade dentro do guard 'tenant'
             'name' => 'required|string|max:50|unique:tenant.roles,name,NULL,id,guard_name,tenant',
             'permissions' => 'required|array',
             'permissions.*' => 'exists:tenant.permissions,id',
@@ -43,16 +50,21 @@ class RolePermissionController extends Controller
         return Redirect::route('admin.roles-permissions.index')->with('success', 'Papel criado com sucesso.');
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, Role $rolesPermission)
     {
-        $this->authorize('gerenciar parametros');
-
         $validated = $request->validate([
-            // Validação aprimorada para ignorar o ID atual dentro do guard 'tenant'
             'name' => ['required', 'string', 'max:50', Rule::unique('tenant.roles', 'name')->where('guard_name', 'tenant')->ignore($rolesPermission->id)],
             'permissions' => 'required|array',
             'permissions.*' => 'exists:tenant.permissions,id',
         ]);
+
+        // Regra de negócio: impede a renomeação de papéis essenciais.
+        if (in_array($rolesPermission->getOriginal('name'), ['Admin Tenant', 'Funcionario', 'Cidadao', 'Advogado Coordenador']) && $rolesPermission->getOriginal('name') !== $validated['name']) {
+            return Redirect::back()->with('error', 'Este papel é essencial e não pode ser renomeado.');
+        }
 
         $rolesPermission->name = $validated['name'];
         $rolesPermission->save();
@@ -62,14 +74,12 @@ class RolePermissionController extends Controller
         return Redirect::route('admin.roles-permissions.index')->with('success', 'Papel atualizado com sucesso.');
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(Role $rolesPermission)
     {
-        $this->authorize('gerenciar parametros');
-
-        if (in_array($rolesPermission->name, ['Admin Tenant', 'Funcionario', 'Cidadao'])) {
-            return Redirect::back()->with('error', 'Este papel é essencial e não pode ser excluído.');
-        }
-
+        // A autorização, incluindo a verificação de papel essencial, já foi tratada pela RolePolicy.
         $rolesPermission->delete();
 
         return Redirect::route('admin.roles-permissions.index')->with('success', 'Papel excluído com sucesso.');

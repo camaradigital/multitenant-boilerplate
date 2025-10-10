@@ -129,7 +129,7 @@ function solicitar(servicoId) {
         return;
     }
     // CORREÇÃO: Usando o nome da rota definido no seu arquivo de rotas
-    router.visit(route('portal.solicitacoes.create', { servico: servicoId }));
+    router.visit(route('portalcidadao.solicitacoes.create', { servico: servicoId }));
 }
 
 const showBackToTop = ref(false);

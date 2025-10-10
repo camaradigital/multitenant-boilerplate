@@ -4,29 +4,36 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Permission; // Usando o model personalizado
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 
 class PermissionController extends Controller
 {
-    use AuthorizesRequests;
+    /**
+     * Aplica a policy aos métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Permission::class, 'permission');
+    }
 
     public function index()
     {
-        $this->authorize('gerenciar parametros');
+        // A autorização 'viewAny' é aplicada automaticamente pelo __construct
+
+        $permissions = Permission::where('guard_name', 'tenant')
+            ->latest()
+            ->get();
 
         return inertia('Tenant/Permissions/Index', [
-            'permissions' => Permission::where('guard_name', 'tenant')
-                ->latest()
-                ->paginate(15),
+            'permissions' => $permissions,
         ]);
     }
 
     public function store(Request $request)
     {
-        $this->authorize('gerenciar parametros');
+        // A autorização 'create' é aplicada automaticamente pelo __construct
 
         $validated = $request->validate([
             'name' => 'required|string|max:125|unique:tenant.permissions,name,NULL,id,guard_name,tenant',
@@ -42,7 +49,7 @@ class PermissionController extends Controller
 
     public function update(Request $request, Permission $permission)
     {
-        $this->authorize('gerenciar parametros');
+        // A autorização 'update' é aplicada automaticamente pelo __construct
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:125', Rule::unique('tenant.permissions', 'name')->where('guard_name', 'tenant')->ignore($permission->id)],
@@ -55,7 +62,7 @@ class PermissionController extends Controller
 
     public function destroy(Permission $permission)
     {
-        $this->authorize('gerenciar parametros');
+        // A autorização 'delete' é aplicada automaticamente pelo __construct
 
         // Proteção: não permite excluir uma permissão que está sendo usada por algum papel.
         if ($permission->roles()->count() > 0) {

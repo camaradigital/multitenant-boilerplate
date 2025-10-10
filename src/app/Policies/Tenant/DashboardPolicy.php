@@ -11,6 +11,8 @@ class DashboardPolicy
 
     /**
      * Determina se o usuário pode visualizar o dashboard do cidadão (Portal Pessoal).
+     * A regra de negócio aqui é que o usuário precisa ser um Cidadão.
+     * Manter a verificação de Role é o mais direto e correto para este caso.
      */
     public function viewCidadaoDashboard(User $user): bool
     {
@@ -19,12 +21,10 @@ class DashboardPolicy
 
     /**
      * Determina se o usuário pode visualizar o dashboard administrativo.
-     *
-     * A lógica aqui é permitir o acesso a qualquer usuário que NÃO seja um 'Cidadao',
-     * o que implicitamente cobre os papéis administrativos.
+     * A verificação foi atualizada para usar a permissão granular 'dashboard.visualizar'.
      */
     public function viewAdminDashboard(User $user): bool
     {
-        return ! $user->hasRole('Cidadao');
+        return $user->can('dashboard.visualizar');
     }
 }

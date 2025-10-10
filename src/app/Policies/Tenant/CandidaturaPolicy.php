@@ -14,35 +14,32 @@ class CandidaturaPolicy
 
     /**
      * Determine whether the user can view any models.
-     * Apenas administradores podem ver a lista de todas as candidaturas.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('candidaturas.visualizar_todos');
     }
 
     /**
      * Determine whether the user can view the model.
-     * O administrador pode ver qualquer uma, ou o utilizador pode ver a sua própria.
      */
     public function view(User $user, Candidatura $candidatura): bool
     {
-        if ($user->can('gerenciar vagas de emprego')) {
-            return true;
-        }
-
-        return $user->id === $candidatura->user_id;
+        // Permite se o usuário tiver permissão para ver todas OU se for o dono da candidatura.
+        return $user->can('candidaturas.visualizar') || $user->id === $candidatura->user_id;
     }
 
     /**
      * Determine whether the user can create models.
-     * Qualquer utilizador autenticado pode candidatar-se, mas apenas uma vez por vaga.
-     *
-     * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function create(User $user, Vaga $vaga)
+    public function create(User $user, Vaga $vaga): Response
     {
-        // Verifica se o utilizador já se candidatou a esta vaga específica
+        // CORREÇÃO: Apenas usuários com o perfil 'Cidadao' podem se candidatar.
+        if (! $user->hasRole('Cidadao')) {
+            return Response::deny('Apenas cidadãos podem se candidatar a vagas.');
+        }
+
+        // Verifica se o cidadão já se candidatou a esta vaga específica
         $hasApplied = Candidatura::where('user_id', $user->id)
             ->where('vaga_id', $vaga->id)
             ->exists();
@@ -54,19 +51,18 @@ class CandidaturaPolicy
 
     /**
      * Determine whether the user can update the model.
-     * Apenas administradores podem atualizar o estado de uma candidatura.
      */
     public function update(User $user, Candidatura $candidatura): bool
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('candidaturas.atualizar_status');
     }
 
     /**
      * Determine whether the user can delete the model.
-     * Apenas administradores podem apagar uma candidatura.
      */
     public function delete(User $user, Candidatura $candidatura): bool
     {
-        return $user->can('gerenciar vagas de emprego');
+        // A exclusão de candidatura pode ser controlada pela mesma permissão de atualização de status.
+        return $user->can('candidaturas.atualizar_status');
     }
 }

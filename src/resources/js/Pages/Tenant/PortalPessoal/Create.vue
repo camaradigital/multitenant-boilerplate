@@ -75,11 +75,11 @@ const formatFileSize = (bytes) => {
 
 // Função principal de envio
 const submit = () => {
-    form.post(route('portal.solicitacoes.store'), {
+    form.post(route('portalcidadao.solicitacoes.store'), {
         forceFormData: true, // Garante que arquivos sejam enviados corretamente
         onSuccess: () => {
             // Navegação manual após o sucesso
-            router.visit(route('portal.meu-painel'));
+            router.visit(route('portalcidadao.meu-painel'));
         },
         onError: (errors) => {
             // Voltar para a etapa 2 se o erro for de validação de observações/documentos
@@ -179,7 +179,7 @@ const submit = () => {
                         </div>
 
                         <div class="mt-10 text-center">
-                            <Link :href="route('portal.meu-painel')" class="inline-flex items-center button-secondary">
+                            <Link :href="route('portalcidadao.meu-painel')" class="inline-flex items-center button-secondary">
                                 <ArrowLeft class="w-4 h-4 mr-2" />
                                 Voltar ao Painel
                             </Link>

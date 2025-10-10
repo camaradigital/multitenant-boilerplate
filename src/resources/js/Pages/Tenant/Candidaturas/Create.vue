@@ -13,7 +13,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('candidaturas.store', { vaga: props.vaga.id }), {
+    form.post(route('portalcidadao.candidaturas.store', { vaga: props.vaga.id }), {
         onSuccess: () => form.reset(),
     });
 };

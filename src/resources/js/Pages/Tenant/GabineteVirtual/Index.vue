@@ -27,7 +27,7 @@ const closeModal = () => {
 };
 
 const submit = () => {
-    form.post(route('gabinete-virtual.store'), {
+    form.post(route('portalcidadao.gabinete-virtual.store'), {
         onSuccess: () => {
             closeModal();
         },
@@ -100,7 +100,7 @@ const formatDate = (dateString) => {
 
                         <!-- Lista de Cards de Mensagens -->
                         <div v-else class="space-y-3">
-                            <Link v-for="mensagem in mensagens.data" :key="mensagem.id" :href="route('gabinete-virtual.show', mensagem.id)" class="block p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 group">
+                            <Link v-for="mensagem in mensagens.data" :key="mensagem.id" :href="route('portalcidadao.gabinete-virtual.show', mensagem.id)" class="block p-4 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-800/50 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 group">
                                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div class="flex-grow">
                                         <div class="flex items-center gap-3">

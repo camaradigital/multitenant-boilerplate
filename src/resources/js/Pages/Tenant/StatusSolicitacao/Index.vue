@@ -1,8 +1,9 @@
 <script setup>
-import { ref } from 'vue';
-import { useForm, Head, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { useForm, Head } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import {
     Dialog,
     DialogPanel,
@@ -19,6 +20,32 @@ const props = defineProps({
 const isModalOpen = ref(false);
 const isEditing = ref(false);
 
+// --- Lógica para o Modal de Exclusão ---
+const confirmingStatusDeletion = ref(false);
+const statusToDelete = ref(null);
+const deleteForm = useForm({});
+
+const confirmStatusDeletion = (statusItem) => {
+    statusToDelete.value = statusItem;
+    confirmingStatusDeletion.value = true;
+};
+
+const deleteStatus = () => {
+    deleteForm.delete(route('admin.status-solicitacao.destroy', statusToDelete.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            confirmingStatusDeletion.value = false;
+            statusToDelete.value = null;
+        }
+    });
+};
+
+const deleteConfirmationMessage = computed(() => {
+    return statusToDelete.value ? `Tem certeza que deseja remover o status "${statusToDelete.value.nome}"? Esta ação não pode ser desfeita.` : '';
+});
+// --- Fim da Lógica de Exclusão ---
+
+
 const form = useForm({
     id: null,
     nome: '',
@@ -30,6 +57,7 @@ const form = useForm({
 const openModal = () => {
     isEditing.value = false;
     form.reset();
+    form.clearErrors();
     isModalOpen.value = true;
 };
 
@@ -40,6 +68,7 @@ const editStatus = (statusItem) => {
     form.cor = statusItem.cor;
     form.is_default_abertura = statusItem.is_default_abertura;
     form.is_final = statusItem.is_final;
+    form.clearErrors();
     isModalOpen.value = true;
 };
 
@@ -49,7 +78,6 @@ const closeModal = () => {
 
 const submit = () => {
     const routeName = isEditing.value ? 'admin.status-solicitacao.update' : 'admin.status-solicitacao.store';
-    // CORREÇÃO: o nome do parâmetro foi alterado de status_solicitacao para statusSolicitacao
     const params = isEditing.value ? { statusSolicitacao: form.id } : {};
 
     const options = {
@@ -61,14 +89,6 @@ const submit = () => {
         form.put(route(routeName, params), options);
     } else {
         form.post(route(routeName), options);
-    }
-};
-
-const deleteStatus = (statusItem) => {
-    if (confirm('Tem certeza que deseja remover este status?')) {
-        router.delete(route('admin.status-solicitacao.destroy', statusItem), {
-            preserveScroll: true,
-        });
     }
 };
 </script>
@@ -83,53 +103,56 @@ const deleteStatus = (statusItem) => {
             </h2>
         </template>
 
-        <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-5xl">
-                <div class="form-icon"><ClipboardCheck :size="32" class="icon-in-badge" /></div>
+        <div class="py-12 px-4 sm:px-6 lg:px-8">
+             <div class="max-w-7xl mx-auto">
+                <div class="content-container">
+                    <div class="form-icon"><ClipboardCheck :size="32" class="icon-in-badge" /></div>
 
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-6 border-b-dynamic">
-                    <div>
-                        <h2 class="header-title">Status de Solicitação</h2>
-                        <p class="form-subtitle">Defina as etapas do seu fluxo de atendimento.</p>
-                    </div>
-                    <div class="w-full md:w-auto">
-                        <button @click="openModal" class="btn-primary">
-                            <Plus class="h-4 w-4 mr-2" />
-                            Novo Status
-                        </button>
-                    </div>
-                </div>
-
-                <div class="p-4 md:p-6">
-                    <div v-if="status.data.length > 0" class="space-y-4">
-                        <div v-for="statusItem in status.data" :key="statusItem.id" class="role-card">
-                            <div class="flex items-center gap-4">
-                                <div class="w-6 h-6 rounded-full border-2 border-white/20" :style="{ backgroundColor: statusItem.cor }"></div>
-                                <div class="flex-1">
-                                    <p class="role-name">{{ statusItem.nome }}</p>
-                                    <div class="mt-2 flex flex-wrap gap-2">
-                                        <span v-if="statusItem.is_default_abertura" class="badge-special">
-                                            Status Inicial Padrão
-                                        </span>
-                                        <span v-if="statusItem.is_final" class="badge-special">
-                                            Status de Finalização
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2 ml-4">
-                                <button @click="editStatus(statusItem)" class="table-action-btn hover:text-amber-600 dark:hover:text-yellow-400" title="Editar"><Pencil class="w-5 h-5" /></button>
-                                <button @click="deleteStatus(statusItem)" class="table-action-btn hover:text-red-600 dark:hover:text-red-400" title="Excluir"><Trash2 class="w-5 h-5" /></button>
-                            </div>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-6 border-b-dynamic">
+                        <div>
+                            <h2 class="header-title">Status de Solicitação</h2>
+                            <p class="form-subtitle">Defina as etapas do seu fluxo de atendimento.</p>
+                        </div>
+                        <div class="w-full md:w-auto">
+                            <button @click="openModal" class="btn-primary">
+                                <Plus class="h-4 w-4 mr-2" />
+                                Novo Status
+                            </button>
                         </div>
                     </div>
-                     <div v-else class="text-center py-10">
-                        <p class="text-gray-500 dark:text-gray-400">Nenhum status encontrado.</p>
-                     </div>
-                </div>
 
-                <div class="px-6 pb-4">
-                    <Pagination :links="status.links" />
+                    <div class="p-4 md:p-6">
+                        <div v-if="status.data.length > 0">
+                            <ul class="divide-y divide-gray-200 dark:divide-white/10">
+                                <li v-for="statusItem in status.data" :key="statusItem.id" class="status-item group" :style="{ '--status-color': statusItem.cor }">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="status-name">{{ statusItem.nome }}</p>
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <span v-if="statusItem.is_default_abertura" class="badge-special">
+                                                Status Inicial Padrão
+                                            </span>
+                                            <span v-if="statusItem.is_final" class="badge-special">
+                                                Status de Finalização
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click="editStatus(statusItem)" class="table-action-btn hover:text-amber-600 dark:hover:text-yellow-400" title="Editar"><Pencil class="w-5 h-5" /></button>
+                                        <button @click="confirmStatusDeletion(statusItem)" class="table-action-btn hover:text-red-600 dark:hover:text-red-400" title="Excluir"><Trash2 class="w-5 h-5" /></button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                         <div v-else class="empty-state">
+                            <ClipboardCheck class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                            <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">Nenhum status encontrado</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Comece adicionando um novo status para seu fluxo de atendimento.</p>
+                        </div>
+                    </div>
+
+                    <div v-if="status.data.length > 0" class="px-6 pb-4 border-t border-gray-200 dark:border-white/10 pt-4">
+                        <Pagination :links="status.links" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -151,29 +174,48 @@ const deleteStatus = (statusItem) => {
                                             <button @click="closeModal" type="button" class="table-action-btn"><X class="w-5 h-5" /></button>
                                         </DialogTitle>
 
-                                        <div class="mt-6 space-y-6">
-                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div class="md:col-span-2">
-                                                    <label for="nome" class="form-label">Nome do Status</label>
-                                                    <input type="text" v-model="form.nome" id="nome" class="form-input" required>
-                                                    <div v-if="form.errors.nome" class="form-error">{{ form.errors.nome }}</div>
+                                        <div class="mt-6 space-y-8">
+                                            <fieldset class="space-y-6">
+                                                <legend class="section-title">Detalhes do Status</legend>
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    <div class="md:col-span-2">
+                                                        <label for="nome" class="form-label">Nome do Status</label>
+                                                        <input type="text" v-model="form.nome" id="nome" class="form-input" required>
+                                                        <div v-if="form.errors.nome" class="form-error">{{ form.errors.nome }}</div>
+                                                    </div>
+                                                    <div>
+                                                        <label for="cor" class="form-label">Cor</label>
+                                                        <input type="color" v-model="form.cor" id="cor" class="form-input !p-1 !h-12 w-full">
+                                                        <div v-if="form.errors.cor" class="form-error">{{ form.errors.cor }}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <label for="cor" class="form-label">Cor</label>
-                                                    <input type="color" v-model="form.cor" id="cor" class="form-input !p-1 !h-12">
-                                                    <div v-if="form.errors.cor" class="form-error">{{ form.errors.cor }}</div>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" v-model="form.is_default_abertura" class="form-checkbox">
-                                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Marcar como status inicial padrão</span>
+                                            </fieldset>
+
+                                            <fieldset class="space-y-4">
+                                                <legend class="section-title">Regras</legend>
+                                                 <label for="is_default_abertura" class="toggle-switch-label">
+                                                    <div>
+                                                        <span class="font-medium text-gray-900 dark:text-gray-100">Status Inicial Padrão</span>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-400">Marca este status como o primeiro de toda nova solicitação.</p>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" v-model="form.is_default_abertura" id="is_default_abertura" class="toggle-switch-checkbox">
+                                                        <div class="toggle-switch-bg"></div>
+                                                        <div class="toggle-switch-indicator"></div>
+                                                    </div>
                                                 </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" v-model="form.is_final" class="form-checkbox">
-                                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Marcar como status de finalização (Ex: Concluído, Cancelado)</span>
+                                                <label for="is_final" class="toggle-switch-label">
+                                                     <div>
+                                                        <span class="font-medium text-gray-900 dark:text-gray-100">Status de Finalização</span>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-400">Indica que a solicitação foi concluída ou cancelada.</p>
+                                                    </div>
+                                                    <div class="toggle-switch">
+                                                        <input type="checkbox" v-model="form.is_final" id="is_final" class="toggle-switch-checkbox">
+                                                        <div class="toggle-switch-bg"></div>
+                                                        <div class="toggle-switch-indicator"></div>
+                                                    </div>
                                                 </label>
-                                            </div>
+                                            </fieldset>
                                         </div>
                                     </div>
 
@@ -190,6 +232,15 @@ const deleteStatus = (statusItem) => {
                 </div>
             </Dialog>
         </TransitionRoot>
+
+        <ConfirmationModal
+            :show="confirmingStatusDeletion"
+            title="Excluir Status"
+            :message="deleteConfirmationMessage"
+            @close="confirmingStatusDeletion = false"
+            @confirm="deleteStatus"
+            danger
+        />
     </TenantLayout>
 </template>
 
@@ -198,18 +249,32 @@ const deleteStatus = (statusItem) => {
 .content-container { @apply relative w-full pt-16 rounded-3xl shadow-xl transition-all duration-300; @apply bg-white border border-gray-200; @apply dark:bg-[#102C26]/60 dark:border-2 dark:border-green-400/25 dark:backdrop-blur-sm; }
 .border-b-dynamic { @apply border-b border-gray-200 dark:border-green-400/10; }
 .form-icon { @apply absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full flex justify-center items-center shadow-lg; @apply bg-emerald-600 shadow-emerald-500/30 dark:bg-[#43DB9E] dark:shadow-green-400/30; }
-.icon-in-badge { @apply text-white; }
+.icon-in-badge { @apply text-white dark:text-[#0A1E1C]; }
 .header-title { @apply text-2xl font-bold text-gray-900 dark:text-white; }
 .form-subtitle { @apply text-sm mt-1 text-gray-500 dark:text-gray-400; }
-.role-card { @apply bg-white dark:bg-white/5 p-5 rounded-xl border border-gray-200 dark:border-white/10 flex items-center justify-between transition hover:shadow-md hover:border-gray-300 dark:hover:border-white/20; }
-.role-name { @apply text-lg font-bold text-emerald-800 dark:text-emerald-300; }
+.empty-state { @apply text-center py-12 px-6; }
+
+/* --- NOVOS ESTILOS PARA A LISTA --- */
+.status-item { @apply relative flex items-center justify-between p-4 pl-6 transition duration-150 ease-in-out; }
+.status-item::before { @apply content-[''] absolute left-0 top-0 h-full w-1 rounded-l-md; background-color: var(--status-color); }
+.status-name { @apply text-lg font-bold text-emerald-800 dark:text-emerald-300; }
 .badge-special { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-300; }
+
 .btn-primary { @apply flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all focus:outline-none focus:ring-2 focus:ring-offset-2; @apply focus:ring-offset-white dark:focus:ring-offset-gray-800 bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 dark:bg-[#43DB9E] dark:text-[#0A1E1C] dark:hover:bg-green-500 dark:focus:ring-green-400; @apply disabled:opacity-50; }
 .btn-secondary { @apply inline-flex items-center px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl font-semibold text-xs text-gray-700 dark:text-gray-200 uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150; }
 .table-action-btn { @apply p-2 rounded-full transition-colors text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10; }
-.modal-panel { @apply w-full max-w-2xl transform overflow-hidden rounded-2xl text-left align-middle shadow-xl transition-all; @apply bg-white dark:bg-gray-800; }
+.modal-panel { @apply w-full max-w-xl transform overflow-hidden rounded-2xl text-left align-middle shadow-xl transition-all; @apply bg-white dark:bg-gray-800; }
 .form-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1; }
 .form-input { @apply block w-full text-sm rounded-xl transition-all h-12 py-3.5 px-4; @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400; @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500; @apply dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400; @apply dark:focus:ring-green-500 dark:focus:border-green-500; }
 .form-error { @apply text-sm text-red-600 dark:text-red-400 mt-1; }
-.form-checkbox { @apply h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 dark:border-gray-600; }
+.section-title { @apply text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider; }
+
+/* --- ESTILOS PARA TOGGLE SWITCH --- */
+.toggle-switch-label { @apply flex items-center justify-between cursor-pointer text-sm p-4 rounded-lg bg-gray-50 dark:bg-white/5; }
+.toggle-switch { @apply relative inline-flex items-center h-6 rounded-full w-11 transition-colors flex-shrink-0; }
+.toggle-switch-checkbox { @apply absolute w-full h-full opacity-0 cursor-pointer; }
+.toggle-switch-bg { @apply w-full h-full rounded-full transition-colors; @apply bg-gray-200 dark:bg-gray-700; }
+.toggle-switch-indicator { @apply absolute left-1 top-1 w-4 h-4 rounded-full transition-transform; @apply bg-white; }
+.toggle-switch-checkbox:checked + .toggle-switch-bg { @apply bg-emerald-600 dark:bg-green-500; }
+.toggle-switch-checkbox:checked ~ .toggle-switch-indicator { @apply translate-x-5; }
 </style>

@@ -27,7 +27,8 @@ import {
     TrendingUp,
     MessageSquare,
     Send,
-    BrainCircuit
+    BrainCircuit,
+    Gavel
 } from 'lucide-vue-next';
 
 /**
@@ -39,7 +40,7 @@ const coreNav = [
         href: route('tenant.dashboard'),
         current: 'tenant.dashboard',
         icon: LayoutDashboard,
-        permission: null // Acessível a todos
+        permission: 'dashboard.visualizar'
     },
 ];
 
@@ -50,9 +51,16 @@ const citizenNav = [
     {
         name: 'Fale com o Presidente',
         icon: MessageSquare,
-        permission: 'ver portal', // Apenas cidadãos
-        href: route('gabinete-virtual.index'),
-        current: 'gabinete-virtual.*',
+        permission: 'gabinete_virtual.criar', // Permissão para cidadão criar mensagem
+        href: route('portalcidadao.gabinete-virtual.index'),
+        current: 'portalcidadao.gabinete-virtual.*',
+    },
+    {
+        name: 'Indicação de Projeto',
+        icon: Gavel,
+        permission: 'sugestoes_de_lei.criar', // Permissão para cidadão criar sugestão
+        href: route('portalcidadao.sugestao.create'),
+        current: 'portalcidadao.sugestao.*',
     },
 ];
 
@@ -64,7 +72,7 @@ const publicNav = [
     {
         name: 'Acesso Rápido',
         icon: Landmark,
-        permission: 'ver portal', // <- A permissão para Cidadãos
+        permission: 'portalcidadao.visualizar', // Permissão para ver o portal
         children: [
             { name: 'Documentos Perdidos', href: route('portal.achados-e-perdidos'), current: 'portal.achados-e-perdidos', icon: FileBadge, permission: null },
             { name: 'Pessoas Desaparecidas', href: route('portal.pessoas-desaparecidas'), current: 'portal.pessoas-desaparecidas', icon: UserSearch, permission: null },
@@ -81,15 +89,16 @@ const managementNav = [
     {
         name: 'Gerenciamento',
         icon: Settings,
-        permission: null,
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Solicitações', href: route('admin.solicitacoes.index'), current: 'admin.solicitacoes.*', icon: FileText, permission: 'ver solicitacoes' },
-            { name: 'Funcionários', href: route('admin.funcionarios.index'), current: 'admin.funcionarios.*', icon: Users, permission: 'gerenciar funcionarios' },
-            { name: 'Cidadãos', href: route('admin.cidadaos.index'), current: 'admin.cidadaos.*', icon: UserCheck, permission: 'gerenciar cidadaos' },
-            { name: 'Serviços', href: route('admin.servicos.index'), current: 'admin.servicos.*', icon: Wrench, permission: 'gerenciar servicos' },
-            { name: 'Tipos de Serviço', href: route('admin.tipos-servico.index'), current: 'admin.tipos-servico.*', icon: FolderKanban, permission: 'gerenciar servicos' },
-            { name: 'Entidades', href: route('admin.entidades.index'), current: 'admin.entidades.*', icon: Library, permission: 'gerenciar entidades' },
-            { name: 'Convênios', href: route('admin.convenios.index'), current: 'admin.convenios.*', icon: Handshake, permission: 'gerenciar entidades' },
+            { name: 'Solicitações', href: route('admin.solicitacoes.index'), current: 'admin.solicitacoes.*', icon: FileText, permission: 'solicitacoes.visualizar_todos' },
+            { name: 'Sugestões de Projetos', href: route('admin.sugestoes.index'), current: 'admin.sugestoes.*', icon: Gavel, permission: 'sugestoes_de_lei.visualizar_todos' },
+            { name: 'Funcionários', href: route('admin.funcionarios.index'), current: 'admin.funcionarios.*', icon: Users, permission: 'funcionarios.visualizar_todos' },
+            { name: 'Cidadãos', href: route('admin.cidadaos.index'), current: 'admin.cidadaos.*', icon: UserCheck, permission: 'cidadaos.visualizar_todos' },
+            { name: 'Serviços', href: route('admin.servicos.index'), current: 'admin.servicos.*', icon: Wrench, permission: 'servicos.visualizar_todos' },
+            { name: 'Tipos de Serviço', href: route('admin.tipos-servico.index'), current: 'admin.tipos-servico.*', icon: FolderKanban, permission: 'tipos_servico.visualizar_todos' },
+            { name: 'Entidades', href: route('admin.entidades.index'), current: 'admin.entidades.*', icon: Library, permission: 'entidades.visualizar_todos' },
+            { name: 'Convênios', href: route('admin.convenios.index'), current: 'admin.convenios.*', icon: Handshake, permission: 'convenios.visualizar_todos' },
         ]
     },
 ];
@@ -101,10 +110,10 @@ const jobsNav = [
     {
         name: 'Vagas de Emprego',
         icon: Briefcase,
-        permission: 'gerenciar vagas de emprego',
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Vagas', href: route('admin.vagas.index'), current: 'admin.vagas.*', icon: FileText, permission: 'gerenciar vagas de emprego' },
-            { name: 'Empresas', href: route('admin.empresas.index'), current: 'admin.empresas.*', icon: Building2, permission: 'gerenciar vagas de emprego' },
+            { name: 'Vagas', href: route('admin.vagas.index'), current: 'admin.vagas.*', icon: FileText, permission: 'vagas_de_emprego.visualizar_todos' },
+            { name: 'Empresas', href: route('admin.empresas.index'), current: 'admin.empresas.*', icon: Building2, permission: 'empresas.visualizar_todos' },
         ]
     }
 ];
@@ -116,10 +125,11 @@ const memoriaLegislativaNav = [
     {
         name: 'Memória Legislativa',
         icon: Landmark,
-        permission: 'gerenciar memoria',
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Legislaturas', href: route('admin.legislaturas.index'), current: 'admin.legislaturas.*', icon: CalendarDays, permission: 'gerenciar memoria' },
-            { name: 'Políticos', href: route('admin.politicos.index'), current: 'admin.politicos.*', icon: UserSquare, permission: 'gerenciar memoria' },
+            { name: 'Legislaturas', href: route('admin.legislaturas.index'), current: 'admin.legislaturas.*', icon: CalendarDays, permission: 'memoria_legislativa.visualizar_todos' },
+            { name: 'Políticos', href: route('admin.politicos.index'), current: 'admin.politicos.*', icon: UserSquare, permission: 'memoria_legislativa.visualizar_todos' },
+            { name: 'Comissões', href: route('admin.comissoes.index'), current: 'admin.comissoes.*', icon: Gavel, permission: 'comissoes.visualizar_todos' },
         ]
     }
 ];
@@ -131,34 +141,34 @@ const lostAndFoundNav = [
     {
         name: 'Achados e Perdidos',
         icon: FileBadge,
-        permission: 'gerenciar achados e perdidos',
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Documentos', href: route('admin.achados-e-perdidos-documentos.index'), current: 'admin.achados-e-perdidos-documentos.*', icon: FileBadge, permission: 'gerenciar achados e perdidos' },
-            { name: 'Pessoas Desaparecidas', href: route('admin.pessoas-desaparecidas.index'), current: 'admin.pessoas-desaparecidas.*', icon: UserSearch, permission: 'gerenciar achados e perdidos' },
+            { name: 'Documentos', href: route('admin.achados-e-perdidos-documentos.index'), current: 'admin.achados-e-perdidos-documentos.*', icon: FileBadge, permission: 'achados_e_perdidos.visualizar_todos' },
+            { name: 'Pessoas Desaparecidas', href: route('admin.pessoas-desaparecidas.index'), current: 'admin.pessoas-desaparecidas.*', icon: UserSearch, permission: 'pessoas_desaparecidas.visualizar_todos' },
         ]
     }
 ];
 
 /**
- * @description Novo menu combinado para Comunicação e Gabinete Virtual.
+ * @description Menu combinado para Comunicação e Gabinete Virtual.
  */
 const comunicacaoGabineteNav = [
     {
-        name: 'Gabinete Virtual',
+        name: 'Comunicação',
         icon: MessageSquare,
-        permission: null, // O menu pai será exibido se algum filho tiver permissão
+        permission: null, // Visibilidade depende dos filhos
         children: [
             {
                 name: 'Gabinete Virtual',
                 icon: MessageSquare,
-                permission: 'gerenciar gabinete virtual',
+                permission: 'gabinete_virtual.visualizar_mensagens',
                 href: route('admin.gabinete-virtual.index'),
                 current: 'admin.gabinete-virtual.*',
             },
             {
-                name: 'Comunicação',
+                name: 'Campanhas',
                 icon: Send,
-                permission: 'gerenciar campanhas',
+                permission: 'campanhas.visualizar_todos',
                 href: route('admin.campanhas.index'),
                 current: 'admin.campanhas.*',
             },
@@ -173,15 +183,14 @@ const reportsNav = [
     {
         name: 'Relatórios',
         icon: BarChart3,
-        permission: 'visualizar relatorios',
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Atendimentos', href: route('admin.relatorios.atendimentos'), current: 'admin.relatorios.atendimentos', icon: ClipboardCheck, permission: 'visualizar relatorios' },
-            { name: 'Satisfação', href: route('admin.relatorios.satisfacao'), current: 'admin.relatorios.satisfacao', icon: Star, permission: 'visualizar relatorios' },
-            { name: 'Cidadãos', href: route('admin.relatorios.cidadaos'), current: 'admin.relatorios.cidadaos', icon: Users, permission: 'visualizar relatorios' },
-            // --- NOVOS RELATÓRIOS ---
-            { name: 'Mapeamento de Demandas', href: route('admin.relatorios.demandas-por-bairro'), current: 'admin.relatorios.demandas-por-bairro', icon: MapPin, permission: 'viewDemandasPorBairro' },
-            { name: 'Análise de Tendências', href: route('admin.relatorios.analise-de-tendencias'), current: 'admin.relatorios.analise-de-tendencias', icon: TrendingUp, permission: 'viewAnaliseDeTendencias' },
-            { name: 'Lideranças por Bairro', href: route('admin.mapeamento-politico.index'), current: 'admin.mapeamento-politico.index', icon: BrainCircuit, permission: 'visualizar relatorios' },
+            { name: 'Atendimentos', href: route('admin.relatorios.atendimentos'), current: 'admin.relatorios.atendimentos', icon: ClipboardCheck, permission: 'relatorios.visualizar_atendimentos' },
+            { name: 'Satisfação', href: route('admin.relatorios.satisfacao'), current: 'admin.relatorios.satisfacao', icon: Star, permission: 'relatorios.visualizar_satisfacao' },
+            { name: 'Cidadãos', href: route('admin.relatorios.cidadaos'), current: 'admin.relatorios.cidadaos', icon: Users, permission: 'relatorios.visualizar_cidadaos' },
+            { name: 'Mapeamento de Demandas', href: route('admin.relatorios.demandas-por-bairro'), current: 'admin.relatorios.demandas-por-bairro', icon: MapPin, permission: 'relatorios.visualizar_demandas_por_bairro' },
+            { name: 'Análise de Tendências', href: route('admin.relatorios.analise-de-tendencias'), current: 'admin.relatorios.analise-de-tendencias', icon: TrendingUp, permission: 'relatorios.visualizar_analise_de_tendencias' },
+            { name: 'Lideranças por Bairro', href: route('admin.relatorios.mapeamento-politico.index'), current: 'admin.mapeamento-politico.index', icon: BrainCircuit, permission: 'relatorios.visualizar_mapeamento_politico' },
         ]
     },
 ];
@@ -191,16 +200,16 @@ const reportsNav = [
  */
 const settingsNav = [
     {
-        name: 'Parâmetros',
+        name: 'Configurações',
         icon: SlidersHorizontal,
-        permission: 'gerenciar parametros',
+        permission: null, // Visibilidade depende dos filhos
         children: [
-            { name: 'Gerais', href: route('admin.parametros.index'), current: 'admin.parametros.*', icon: Settings, permission: 'gerenciar parametros' },
-            { name: 'Status de Solicitação', href: route('admin.status-solicitacao.index'), current: 'admin.status-solicitacao.*', icon: ClipboardCheck, permission: 'gerenciar parametros' },
-            { name: 'Campos Personalizados', href: route('admin.custom-fields.index'), current: 'admin.custom-fields.*', icon: ListChecks, permission: 'gerenciar parametros' },
-            { name: 'Papéis', href: route('admin.roles-permissions.index'), current: 'admin.roles-permissions.*', icon: ShieldCheck, permission: 'gerenciar parametros' },
-            { name: 'Permissões', href: route('admin.permissions.index'), current: 'admin.permissions.*', icon: KeyRound, permission: 'gerenciar parametros' },
-            { name: 'Auditoria', href: route('admin.auditoria.index'), current: 'admin.auditoria.index', icon: History, permission: 'gerenciar parametros' },
+            { name: 'Gerais', href: route('admin.parametros.index'), current: 'admin.parametros.*', icon: Settings, permission: 'configuracoes.visualizar' },
+            { name: 'Status de Solicitação', href: route('admin.status-solicitacao.index'), current: 'admin.status-solicitacao.*', icon: ClipboardCheck, permission: 'status_solicitacao.visualizar_todos' },
+            { name: 'Campos Personalizados', href: route('admin.custom-fields.index'), current: 'admin.custom-fields.*', icon: ListChecks, permission: 'campos_personalizados.visualizar_todos' },
+            { name: 'Papéis', href: route('admin.roles-permissions.index'), current: 'admin.roles-permissions.*', icon: ShieldCheck, permission: 'perfis.visualizar_todos' },
+            { name: 'Permissões', href: route('admin.permissions.index'), current: 'admin.permissions.*', icon: KeyRound, permission: 'perfis.visualizar_todos' },
+            { name: 'Auditoria', href: route('admin.auditoria.index'), current: 'admin.auditoria.index', icon: History, permission: 'logs_de_atividade.visualizar_todos' },
         ]
     },
 ];
@@ -214,7 +223,7 @@ export const navigation = [
     ...jobsNav,
     ...memoriaLegislativaNav,
     ...lostAndFoundNav,
-    ...comunicacaoGabineteNav, // <-- NOVO MENU COMBINADO AQUI
+    ...comunicacaoGabineteNav,
     ...reportsNav,
     ...settingsNav,
 ];

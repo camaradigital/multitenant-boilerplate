@@ -14,8 +14,7 @@ class UpsertServicoRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Garante que o usuário autenticado tenha a permissão 'gerenciar servicos'.
-        return $this->user()->can('gerenciar servicos');
+        return true;
     }
 
     /**

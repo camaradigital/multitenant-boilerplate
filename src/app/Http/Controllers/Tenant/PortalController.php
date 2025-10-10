@@ -1,5 +1,7 @@
 <?php
 
+// PÁGINA  HOME DO TENANT
+
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;

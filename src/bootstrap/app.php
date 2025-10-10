@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\VerificarRenovacaoMesaCommand; // <-- ADICIONADO
 use App\Console\Commands\VerificarSolicitacoesParadas; // <-- ADICIONADO
 use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
 use Illuminate\Foundation\Application;
@@ -65,12 +66,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
         ]);
     })
-    // --- ADICIONADO O BLOCO DE AGENDAMENTO AQUI ---
+    // --- BLOCO DE AGENDAMENTO ---
     ->withSchedule(function (Schedule $schedule) {
         // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
         $schedule->command(VerificarSolicitacoesParadas::class)->dailyAt('09:00');
+        // [NOVO] Verifica a renovação da Mesa Diretora no primeiro dia de cada mês, às 9h da manhã.
+        $schedule->command(VerificarRenovacaoMesaCommand::class)->monthlyOn(1, '09:00');
     })
-    // --- FIM DO BLOCO ---
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e) {
             return redirect('/');

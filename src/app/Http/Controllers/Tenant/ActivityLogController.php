@@ -3,21 +3,18 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivityLogController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Exibe a página de log de auditoria com filtros.
      */
     public function index(Request $request)
     {
         // Garante que apenas usuários com a permissão correta possam ver os logs.
-        $this->authorize('gerenciar parametros');
+        $this->authorize('viewAny', Activity::class);
 
         // 1. Validação dos filtros recebidos da requisição.
         $filters = $request->validate([

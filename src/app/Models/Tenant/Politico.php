@@ -25,6 +25,7 @@ class Politico extends Model
         'partido',
         'biografia',
         'foto_path',
+        'email',
     ];
 
     /**
@@ -73,5 +74,10 @@ class Politico extends Model
     public function mandatos()
     {
         return $this->hasMany(Mandato::class);
+    }
+
+    public function comissaoMembros(): HasMany
+    {
+        return $this->hasMany(ComissaoMembro::class);
     }
 }

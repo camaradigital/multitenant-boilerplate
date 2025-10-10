@@ -123,7 +123,7 @@ const deleteDocumento = () => {
     if (!documentoParaExcluir.value) return;
     router.delete(route('admin.documentos.destroy', documentoParaExcluir.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
 };
-const submitAvaliacao = () => formAvaliacao.post(route('portal.solicitacoes.avaliar', props.solicitacao.id), { preserveScroll: true });
+const submitAvaliacao = () => formAvaliacao.post(route('portalcidadao.solicitacoes.avaliar', props.solicitacao.id), { preserveScroll: true });
 
 
 // --- COMPUTED / HELPERS ---
@@ -177,7 +177,7 @@ const formatarData = (data: string | null | undefined) => {
     <TenantLayout>
         <template #header>
             <div class="flex items-center space-x-4">
-                <Link :href="isCidadao ? route('portal.meu-painel') : route('admin.solicitacoes.index')" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 transition-colors">
+                <Link :href="isCidadao ? route('portalcidadao.meu-painel') : route('admin.solicitacoes.index')" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 transition-colors">
                     <ArrowLeft class="w-5 h-5" />
                 </Link>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">

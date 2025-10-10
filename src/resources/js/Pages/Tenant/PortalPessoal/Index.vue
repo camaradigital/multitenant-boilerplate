@@ -120,7 +120,7 @@ const openHistoricoModal = (solicitacao) => {
 const submitAvaliacao = () => {
     if (!solicitacaoAvaliar.value) return;
 
-    formAvaliacao.post(route('portal.solicitacoes.avaliar', solicitacaoAvaliar.value.id), {
+    formAvaliacao.post(route('portalcidadao.solicitacoes.avaliar', solicitacaoAvaliar.value.id), {
         onSuccess: () => {
             const index = props.solicitacoes.data.findIndex(s => s.id === solicitacaoAvaliar.value.id);
             if (index !== -1) {
@@ -218,7 +218,7 @@ onMounted(() => {
                                 <BarChart2 class="w-5 h-5 mr-2" />
                                 Ver Estatísticas
                             </button>
-                            <Link v-if="canCreateOnlineSolicitacao" :href="route('portal.solicitacoes.create')" class="action-button">
+                            <Link v-if="canCreateOnlineSolicitacao" :href="route('portalcidadao.solicitacoes.create')" class="action-button">
                                 <PlusCircle class="w-5 h-5 mr-2" />
                                 Nova Solicitação
                             </Link>
@@ -298,7 +298,7 @@ onMounted(() => {
                                             <button @click="openHistoricoModal(solicitacao)" class="table-action-btn" title="Ver Histórico">
                                                 <History class="w-5 h-5 text-gray-500" />
                                             </button>
-                                            <Link :href="route('portal.solicitacoes.show', solicitacao.id)" class="table-action-btn" title="Ver Detalhes">
+                                            <Link :href="route('portalcidadao.solicitacoes.show', solicitacao.id)" class="table-action-btn" title="Ver Detalhes">
                                                 <Eye class="w-5 h-5" />
                                             </Link>
                                         </div>

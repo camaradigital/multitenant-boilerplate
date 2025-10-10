@@ -40,12 +40,12 @@ class PesquisaSatisfacaoController extends Controller
 
         // Garante que a solicitação já foi finalizada.
         if (! $statusAtual || ! $statusAtual->is_final) {
-            return Redirect::route('portal.meu-painel')->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
+            return Redirect::route('portalcidadao.meu-painel')->withErrors(['geral' => 'Você só pode avaliar solicitações que já foram finalizadas.']);
         }
 
         // Garante que a solicitação ainda não foi avaliada.
         if (PesquisaSatisfacao::where('solicitacao_servico_id', $solicitacao->id)->exists()) {
-            return Redirect::route('portal.meu-painel')->withErrors(['geral' => 'Esta solicitação já foi avaliada.']);
+            return Redirect::route('portalcidadao.meu-painel')->withErrors(['geral' => 'Esta solicitação já foi avaliada.']);
         }
 
         // 3. Criação da pesquisa de satisfação.
@@ -67,6 +67,6 @@ class PesquisaSatisfacaoController extends Controller
         // --- FIM DA LÓGICA ---
 
         // 4. Redirecionamento com mensagem de sucesso.
-        return Redirect::route('portal.meu-painel')->with('success', 'Obrigado pela sua avaliação!');
+        return Redirect::route('portalcidadao.meu-painel')->with('success', 'Obrigado pela sua avaliação!');
     }
 }

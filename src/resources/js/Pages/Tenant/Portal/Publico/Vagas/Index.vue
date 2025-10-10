@@ -262,7 +262,7 @@ const formatDate = (dateString) => {
                 <button @click="closeDetailsModal" type="button" class="btn btn-secondary">Fechar</button>
 
                 <div v-if="isLoggedIn">
-                     <Link :href="route('candidaturas.create', { vaga: selectedVaga.id })" class="btn btn-primary">
+                     <Link :href="route('portalcidadao.candidaturas.create', { vaga: selectedVaga.id })" class="btn btn-primary">
                         <UserCheck class="w-4 h-4 mr-2" />
                         Candidatar-se
                     </Link>

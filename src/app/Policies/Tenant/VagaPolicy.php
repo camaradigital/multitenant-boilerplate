@@ -17,7 +17,7 @@ class VagaPolicy
      */
     public function viewAny(User $user)
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('vagas_de_emprego.visualizar_todos');
     }
 
     /**
@@ -27,7 +27,7 @@ class VagaPolicy
      */
     public function view(User $user, Vaga $vaga)
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('vagas_de_emprego.visualizar');
     }
 
     /**
@@ -37,7 +37,7 @@ class VagaPolicy
      */
     public function create(User $user)
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('vagas_de_emprego.criar');
     }
 
     /**
@@ -47,7 +47,7 @@ class VagaPolicy
      */
     public function update(User $user, Vaga $vaga)
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('vagas_de_emprego.atualizar');
     }
 
     /**
@@ -57,6 +57,6 @@ class VagaPolicy
      */
     public function delete(User $user, Vaga $vaga)
     {
-        return $user->can('gerenciar vagas de emprego');
+        return $user->can('vagas_de_emprego.excluir');
     }
 }

@@ -18,7 +18,7 @@ class CampanhaController extends Controller
      */
     public function __construct()
     {
-        // O middleware foi removido daqui e a lógica foi para a Policy.
+        // A autorização é tratada por método individualmente.
     }
 
     public function index(Request $request)
@@ -77,17 +77,29 @@ class CampanhaController extends Controller
             'segmentacao' => 'required|array',
         ]);
 
-        $campanha = CampanhaComunicacao::create([
+        CampanhaComunicacao::create([
             'titulo' => $request->titulo,
             'mensagem' => $request->mensagem,
             'segmentacao' => $request->segmentacao,
             'created_by_user_id' => auth()->id(),
+            'status' => 'Rascunho', // Status inicial
         ]);
 
-        // Disparar o Job para envio em segundo plano
+        return redirect()->route('admin.campanhas.index')->with('success', 'Campanha criada como rascunho com sucesso!');
+    }
+
+    /**
+     * Envia a campanha para os destinatários.
+     */
+    public function send(CampanhaComunicacao $campanha)
+    {
+        $this->authorize('send', $campanha);
+
         SendCampanhaEmailJob::dispatch($campanha);
 
-        return redirect()->route('admin.campanhas.index')->with('success', 'Campanha criada e agendada para envio!');
+        $campanha->update(['status' => 'Enviando']);
+
+        return back()->with('success', 'A campanha foi agendada para envio!');
     }
 
     public function calcularPublico(Request $request)

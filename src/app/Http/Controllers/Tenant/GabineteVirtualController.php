@@ -59,7 +59,7 @@ class GabineteVirtualController extends Controller
             'mensagem' => $request->mensagem,
         ]);
 
-        return redirect()->route('gabinete-virtual.index')->with('success', 'Mensagem enviada com sucesso!');
+        return redirect()->route('portalcidadao.gabinete-virtual.index')->with('success', 'Mensagem enviada com sucesso!');
     }
 
     // Para o Admin (Presidente)

@@ -7,6 +7,7 @@ use App\Http\Controllers\Tenant\CampanhaController;
 use App\Http\Controllers\Tenant\CandidaturaController;
 use App\Http\Controllers\Tenant\CidadaoController;
 use App\Http\Controllers\Tenant\CidadaoRelacionamentoController;
+use App\Http\Controllers\Tenant\ComissaoController;
 use App\Http\Controllers\Tenant\ConvenioController;
 use App\Http\Controllers\Tenant\CustomFieldController;
 use App\Http\Controllers\Tenant\DashboardController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Tenant\PermissionController;
 use App\Http\Controllers\Tenant\PesquisaSatisfacaoController;
 use App\Http\Controllers\Tenant\PessoaDesaparecidaController;
 use App\Http\Controllers\Tenant\PoliticoController;
+use App\Http\Controllers\Tenant\PortalCidadao\PortalPessoalSugestaoController;
 use App\Http\Controllers\Tenant\PortalController;
 use App\Http\Controllers\Tenant\ProfileController;
 use App\Http\Controllers\Tenant\RealtimeValidationController;
@@ -34,6 +36,7 @@ use App\Http\Controllers\Tenant\RolePermissionController;
 use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
+use App\Http\Controllers\Tenant\SugestaoProjetoLeiController;
 use App\Http\Controllers\Tenant\TipoServicoController;
 use App\Http\Controllers\Tenant\VagaController;
 use App\Models\Tenant\Bairro;
@@ -132,24 +135,25 @@ Route::middleware([
         Route::get('/dashboard', DashboardController::class)->name('tenant.dashboard');
 
         // --- ROTAS DO CIDADÃO ---
-        Route::get('/meu-painel', [MeuPainelController::class, 'index'])->name('portal.meu-painel');
-        // Rotas para Candidaturas
-        Route::get('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'create'])->name('candidaturas.create');
-        Route::post('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'store'])->name('candidaturas.store');
-        // Rotas para Solicitações
-        Route::get('/solicitacoes/criar', [MeuPainelController::class, 'create'])->name('portal.solicitacoes.create');
-        Route::get('/minhas-solicitacoes/{solicitacao}', [SolicitacaoServicoController::class, 'show'])->name('portal.solicitacoes.show');
-        Route::post('/solicitacoes', [SolicitacaoServicoController::class, 'store'])->name('portal.solicitacoes.store');
-        Route::post('/solicitacoes/{solicitacao}/avaliar', [PesquisaSatisfacaoController::class, 'store'])->name('portal.solicitacoes.avaliar');
-        Route::get('/profile/export-data', [ProfileController::class, 'exportData'])->name('profile.export-data');
-        Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
-        Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-        // GABINETE VIRTUAL (CIDADÃO)
-        Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
-            Route::get('/', [GabineteVirtualController::class, 'citizenIndex'])->name('index');
-            Route::post('/', [GabineteVirtualController::class, 'storeMensagem'])->name('store');
-            Route::get('/{mensagem}', [GabineteVirtualController::class, 'citizenShow'])->name('show');
+        Route::name('portalcidadao.')->group(function () {
+            Route::get('/meu-painel', [MeuPainelController::class, 'index'])->name('meu-painel');
+            Route::get('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'create'])->name('candidaturas.create');
+            Route::post('/vagas/{vaga}/candidatar', [CandidaturaController::class, 'store'])->name('candidaturas.store');
+            Route::get('/solicitacoes/criar', [MeuPainelController::class, 'create'])->name('solicitacoes.create');
+            Route::get('/minhas-solicitacoes/{solicitacao}', [SolicitacaoServicoController::class, 'show'])->name('solicitacoes.show');
+            Route::post('/solicitacoes', [SolicitacaoServicoController::class, 'store'])->name('solicitacoes.store');
+            Route::post('/solicitacoes/{solicitacao}/avaliar', [PesquisaSatisfacaoController::class, 'store'])->name('solicitacoes.avaliar');
+            Route::get('/indicacao-projeto', [PortalPessoalSugestaoController::class, 'create'])->name('sugestao.create');
+            Route::post('/indicacao-projeto', [PortalPessoalSugestaoController::class, 'store'])->name('sugestao.store');
+            Route::get('/indicacao-projeto/sucesso/{protocolo}', [PortalPessoalSugestaoController::class, 'success'])->name('sugestao.success');
+            Route::get('/profile/export-data', [ProfileController::class, 'exportData'])->name('profile.export-data');
+            Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
+            Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
+            Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
+                Route::get('/', [GabineteVirtualController::class, 'citizenIndex'])->name('index');
+                Route::post('/', [GabineteVirtualController::class, 'storeMensagem'])->name('store');
+                Route::get('/{mensagem}', [GabineteVirtualController::class, 'citizenShow'])->name('show');
+            });
         });
 
         // MÓDULO DE NOTIFICAÇÕES
@@ -184,77 +188,65 @@ Route::middleware([
             });
 
             // MÓDULO DE GESTÃO DE FUNCIONÁRIOS
-            Route::middleware('can:gerenciar funcionarios')->group(function () {
-                Route::resource('funcionarios', FuncionarioController::class)->except(['create', 'edit']);
-            });
+            Route::resource('funcionarios', FuncionarioController::class)->except(['create', 'edit']);
 
             // MÓDULO DE GESTÃO DE CIDADÃOS
-            Route::middleware('can:gerenciar cidadaos')->group(function () {
-                // Rotas CRUD continuam no CidadaoController
-                Route::get('/cidadaos', [CidadaoController::class, 'index'])->name('cidadaos.index');
-                Route::get('/cidadaos/create', [CidadaoController::class, 'create'])->name('cidadaos.create');
-                Route::post('/cidadaos', [CidadaoController::class, 'store'])->name('cidadaos.store');
-                Route::get('/cidadaos/{cidadao}/edit', [CidadaoController::class, 'edit'])->name('cidadaos.edit');
-                Route::put('/cidadaos/{cidadao}', [CidadaoController::class, 'update'])->name('cidadaos.update');
-                Route::delete('/cidadaos/{cidadao}', [CidadaoController::class, 'destroy'])->name('cidadaos.destroy');
-                Route::post('/cidadaos/{cidadao}/anonymize', [CidadaoController::class, 'anonymize'])->name('cidadaos.anonymize');
-                Route::get('/cidadaos/{cidadao}/exportar-dados', [CidadaoController::class, 'exportData'])->name('cidadaos.export-data');
+            Route::get('/cidadaos', [CidadaoController::class, 'index'])->name('cidadaos.index');
+            Route::get('/cidadaos/create', [CidadaoController::class, 'create'])->name('cidadaos.create');
+            Route::post('/cidadaos', [CidadaoController::class, 'store'])->name('cidadaos.store');
+            Route::get('/cidadaos/{cidadao}/edit', [CidadaoController::class, 'edit'])->name('cidadaos.edit');
+            Route::put('/cidadaos/{cidadao}', [CidadaoController::class, 'update'])->name('cidadaos.update');
+            Route::delete('/cidadaos/{cidadao}', [CidadaoController::class, 'destroy'])->name('cidadaos.destroy');
+            Route::post('/cidadaos/{cidadao}/anonymize', [CidadaoController::class, 'anonymize'])->name('cidadaos.anonymize');
+            Route::get('/cidadaos/{cidadao}/exportar-dados', [CidadaoController::class, 'exportData'])->name('cidadaos.export-data');
 
-                // Rotas do Dossiê/Relacionamento agora apontam para o CidadaoRelacionamentoController
-                Route::get('/cidadaos/{cidadao}', [CidadaoRelacionamentoController::class, 'show'])->name('cidadaos.show');
-                Route::post('/cidadaos/{cidadao}/notas', [CidadaoRelacionamentoController::class, 'storeNota'])->name('cidadaos.notas.store');
-                Route::post('/cidadaos/{cidadao}/tags', [CidadaoRelacionamentoController::class, 'attachTag'])->name('cidadaos.tags.attach');
-                Route::delete('/cidadaos/{cidadao}/tags/{tag}', [CidadaoRelacionamentoController::class, 'detachTag'])->name('cidadaos.tags.detach');
-            });
+            // Rotas do Dossiê/Relacionamento agora apontam para o CidadaoRelacionamentoController
+            Route::get('/cidadaos/{cidadao}', [CidadaoRelacionamentoController::class, 'show'])->name('cidadaos.show');
+            Route::post('/cidadaos/{cidadao}/notas', [CidadaoRelacionamentoController::class, 'storeNota'])->name('cidadaos.notas.store');
+            Route::post('/cidadaos/{cidadao}/tags', [CidadaoRelacionamentoController::class, 'attachTag'])->name('cidadaos.tags.attach');
+            Route::delete('/cidadaos/{cidadao}/tags/{tag}', [CidadaoRelacionamentoController::class, 'detachTag'])->name('cidadaos.tags.detach');
 
             // MÓDULO DE GESTÃO DE SERVIÇOS
-            Route::middleware('can:gerenciar servicos')->group(function () {
-                // Rotas para 'Serviços' (definidas manualmente para garantir funcionamento)
-                Route::get('servicos', [ServicoController::class, 'index'])->name('servicos.index');
-                Route::post('servicos', [ServicoController::class, 'store'])->name('servicos.store');
-                Route::get('servicos/{servico}', [ServicoController::class, 'show'])->name('servicos.show');
-                Route::put('servicos/{servico}', [ServicoController::class, 'update'])->name('servicos.update');
-                Route::delete('servicos/{servico}', [ServicoController::class, 'destroy'])->name('servicos.destroy');
-
-                // Rotas para 'Tipos de Serviço' (definidas manualmente para garantir funcionamento)
-                Route::get('tipos-servico', [TipoServicoController::class, 'index'])->name('tipos-servico.index');
-                Route::post('tipos-servico', [TipoServicoController::class, 'store'])->name('tipos-servico.store');
-                Route::get('tipos-servico/{tipoServico}', [TipoServicoController::class, 'show'])->name('tipos-servico.show');
-                Route::put('tipos-servico/{tipoServico}', [TipoServicoController::class, 'update'])->name('tipos-servico.update');
-                Route::delete('tipos-servico/{tipoServico}', [TipoServicoController::class, 'destroy'])->name('tipos-servico.destroy');
-            });
+            // Rotas para 'Serviços' (definidas manualmente para garantir funcionamento)
+            Route::get('servicos', [ServicoController::class, 'index'])->name('servicos.index');
+            Route::post('servicos', [ServicoController::class, 'store'])->name('servicos.store');
+            Route::get('servicos/{servico}', [ServicoController::class, 'show'])->name('servicos.show');
+            Route::put('servicos/{servico}', [ServicoController::class, 'update'])->name('servicos.update');
+            Route::delete('servicos/{servico}', [ServicoController::class, 'destroy'])->name('servicos.destroy');
+            // Rotas para 'Tipos de Serviço' (definidas manualmente para garantir funcionamento)
+            Route::get('tipos-servico', [TipoServicoController::class, 'index'])->name('tipos-servico.index');
+            Route::post('tipos-servico', [TipoServicoController::class, 'store'])->name('tipos-servico.store');
+            Route::get('tipos-servico/{tipoServico}', [TipoServicoController::class, 'show'])->name('tipos-servico.show');
+            Route::put('tipos-servico/{tipoServico}', [TipoServicoController::class, 'update'])->name('tipos-servico.update');
+            Route::delete('tipos-servico/{tipoServico}', [TipoServicoController::class, 'destroy'])->name('tipos-servico.destroy');
 
             // MÓDULO DE ACHADOS E PERDIDOS
-            Route::middleware('can:gerenciar achados e perdidos')->group(function () {
-                Route::resource('achados-e-perdidos-documentos', AchadoEPerdidoDocumentoController::class)->except(['show', 'create', 'edit'])->parameters(['achados-e-perdidos-documentos' => 'achadosEPerdidosDocumento']);
-                Route::resource('pessoas-desaparecidas', PessoaDesaparecidaController::class)->except(['show', 'create', 'edit'])->parameters(['pessoas-desaparecidas' => 'pessoaDesaparecida']);
-                Route::get('pessoas-desaparecidas/{pessoaDesaparecida}/boletim', [PessoaDesaparecidaController::class, 'downloadBoletim'])->name('pessoas-desaparecidas.downloadBoletim');
-            });
+            Route::resource('achados-e-perdidos-documentos', AchadoEPerdidoDocumentoController::class)->except(['show', 'create', 'edit'])->parameters(['achados-e-perdidos-documentos' => 'achadosEPerdidosDocumento']);
+            Route::resource('pessoas-desaparecidas', PessoaDesaparecidaController::class)->except(['show', 'create', 'edit'])->parameters(['pessoas-desaparecidas' => 'pessoaDesaparecida']);
+            Route::get('pessoas-desaparecidas/{pessoaDesaparecida}/boletim', [PessoaDesaparecidaController::class, 'downloadBoletim'])->name('pessoas-desaparecidas.downloadBoletim');
 
             // Rotas para Vagas de Emprego
-            Route::middleware('can:gerenciar vagas de emprego')->group(function () {
-                Route::resource('empresas', EmpresaController::class);
-                Route::resource('vagas', VagaController::class);
-                Route::get('vagas/{vaga}/candidaturas', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'index'])->name('vagas.candidaturas.index');
-                Route::get('candidaturas/{candidatura}/curriculo', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'downloadCurriculo'])->name('candidaturas.downloadCurriculo');
-            });
+            Route::resource('empresas', EmpresaController::class);
+            Route::resource('vagas', VagaController::class);
+            Route::get('vagas/{vaga}/candidaturas', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'index'])->name('vagas.candidaturas.index');
+            Route::get('candidaturas/{candidatura}/curriculo', [\App\Http\Controllers\Tenant\CandidaturaController::class, 'downloadCurriculo'])->name('candidaturas.downloadCurriculo');
 
             // MÓDULO DE ENTIDADES E CONVÉNIOS
-            Route::middleware('can:gerenciar entidades')->group(function () {
-                Route::resource('entidades', EntidadeController::class)->except(['show', 'create', 'edit']);
-                Route::resource('convenios', ConvenioController::class)->except(['show', 'create', 'edit']);
-            });
+            Route::resource('entidades', EntidadeController::class)->except(['show', 'create', 'edit']);
+            Route::resource('convenios', ConvenioController::class)->except(['show', 'create', 'edit']);
 
             // MÓDULO DE MEMÓRIA LEGISLATIVA (ADMIN)
-            Route::middleware('can:gerenciar memoria')->group(function () {
-                Route::resource('politicos', PoliticoController::class)->except(['show']);
-                Route::resource('legislaturas', LegislaturaController::class);
-                Route::post('legislaturas/{legislatura}/mandatos', [MandatoController::class, 'store'])->name('mandatos.store');
-                Route::delete('mandatos/{mandato}', [MandatoController::class, 'destroy'])->name('mandatos.destroy');
-            });
+            Route::resource('politicos', PoliticoController::class)->except(['show']);
+            Route::resource('legislaturas', LegislaturaController::class);
+            Route::post('legislaturas/{legislatura}/mandatos', [MandatoController::class, 'store'])->name('mandatos.store');
+            Route::delete('mandatos/{mandato}', [MandatoController::class, 'destroy'])->name('mandatos.destroy');
+            // Rotas para Comissões
+            Route::resource('comissoes', ComissaoController::class)->except(['create', 'edit', 'show']);
+            Route::post('comissoes/{comissao}/membros', [ComissaoController::class, 'adicionarMembro'])->name('comissoes.membros.store');
+            Route::delete('comissoes/{comissao}/membros/{membroId}', [ComissaoController::class, 'removerMembro'])->name('comissoes.membros.destroy');
 
             // MÓDULO DE RELATÓRIOS
-            Route::middleware('can:visualizar relatorios')->prefix('relatorios')->name('relatorios.')->group(function () {
+            Route::prefix('relatorios')->name('relatorios.')->group(function () {
                 Route::get('/atendimentos', [RelatorioController::class, 'atendimentos'])->name('atendimentos');
                 Route::get('/atendimentos/exportar', [RelatorioController::class, 'exportarAtendimentos'])->name('atendimentos.exportar');
                 Route::get('/atendimentos/exportar-pdf', [RelatorioController::class, 'exportarAtendimentosPDF'])->name('atendimentos.exportarPDF');
@@ -262,27 +254,28 @@ Route::middleware([
                 Route::get('/cidadaos', [RelatorioController::class, 'cidadaos'])->name('cidadaos');
                 Route::get('/cidadaos/exportar', [RelatorioController::class, 'exportarCidadaos'])->name('cidadaos.exportar');
                 Route::get('/cidadaos/exportar-pdf', [RelatorioController::class, 'exportarCidadaosPDF'])->name('cidadaos.exportarPDF');
-
                 // --- NOVAS ROTAS ESTRATÉGICAS ---
                 Route::get('/demandas-por-bairro', [RelatorioController::class, 'demandasPorBairro'])->name('demandas-por-bairro');
                 Route::get('/analise-de-tendencias', [RelatorioController::class, 'analiseDeTendencias'])->name('analise-de-tendencias');
+                Route::get('/mapeamento-politico', [MapeamentoPoliticoController::class, 'index'])->name('mapeamento-politico.index');
             });
 
             // MÓDULO DE CONFIGURAÇÕES E PARÂMETROS
-            Route::middleware('can:gerenciar parametros')->group(function () {
-                Route::get('parametros', [ParametroController::class, 'index'])->name('parametros.index');
-                Route::put('parametros', [ParametroController::class, 'update'])->name('parametros.update');
-                Route::resource('status-solicitacao', StatusSolicitacaoController::class)->except(['create', 'edit'])->parameters(['status-solicitacao' => 'statusSolicitacao']);
-                Route::resource('custom-fields', CustomFieldController::class)->except(['create', 'edit']);
-                Route::get('auditoria', [ActivityLogController::class, 'index'])->name('auditoria.index');
-                Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
-                Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
-            });
+            Route::get('parametros', [ParametroController::class, 'index'])->name('parametros.index');
+            Route::put('parametros', [ParametroController::class, 'update'])->name('parametros.update');
+            Route::resource('status-solicitacao', StatusSolicitacaoController::class)->except(['create', 'edit'])->parameters(['status-solicitacao' => 'statusSolicitacao']);
+            Route::resource('custom-fields', CustomFieldController::class)->except(['create', 'edit']);
+            Route::get('auditoria', [ActivityLogController::class, 'index'])->name('auditoria.index');
+            Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
+            Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
 
-            // [NOVO] Rota para o Painel de Mapeamento Político
-            Route::get('/mapeamento-politico', [MapeamentoPoliticoController::class, 'index'])
-                ->name('mapeamento-politico.index')
-                ->middleware('can:visualizar relatorios'); // Ou uma permissão específica se preferir
+            // [ADICIONADO] Rotas para Sugestões de Projetos de Lei (Admin)
+            Route::prefix('sugestoes')->as('sugestoes.')->group(function () {
+                Route::get('/', [SugestaoProjetoLeiController::class, 'index'])->name('index');
+                Route::get('/{sugestao}', [SugestaoProjetoLeiController::class, 'show'])->name('show');
+                Route::post('/{sugestao}/status', [SugestaoProjetoLeiController::class, 'updateStatus'])->name('updateStatus');
+                Route::delete('/{sugestao}', [SugestaoProjetoLeiController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // --- ROTAS DE PERFIL DE UTILIZADOR ---

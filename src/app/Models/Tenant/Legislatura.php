@@ -2,11 +2,13 @@
 
 namespace App\Models\Tenant;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Activitylog\LogOptions; // Importar a classe Attribute
+use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
@@ -25,6 +27,7 @@ class Legislatura extends Model
         'data_fim',
         'foto_principal_path',
         'texto_destaque',
+        'is_atual',
     ];
 
     /**
@@ -78,5 +81,18 @@ class Legislatura extends Model
     public function mandatos()
     {
         return $this->hasMany(Mandato::class);
+    }
+
+    public function comissoes(): HasMany
+    {
+        return $this->hasMany(Comissao::class);
+    }
+
+    /**
+     * Scope a query to only include the current legislature.
+     */
+    public function scopeAtual(Builder $query): Builder
+    {
+        return $query->where('is_atual', true);
     }
 }

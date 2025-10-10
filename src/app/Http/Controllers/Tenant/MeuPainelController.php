@@ -1,12 +1,12 @@
 <?php
 
+// CONTROLLER DO CIDADÃO PARA PAINEL PESSOAL DO CIDADÃO
+
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-// Models
 use App\Models\Tenant\Servico;
 use App\Models\Tenant\SolicitacaoServico;
-// Facades e Classes
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;

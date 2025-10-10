@@ -282,7 +282,7 @@ class SolicitacaoServicoController extends Controller
         }
 
         if ($user->hasRole('Cidadao')) {
-            return Redirect::route('portal.meu-painel')->with('success', 'Solicitação registrada com sucesso!');
+            return Redirect::route('portalcidadao.meu-painel')->with('success', 'Solicitação registrada com sucesso!');
         }
 
         return Redirect::route('admin.solicitacoes.index')->with('success', 'Solicitação registrada com sucesso!');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Central\Tenant;
+// Importa a nova Policy
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -19,7 +20,8 @@ class ParametroController extends Controller
      */
     public function index()
     {
-        $this->authorize('gerenciar parametros');
+        // Usa a Policy para verificar a permissão 'configuracoes.visualizar'
+        $this->authorize('view', Tenant::class);
 
         $tenant = Tenant::current();
 
@@ -31,13 +33,11 @@ class ParametroController extends Controller
                 'cor_primaria',
                 'cor_secundaria',
                 'logotipo_url',
-                // --- INÍCIO DA MODIFICAÇÃO ---
                 'telefone_contato',
                 'whatsapp',
                 'email_contato',
                 'instagram',
                 'youtube',
-                // --- FIM DA MODIFICAÇÃO ---
                 'permite_cadastro_cidade_externa',
                 'limite_renda_juridico',
                 'exigir_renda_juridico',
@@ -56,7 +56,8 @@ class ParametroController extends Controller
      */
     public function update(Request $request)
     {
-        $this->authorize('gerenciar parametros');
+        // Usa a Policy para verificar a permissão 'configuracoes.atualizar'
+        $this->authorize('update', Tenant::class);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -64,13 +65,11 @@ class ParametroController extends Controller
             'cor_primaria' => 'required|string|size:7',
             'cor_secundaria' => 'required|string|size:7',
             'logotipo' => 'nullable|image|mimes:jpeg,png,svg|max:2048',
-            // --- INÍCIO DA MODIFICAÇÃO ---
             'telefone_contato' => 'nullable|string|max:20',
             'whatsapp' => 'nullable|string|max:20',
             'email_contato' => 'nullable|email|max:255',
             'instagram' => 'nullable|url|max:255',
             'youtube' => 'nullable|url|max:255',
-            // --- FIM DA MODIFICAÇÃO ---
             'permite_cadastro_cidade_externa' => 'required|boolean',
             'limite_renda_juridico' => 'required|numeric|min:0',
             'exigir_renda_juridico' => 'required|boolean',
@@ -88,7 +87,6 @@ class ParametroController extends Controller
             if ($tenant->logotipo_url) {
                 Storage::disk('public')->delete($tenant->logotipo_url);
             }
-            // A pasta 'tenants/{id}/logos' é mais organizada
             $path = $request->file('logotipo')->store('tenants/'.$tenant->id.'/logos', 'public');
             $tenant->logotipo_url = $path;
         }

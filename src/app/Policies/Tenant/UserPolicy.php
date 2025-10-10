@@ -51,54 +51,59 @@ class UserPolicy
 
     public function viewAnyCidadao(User $user): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.visualizar_todos');
     }
 
     public function viewCidadao(User $user, User $cidadao): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.visualizar');
     }
 
     public function createCidadao(User $user): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.criar');
     }
 
     public function updateCidadao(User $user, User $cidadao): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.atualizar');
     }
 
     public function deleteCidadao(User $user, User $cidadao): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.excluir');
     }
 
-    public function anonymizeCidadao(User $user, User $cidadao): bool
+    public function manageTagsCidadao(User $user): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.gerenciar_tags');
     }
 
-    public function exportDataCidadao(User $user, User $cidadao): bool
+    public function manageNotesCidadao(User $user): bool
     {
-        return $user->can('gerenciar cidadaos');
+        return $user->can('cidadaos.gerenciar_notas');
     }
 
     // --- Habilidades para Funcionários ---
 
     public function viewAnyFuncionario(User $user): bool
     {
-        return $user->can('gerenciar funcionarios');
+        return $user->can('funcionarios.visualizar_todos');
+    }
+
+    public function viewFuncionario(User $user): bool
+    {
+        return $user->can('funcionarios.visualizar');
     }
 
     public function createFuncionario(User $user): bool
     {
-        return $user->can('gerenciar funcionarios');
+        return $user->can('funcionarios.criar');
     }
 
     public function updateFuncionario(User $user, User $funcionario): bool
     {
-        return $user->can('gerenciar funcionarios');
+        return $user->can('funcionarios.atualizar');
     }
 
     public function deleteFuncionario(User $user, User $funcionario): bool
@@ -108,6 +113,11 @@ class UserPolicy
             return false;
         }
 
-        return $user->can('gerenciar funcionarios');
+        return $user->can('funcionarios.excluir');
+    }
+
+    public function manageRolesFuncionario(User $user): bool
+    {
+        return $user->can('funcionarios.gerenciar_perfis');
     }
 }
