@@ -20,6 +20,8 @@ class MeuPainelController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('view-cidadao-dashboard');
+
         $user = Auth::user();
         $query = SolicitacaoServico::where('user_id', $user->id);
 

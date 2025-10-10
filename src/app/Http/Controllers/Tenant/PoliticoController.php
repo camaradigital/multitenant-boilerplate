@@ -7,16 +7,22 @@ use App\Models\Tenant\Politico;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule; // Importação da classe Rule
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PoliticoController extends Controller
 {
-    // No método index()
+    /**
+     * Aplica a PoliticoPolicy aos métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Politico::class, 'politico');
+    }
 
     public function index()
     {
         return inertia('Tenant/Memoria/Politicos/Index', [
-            // Troque latest() por orderBy('nome_politico')
             'politicos' => Politico::orderBy('nome_politico')->paginate(10),
         ]);
     }
@@ -38,8 +44,6 @@ class PoliticoController extends Controller
         ]);
 
         if ($request->hasFile('foto')) {
-            // --- CORREÇÃO ---
-            // Salvamos diretamente na pasta 'politicos' dentro do disco público.
             $validated['foto_path'] = $request->file('foto')->store('politicos', 'public');
         }
 
@@ -64,7 +68,6 @@ class PoliticoController extends Controller
             'foto' => 'nullable|image|max:1024',
         ]);
 
-        // Validação customizada: Impede a remoção do e-mail se o político está na legislatura atual.
         $isInCurrentLegislatura = $politico->mandatos()->whereHas('legislatura', function ($query) {
             $query->where('is_atual', true);
         })->exists();
@@ -79,7 +82,6 @@ class PoliticoController extends Controller
             if ($politico->foto_path) {
                 Storage::disk('public')->delete($politico->foto_path);
             }
-            // --- CORREÇÃO ---
             $validated['foto_path'] = $request->file('foto')->store('politicos', 'public');
         }
 
@@ -90,6 +92,7 @@ class PoliticoController extends Controller
 
     public function destroy(Politico $politico)
     {
+        // A autorização e as regras de negócio de exclusão agora são tratadas pela PoliticoPolicy.
         if ($politico->foto_path) {
             Storage::disk('public')->delete($politico->foto_path);
         }

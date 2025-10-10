@@ -50,21 +50,21 @@ const tagForm = useForm({
 });
 
 const submitNota = () => {
-    notaForm.post(route('tenant.cidadaos.notas.store', props.cidadao.id), {
+    notaForm.post(route('admin.cidadaos.notas.store', props.cidadao.id), {
         preserveScroll: true,
         onSuccess: () => notaForm.reset(),
     });
 };
 
 const addTag = () => {
-    tagForm.post(route('tenant.cidadaos.tags.attach', props.cidadao.id), {
+    tagForm.post(route('admin.cidadaos.tags.attach', props.cidadao.id), {
         preserveScroll: true,
         onSuccess: () => tagForm.reset(),
     });
 };
 
 const removeTag = (tagId) => {
-    useForm({}).delete(route('tenant.cidadaos.tags.detach', [props.cidadao.id, tagId]), {
+    useForm({}).delete(route('admin.cidadaos.tags.detach', [props.cidadao.id, tagId]), {
         preserveScroll: true,
     });
 };

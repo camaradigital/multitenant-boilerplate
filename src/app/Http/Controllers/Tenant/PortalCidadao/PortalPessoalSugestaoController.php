@@ -103,8 +103,9 @@ class PortalPessoalSugestaoController extends Controller
             $legislaturaAtual = Legislatura::atual()->first();
             if ($legislaturaAtual) {
                 $cargosMesaDiretora = ['Presidente', 'Vice-Presidente', '1º Secretário', '2º Secretário']; // Exemplo
+
                 $membrosMesa = Mandato::where('legislatura_id', $legislaturaAtual->id)
-                    ->whereIn('cargo_mesa_diretora', $cargosMesaDiretora)
+                    ->whereIn('cargo', $cargosMesaDiretora) // Alterado de 'cargo_mesa_diretora' para 'cargo'
                     ->with('politico')
                     ->get();
 

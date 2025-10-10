@@ -55,20 +55,19 @@ const closeModal = () => {
 };
 
 const submit = () => {
-    const routeName = isEditing.value ? 'admin.tipos-servico.update' : 'admin.tipos-servico.store';
-    const params = isEditing.value ? { tipo_servico: form.id } : {};
-
-    const options = {
-        onSuccess: () => closeModal(),
-        preserveScroll: true,
-    };
-
     if (isEditing.value) {
-        form.put(route(routeName, params), options);
+        form.put(route('admin.tipos-servico.update', { tipoServico: form.id }), {
+            onSuccess: () => closeModal(),
+            preserveScroll: true,
+        });
     } else {
-        form.post(route(routeName), options);
+        form.post(route('admin.tipos-servico.store'), {
+            onSuccess: () => closeModal(),
+            preserveScroll: true,
+        });
     }
 };
+
 
 
 // --- FUNÇÕES PARA O MODAL DE CONFIRMAÇÃO DE EXCLUSÃO ---

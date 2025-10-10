@@ -12,6 +12,14 @@ use Inertia\Response;
 class EmpresaController extends Controller
 {
     /**
+     * Aplica a EmpresaPolicy a todos os métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Empresa::class, 'empresa');
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(): Response
@@ -34,9 +42,6 @@ class EmpresaController extends Controller
      */
     public function store(Request $request)
     {
-        // CORREÇÃO: Especificamos a conexão 'tenant' para a regra 'unique'.
-        // Isso garante que a validação ocorra no banco de dados do tenant,
-        // onde a tabela 'empresas' existe.
         $request->validate([
             'nome_fantasia' => 'required|string|max:255',
             'razao_social' => 'nullable|string|max:255',
@@ -48,7 +53,7 @@ class EmpresaController extends Controller
         ]);
 
         $data = $request->all();
-        $data['user_id'] = Auth::id(); // Associa o usuário que está cadastrando
+        $data['user_id'] = Auth::id();
 
         Empresa::create($data);
 
@@ -78,8 +83,6 @@ class EmpresaController extends Controller
      */
     public function update(Request $request, Empresa $empresa)
     {
-        // CORREÇÃO: A mesma lógica é aplicada aqui para a atualização.
-        // A regra 'unique' agora verifica na conexão 'tenant', ignorando o registro atual.
         $request->validate([
             'nome_fantasia' => 'required|string|max:255',
             'razao_social' => 'nullable|string|max:255',
@@ -100,11 +103,7 @@ class EmpresaController extends Controller
      */
     public function destroy(Empresa $empresa)
     {
-        // Adicionar verificação se a empresa possui vagas antes de excluir
-        if ($empresa->vagas()->count() > 0) {
-            return redirect()->route('admin.empresas.index')->with('error', 'Não é possível excluir uma empresa que possui vagas cadastradas.');
-        }
-
+        // A autorização e as regras de negócio de exclusão agora são tratadas pela EmpresaPolicy.
         $empresa->delete();
 
         return redirect()->route('admin.empresas.index')->with('success', 'Empresa excluída com sucesso.');

@@ -91,7 +91,7 @@ const removeOption = (index) => {
 
 const submit = () => {
     const routeName = isEditing.value ? 'admin.custom-fields.update' : 'admin.custom-fields.store';
-    const params = isEditing.value ? { custom_field: form.id } : {};
+    const params = isEditing.value ? { customField: form.id } : {};
 
     const options = {
         onSuccess: () => closeModal(),

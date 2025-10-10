@@ -190,7 +190,7 @@ const reportsNav = [
             { name: 'Cidadãos', href: route('admin.relatorios.cidadaos'), current: 'admin.relatorios.cidadaos', icon: Users, permission: 'relatorios.visualizar_cidadaos' },
             { name: 'Mapeamento de Demandas', href: route('admin.relatorios.demandas-por-bairro'), current: 'admin.relatorios.demandas-por-bairro', icon: MapPin, permission: 'relatorios.visualizar_demandas_por_bairro' },
             { name: 'Análise de Tendências', href: route('admin.relatorios.analise-de-tendencias'), current: 'admin.relatorios.analise-de-tendencias', icon: TrendingUp, permission: 'relatorios.visualizar_analise_de_tendencias' },
-            { name: 'Lideranças por Bairro', href: route('admin.relatorios.mapeamento-politico.index'), current: 'admin.mapeamento-politico.index', icon: BrainCircuit, permission: 'relatorios.visualizar_mapeamento_politico' },
+            { name: 'Lideranças por Bairro', href: route('admin.relatorios.mapeamento-politico.index'), current: 'admin.relatorios.mapeamento-politico.index', icon: BrainCircuit, permission: 'relatorios.visualizar_mapeamento_politico' },
         ]
     },
 ];

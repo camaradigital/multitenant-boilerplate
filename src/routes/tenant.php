@@ -241,7 +241,7 @@ Route::middleware([
             Route::post('legislaturas/{legislatura}/mandatos', [MandatoController::class, 'store'])->name('mandatos.store');
             Route::delete('mandatos/{mandato}', [MandatoController::class, 'destroy'])->name('mandatos.destroy');
             // Rotas para Comissões
-            Route::resource('comissoes', ComissaoController::class)->except(['create', 'edit', 'show']);
+            Route::resource('comissoes', ComissaoController::class)->except(['create', 'edit', 'show'])->parameters(['comissoes' => 'comissao']);
             Route::post('comissoes/{comissao}/membros', [ComissaoController::class, 'adicionarMembro'])->name('comissoes.membros.store');
             Route::delete('comissoes/{comissao}/membros/{membroId}', [ComissaoController::class, 'removerMembro'])->name('comissoes.membros.destroy');
 
@@ -264,7 +264,7 @@ Route::middleware([
             Route::get('parametros', [ParametroController::class, 'index'])->name('parametros.index');
             Route::put('parametros', [ParametroController::class, 'update'])->name('parametros.update');
             Route::resource('status-solicitacao', StatusSolicitacaoController::class)->except(['create', 'edit'])->parameters(['status-solicitacao' => 'statusSolicitacao']);
-            Route::resource('custom-fields', CustomFieldController::class)->except(['create', 'edit']);
+            Route::resource('custom-fields', CustomFieldController::class)->except(['create', 'edit'])->parameters(['custom-fields' => 'customField']);
             Route::get('auditoria', [ActivityLogController::class, 'index'])->name('auditoria.index');
             Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
             Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);

@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Redirect;
 
 class EntidadeController extends Controller
 {
+    /**
+     * Aplica a EntidadePolicy a todos os métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Entidade::class, 'entidade');
+    }
+
     public function index()
     {
         return inertia('Tenant/Entidades/Index', [
@@ -57,6 +65,7 @@ class EntidadeController extends Controller
 
     public function destroy(Entidade $entidade)
     {
+        // A autorização e as regras de negócio de exclusão agora são tratadas pela EntidadePolicy.
         $entidade->delete();
 
         return Redirect::route('admin.entidades.index')->with('success', 'Entidade excluída com sucesso.');

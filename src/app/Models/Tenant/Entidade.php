@@ -4,6 +4,7 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
@@ -45,5 +46,10 @@ class Entidade extends Model
     public function registradoPor()
     {
         return $this->belongsTo(User::class, 'registrado_por_user_id');
+    }
+
+    public function convenios(): HasMany
+    {
+        return $this->hasMany(Convenio::class);
     }
 }

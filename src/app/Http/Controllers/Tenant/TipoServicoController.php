@@ -6,11 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\TipoServico;
 use Exception;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\Request; // Importar exceção do DB
-use Illuminate\Support\Facades\Redirect; // Importar exceção genérica
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
 
 class TipoServicoController extends Controller
 {
+    /**
+     * Aplica a TipoServicoPolicy aos métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(TipoServico::class, 'tipoServico');
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -60,27 +68,14 @@ class TipoServicoController extends Controller
      */
     public function destroy(TipoServico $tipoServico)
     {
-        // 1. Verificação de dependências
-        if ($tipoServico->servicos()->exists()) {
-            return Redirect::back()->with('error', 'Não é possível excluir. Existem serviços associados a este tipo.');
-        }
-
+        // A autorização e as regras de negócio de exclusão agora são tratadas pela TipoServicoPolicy.
         try {
-            // 2. Tenta deletar e verifica o resultado
-            if ($tipoServico->delete()) {
-                // Sucesso: a exclusão funcionou
-                return Redirect::back()->with('success', 'Tipo de serviço excluído com sucesso.');
-            } else {
-                // Falha silenciosa: um evento pode ter interrompido a exclusão
-                return Redirect::back()->with('error', 'A exclusão foi interrompida por um evento no sistema.');
-            }
+            $tipoServico->delete();
+
+            return Redirect::back()->with('success', 'Tipo de serviço excluído com sucesso.');
         } catch (QueryException $e) {
-            // 3. Captura erros específicos do banco de dados (ex: Foreign Key)
-            // report($e); // Descomente para logar o erro
             return Redirect::back()->with('error', 'Erro de banco de dados. Este item pode estar em uso em outra parte do sistema.');
         } catch (Exception $e) {
-            // 4. Captura qualquer outro erro inesperado
-            // report($e); // Descomente para logar o erro
             return Redirect::back()->with('error', 'Um erro inesperado ocorreu ao tentar excluir.');
         }
     }

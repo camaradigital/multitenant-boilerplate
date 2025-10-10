@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\Redirect;
 
 class ConvenioController extends Controller
 {
+    /**
+     * Aplica a ConvenioPolicy a todos os métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Convenio::class, 'convenio');
+    }
+
     public function index()
     {
         return inertia('Tenant/Convenios/Index', [

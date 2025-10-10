@@ -120,7 +120,7 @@ const openDeleteComissaoConfirmation = (comissao) => {
 };
 
 const openDeleteMembroConfirmation = (comissaoId, membro) => {
-    const action = () => router.delete(route('admin.comissoes.membros.destroy', { comissao: comissaoId, membro: membro.id }), { preserveScroll: true });
+    const action = () => router.delete(route('admin.comissoes.membros.destroy', { comissao: comissaoId, membroId: membro.id }), { preserveScroll: true });
     openConfirmationModal(
         action,
         'Remover Membro',

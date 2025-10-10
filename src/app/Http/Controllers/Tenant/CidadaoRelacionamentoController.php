@@ -11,11 +11,17 @@ use Inertia\Inertia;
 
 class CidadaoRelacionamentoController extends Controller
 {
+    /**
+     * Display the specified resource.
+     * Mostra o "dossiê" completo de um cidadão.
+     */
     public function show(Cidadao $cidadao)
     {
-        // Carregar todos os relacionamentos necessários, incluindo o bairro
+        // Verifica se o usuário autenticado tem permissão para visualizar o perfil deste cidadão.
+        $this->authorize('viewCidadao', $cidadao);
+
         $cidadao->load([
-            'bairro', // ADICIONADO: Carrega a relação com o bairro
+            'bairro',
             'solicitacoes.servico',
             'pesquisas_satisfacao',
             'gabineteMessages.respostas.user',
@@ -49,7 +55,7 @@ class CidadaoRelacionamentoController extends Controller
             ->sortByDesc('data') // Ordenar pela data, do mais recente para o mais antigo
             ->values(); // Resetar as chaves do array
 
-        return Inertia::render('Tenant/Cidadaos/Show', [ // Apontando para a view correta
+        return Inertia::render('Tenant/Cidadaos/Show', [
             'cidadao' => $cidadao,
             'kpis' => $kpis,
             'timeline' => $timeline,
@@ -57,8 +63,14 @@ class CidadaoRelacionamentoController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created note for the citizen.
+     */
     public function storeNota(Request $request, Cidadao $cidadao)
     {
+        // Verifica se o usuário tem permissão para gerenciar notas para este cidadão.
+        $this->authorize('manageNotesCidadao', $cidadao);
+
         $request->validate([
             'titulo' => 'required|string|max:255',
             'nota' => 'required|string',
@@ -73,16 +85,28 @@ class CidadaoRelacionamentoController extends Controller
         return back()->with('success', 'Nota adicionada com sucesso.');
     }
 
+    /**
+     * Attach a tag to the citizen.
+     */
     public function attachTag(Request $request, Cidadao $cidadao)
     {
+        // Verifica se o usuário tem permissão para gerenciar tags para este cidadão.
+        $this->authorize('manageTagsCidadao', $cidadao);
+
         $request->validate(['tag_id' => 'required|exists:tenant.tags,id']);
         $cidadao->tags()->syncWithoutDetaching($request->tag_id);
 
         return redirect()->back()->with('success', 'Tag adicionada.');
     }
 
+    /**
+     * Detach a tag from the citizen.
+     */
     public function detachTag(Cidadao $cidadao, Tag $tag)
     {
+        // Verifica se o usuário tem permissão para gerenciar tags para este cidadão.
+        $this->authorize('manageTagsCidadao', $cidadao);
+
         $cidadao->tags()->detach($tag->id);
 
         return redirect()->back()->with('success', 'Tag removida.');

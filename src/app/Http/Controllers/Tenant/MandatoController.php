@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\Legislatura;
 use App\Models\Tenant\Mandato;
 use App\Models\Tenant\Politico;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\ValidationException;
 
 class MandatoController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Legislatura $legislatura)
     {
+        // Garante que o usuário tem permissão para atualizar a legislatura antes de adicionar um membro
+        $this->authorize('update', $legislatura);
+
         $validated = $request->validate([
             'politico_id' => 'required|exists:tenant.politicos,id',
             'cargo' => 'required|string|max:100',
@@ -36,6 +42,9 @@ class MandatoController extends Controller
 
     public function update(Request $request, Mandato $mandato)
     {
+        // Garante que o usuário tem permissão para atualizar a legislatura à qual o mandato pertence
+        $this->authorize('update', $mandato->legislatura);
+
         $validated = $request->validate([
             'cargo' => 'required|string|max:100',
         ]);
@@ -47,6 +56,9 @@ class MandatoController extends Controller
 
     public function destroy(Mandato $mandato)
     {
+        // Garante que o usuário tem permissão para atualizar a legislatura antes de remover um membro
+        $this->authorize('update', $mandato->legislatura);
+
         $mandato->delete();
 
         return Redirect::back()->with('success', 'Membro removido.');

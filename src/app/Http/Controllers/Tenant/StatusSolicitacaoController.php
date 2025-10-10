@@ -6,24 +6,31 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\StatusSolicitacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redirect; // Importar a classe Redirect
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 
 class StatusSolicitacaoController extends Controller
 {
     /**
-     * Exibe a lista de status, retornando uma resposta Inertia.
+     * Aplica a StatusSolicitacaoPolicy aos métodos do resource controller.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(StatusSolicitacao::class, 'statusSolicitacao');
+    }
+
+    /**
+     * Exibe a lista de status.
      */
     public function index()
     {
-        // Renderiza o componente Vue e passa os status paginados como prop.
         return inertia('Tenant/StatusSolicitacao/Index', [
             'status' => StatusSolicitacao::latest()->paginate(10),
         ]);
     }
 
     /**
-     * Salva um novo status no banco de dados.
+     * Salva um novo status.
      */
     public function store(Request $request)
     {
@@ -35,21 +42,18 @@ class StatusSolicitacaoController extends Controller
         ]);
 
         DB::transaction(function () use ($request) {
-            // Se o novo status for o padrão, desmarca todos os outros.
             if ($request->boolean('is_default_abertura')) {
                 StatusSolicitacao::query()->update(['is_default_abertura' => false]);
             }
-
             StatusSolicitacao::create($request->all());
         });
 
-        // Redireciona para a rota correta usando o nome definido no seu arquivo de rotas.
         return Redirect::route('admin.status-solicitacao.index')
             ->with('success', 'Status criado com sucesso.');
     }
 
     /**
-     * Atualiza um status no banco de dados.
+     * Atualiza um status.
      */
     public function update(Request $request, StatusSolicitacao $statusSolicitacao)
     {
@@ -61,12 +65,10 @@ class StatusSolicitacaoController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $statusSolicitacao) {
-            // Se este status for o padrão, desmarca todos os outros.
             if ($request->boolean('is_default_abertura')) {
                 StatusSolicitacao::where('id', '!=', $statusSolicitacao->id)
                     ->update(['is_default_abertura' => false]);
             }
-
             $statusSolicitacao->update($request->all());
         });
 
@@ -75,20 +77,11 @@ class StatusSolicitacaoController extends Controller
     }
 
     /**
-     * Remove um status do banco de dados.
+     * Remove um status.
      */
     public function destroy(StatusSolicitacao $statusSolicitacao)
     {
-        // Regra de segurança: Não permitir exclusão do status padrão de abertura.
-        if ($statusSolicitacao->is_default_abertura) {
-            return Redirect::back()->with('error', 'Não é possível excluir o status padrão de abertura.');
-        }
-
-        // Regra de segurança: Não permitir exclusão se o status estiver em uso.
-        if ($statusSolicitacao->solicitacoesServico()->exists()) {
-            return Redirect::back()->with('error', 'Não é possível excluir o status, pois ele já está sendo utilizado em solicitações.');
-        }
-
+        // A autorização e a lógica de negócio agora são tratadas pela policy.
         $statusSolicitacao->delete();
 
         return Redirect::route('admin.status-solicitacao.index')

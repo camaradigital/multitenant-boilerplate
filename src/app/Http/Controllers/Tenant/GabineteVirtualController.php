@@ -93,7 +93,7 @@ class GabineteVirtualController extends Controller
     public function adminShow(GabineteVirtualMensagem $mensagem)
     {
         // A mesma policy 'view' funciona aqui, pois ela permite admins também.
-        $this->authorize('view', $mensagem);
+        $this->authorize('viewAdmin', $mensagem);
 
         $mensagem->load('user', 'respostas.user');
 
