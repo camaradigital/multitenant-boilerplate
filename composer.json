@@ -1,5 +1,0 @@
-{
-    "require": {
-        "spatie/laravel-multitenancy": "^4.0"
-    }
-}
