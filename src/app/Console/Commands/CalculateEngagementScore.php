@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands\Tenant;
+namespace App\Console\Commands;
 
 use App\Models\Tenant\User;
 use Illuminate\Console\Command;
