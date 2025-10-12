@@ -4,16 +4,26 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
-class Bairro extends Model
+class DashboardPreference extends Model
 {
     use HasFactory, LogsActivity, UsesTenantConnection;
 
-    protected $fillable = ['nome', 'tipo_logradouro'];
+    protected $fillable = [
+        'role_id',
+        'widget_identifier',
+        'is_visible',
+        'order',
+        'settings',
+    ];
+
+    protected $casts = [
+        'settings' => 'array',
+        'is_visible' => 'boolean',
+    ];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -26,11 +36,8 @@ class Bairro extends Model
             ->dontSubmitEmptyLogs();
     }
 
-    /**
-     * Um bairro pode ter muitos usuários.
-     */
-    public function users(): HasMany
+    public function role()
     {
-        return $this->hasMany(User::class);
+        return $this->belongsTo(Role::class);
     }
 }

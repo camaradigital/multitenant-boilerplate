@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CampanhaComunicacaoResource;
 use App\Jobs\Tenant\SendCampanhaEmailJob;
+use App\Models\Tenant\Bairro;
 use App\Models\Tenant\CampanhaComunicacao;
 use App\Models\Tenant\User;
 use Illuminate\Http\Request;
@@ -58,8 +59,8 @@ class CampanhaController extends Controller
         // Autorização com a Policy para criar uma nova campanha
         $this->authorize('create', CampanhaComunicacao::class);
 
-        // Obter todos os bairros distintos dos usuários para o filtro
-        $bairros = User::whereNotNull('bairro')->distinct()->orderBy('bairro')->pluck('bairro');
+        // Obter todos os bairros para o filtro, diretamente da tabela de bairros
+        $bairros = Bairro::orderBy('nome')->pluck('nome');
 
         return Inertia::render('Tenant/Campanhas/Create', [
             'bairros' => $bairros,
@@ -137,8 +138,10 @@ class CampanhaController extends Controller
         }
 
         // Filtrar por Bairro
-        if (! empty($segmentacao['bairro'])) {
-            $query->where('bairro', $segmentacao['bairro']);
+        if (! empty($segmentacao['bairros'])) {
+            $query->whereHas('bairro', function ($q) use ($segmentacao) {
+                $q->whereIn('nome', $segmentacao['bairros']);
+            });
         }
 
         return response()->json([

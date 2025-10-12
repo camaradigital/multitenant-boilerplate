@@ -63,7 +63,7 @@ const submit = () => {
             <div class="max-w-7xl mx-auto">
                  <!-- Card Principal -->
                 <div class="relative bg-white dark:bg-gray-900/70 dark:backdrop-blur-sm border border-gray-200 dark:border-white/10 shadow-lg rounded-2xl">
-                     <!-- Ícone no Topo -->
+                        <!-- Ícone no Topo -->
                     <div class="absolute -top-7 left-1/2 -translate-x-1/2 w-16 h-16 bg-emerald-600 dark:bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
                         <FilePlus :size="32" class="text-white" />
                     </div>
@@ -106,7 +106,7 @@ const submit = () => {
                             <div class="lg:col-span-1 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border dark:border-white/10 space-y-6">
                                 <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300">2. Segmentação</h3>
                                 <div class="space-y-4">
-                                     <div>
+                                      <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Faixa Etária</label>
                                         <div class="flex items-center space-x-2 mt-1">
                                             <input v-model="form.segmentacao.idade_min" type="number" placeholder="De" class="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-emerald-500 focus:border-emerald-500" />
@@ -165,7 +165,7 @@ const submit = () => {
                         <!-- Rodapé com Ação Principal -->
                         <div class="p-6 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-white/10 flex items-center justify-end rounded-b-2xl">
                             <button type="submit" class="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold text-sm transition-all bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 disabled:opacity-50" :class="{ 'opacity-50': form.processing }" :disabled="form.processing || totalPublico === null">
-                                Agendar e Enviar Campanha
+                                Criar Rascunho da Campanha
                             </button>
                         </div>
                     </form>

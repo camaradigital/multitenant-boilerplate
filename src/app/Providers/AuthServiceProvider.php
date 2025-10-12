@@ -5,6 +5,7 @@ namespace App\Providers;
 // Models
 use App\Models\Central\Tenant;
 use App\Models\Tenant\AchadoEPerdidoDocumento;
+use App\Models\Tenant\Bairro;
 use App\Models\Tenant\CampanhaComunicacao;
 use App\Models\Tenant\Candidatura;
 use App\Models\Tenant\Comissao;
@@ -24,12 +25,14 @@ use App\Models\Tenant\Servico;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
 use App\Models\Tenant\SugestaoProjetoLei;
+use App\Models\Tenant\Tag;
 use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Models\Tenant\Vaga;
 // Policies
 use App\Policies\Tenant\AchadoEPerdidoDocumentoPolicy;
 use App\Policies\Tenant\ActivityLogPolicy;
+use App\Policies\Tenant\BairroPolicy;
 use App\Policies\Tenant\CampanhaPolicy;
 use App\Policies\Tenant\CandidaturaPolicy;
 use App\Policies\Tenant\ComissaoPolicy;
@@ -51,6 +54,7 @@ use App\Policies\Tenant\ServicoPolicy;
 use App\Policies\Tenant\SolicitacaoServicoPolicy;
 use App\Policies\Tenant\StatusSolicitacaoPolicy;
 use App\Policies\Tenant\SugestaoProjetoLeiPolicy;
+use App\Policies\Tenant\TagPolicy;
 use App\Policies\Tenant\TipoServicoPolicy;
 use App\Policies\Tenant\UserPolicy;
 use App\Policies\Tenant\VagaPolicy;
@@ -101,6 +105,8 @@ class AuthServiceProvider extends ServiceProvider
         StatusSolicitacao::class => StatusSolicitacaoPolicy::class,
         CustomField::class => CustomFieldPolicy::class,
         Activity::class => ActivityLogPolicy::class,
+        Bairro::class => BairroPolicy::class,
+        Tag::class => TagPolicy::class,
     ];
 
     /**
@@ -113,5 +119,10 @@ class AuthServiceProvider extends ServiceProvider
         // Define as permissões para visualizar os diferentes dashboards
         Gate::define('view-cidadao-dashboard', [DashboardPolicy::class, 'viewCidadaoDashboard']);
         Gate::define('view-admin-dashboard', [DashboardPolicy::class, 'viewAdminDashboard']);
+
+        // Apenas usuários com o papel 'Admin Tenant' podem personalizar.
+        Gate::define('customize-dashboard', function (User $user) {
+            return $user->hasRole('Admin Tenant');
+        });
     }
 }

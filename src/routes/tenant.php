@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tenant\AchadoEPerdidoDocumentoController;
 use App\Http\Controllers\Tenant\ActivityLogController;
 use App\Http\Controllers\Tenant\Auth\VerificationController;
+use App\Http\Controllers\Tenant\BairroController;
 use App\Http\Controllers\Tenant\CampanhaController;
 use App\Http\Controllers\Tenant\CandidaturaController;
 use App\Http\Controllers\Tenant\CidadaoController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Tenant\ComissaoController;
 use App\Http\Controllers\Tenant\ConvenioController;
 use App\Http\Controllers\Tenant\CustomFieldController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\DashboardCustomizationController;
 use App\Http\Controllers\Tenant\DocumentoController;
 use App\Http\Controllers\Tenant\EmpresaController;
 use App\Http\Controllers\Tenant\EntidadeController;
@@ -37,6 +39,7 @@ use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\Tenant\SolicitacaoServicoController;
 use App\Http\Controllers\Tenant\StatusSolicitacaoController;
 use App\Http\Controllers\Tenant\SugestaoProjetoLeiController;
+use App\Http\Controllers\Tenant\TagController;
 use App\Http\Controllers\Tenant\TipoServicoController;
 use App\Http\Controllers\Tenant\VagaController;
 use App\Models\Tenant\Bairro;
@@ -268,14 +271,22 @@ Route::middleware([
             Route::get('auditoria', [ActivityLogController::class, 'index'])->name('auditoria.index');
             Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
             Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
+            Route::resource('bairros', BairroController::class);
+            Route::resource('tags', TagController::class);
 
-            // [ADICIONADO] Rotas para Sugestões de Projetos de Lei (Admin)
+            // Rotas para Sugestões de Projetos de Lei (ADMIN)
             Route::prefix('sugestoes')->as('sugestoes.')->group(function () {
                 Route::get('/', [SugestaoProjetoLeiController::class, 'index'])->name('index');
                 Route::get('/{sugestao}', [SugestaoProjetoLeiController::class, 'show'])->name('show');
                 Route::post('/{sugestao}/status', [SugestaoProjetoLeiController::class, 'updateStatus'])->name('updateStatus');
                 Route::delete('/{sugestao}', [SugestaoProjetoLeiController::class, 'destroy'])->name('destroy');
             });
+
+            // Rotas para Customização da Dashboard (ADMIN)
+            Route::get('/dashboard/customize', [DashboardCustomizationController::class, 'edit'])
+                ->name('dashboard.customize.edit');
+            Route::put('/dashboard/customize', [DashboardCustomizationController::class, 'update'])
+                ->name('dashboard.customize.update');
         });
 
         // --- ROTAS DE PERFIL DE UTILIZADOR ---

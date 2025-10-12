@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Se a tabela já existir (o que é o caso)
+        Schema::table('bairros', function (Blueprint $table) {
+            $table->enum('tipo_logradouro', ['zona urbana', 'zona rural'])
+                ->default('zona urbana')
+                ->after('nome');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('bairros', function (Blueprint $table) {
+            $table->dropColumn('tipo_logradouro');
+        });
+    }
+};

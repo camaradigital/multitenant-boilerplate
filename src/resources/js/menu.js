@@ -207,6 +207,8 @@ const settingsNav = [
             { name: 'Gerais', href: route('admin.parametros.index'), current: 'admin.parametros.*', icon: Settings, permission: 'configuracoes.visualizar' },
             { name: 'Status de Solicitação', href: route('admin.status-solicitacao.index'), current: 'admin.status-solicitacao.*', icon: ClipboardCheck, permission: 'status_solicitacao.visualizar_todos' },
             { name: 'Campos Personalizados', href: route('admin.custom-fields.index'), current: 'admin.custom-fields.*', icon: ListChecks, permission: 'campos_personalizados.visualizar_todos' },
+            { name: 'Bairros', href: route('admin.bairros.index'), current: 'admin.bairros.*', icon: MapPin, permission: 'bairros.visualizar_todos' },
+            { name: 'Tags', href: route('admin.tags.index'), current: 'admin.tags.*', icon: ListChecks, permission: 'tags.visualizar_todos' },
             { name: 'Papéis', href: route('admin.roles-permissions.index'), current: 'admin.roles-permissions.*', icon: ShieldCheck, permission: 'perfis.visualizar_todos' },
             { name: 'Permissões', href: route('admin.permissions.index'), current: 'admin.permissions.*', icon: KeyRound, permission: 'perfis.visualizar_todos' },
             { name: 'Auditoria', href: route('admin.auditoria.index'), current: 'admin.auditoria.index', icon: History, permission: 'logs_de_atividade.visualizar_todos' },

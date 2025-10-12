@@ -44,7 +44,7 @@ class VagaController extends Controller
     {
         $empresas = Empresa::where('is_active', true)->orderBy('nome_fantasia')->get();
 
-        return Inertia::render('Tenant/Vagas/Create', compact('empresas'));
+        return Inertia::render('Tenant/Vagas/Index', compact('empresas'));
     }
 
     /**

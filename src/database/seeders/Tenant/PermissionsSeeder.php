@@ -69,6 +69,8 @@ class PermissionsSeeder extends Seeder
             'servicos' => ['visualizar_todos', 'visualizar', 'criar', 'atualizar', 'excluir'],
             'status_solicitacao' => ['visualizar_todos', 'criar', 'atualizar', 'excluir'],
             'campos_personalizados' => ['visualizar_todos', 'criar', 'atualizar', 'excluir'],
+            'bairros' => ['visualizar_todos', 'criar', 'atualizar', 'excluir'],
+            'tags' => ['visualizar_todos', 'criar', 'atualizar', 'excluir'],
             'logs_de_atividade' => ['visualizar_todos', 'visualizar'],
 
             // Módulo Portal (visualização pública)
