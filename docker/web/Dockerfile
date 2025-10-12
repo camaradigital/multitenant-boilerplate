@@ -45,6 +45,9 @@ COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 # Define o diretório de trabalho
 WORKDIR /var/www/html
 
+# Copia o código do Laravel (ajuste o path conforme necessário)
+COPY src /var/www/html
+
 # Altera o dono do diretório para o usuário do PHP
 RUN chown -R www-data:www-data /var/www/html
 
