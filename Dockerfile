@@ -103,6 +103,10 @@ RUN rm /usr/local/bin/composer
 # Ajusta as permissões APENAS nas pastas que precisam de escrita.
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Adiciona uma verificação de saúde para o PHP-FPM
+HEALTHCHECK --interval=5s --timeout=3s --start-period=1s \
+  CMD cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1
+  
 # Expõe a porta do Nginx e inicia o Supervisor.
 EXPOSE 80
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
