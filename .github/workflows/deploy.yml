@@ -28,4 +28,4 @@ jobs:
           context: . # Usa o diretório raiz para o contexto do build
           file: ./Dockerfile # Caminho para o seu Dockerfile
           push: true # Garante que a imagem será enviada para o registry
-          tags: SEU_USUARIO_DOCKERHUB/NOME_DA_SUA_IMAGEM:latest # Ex: joaodasilva/meu-app:latest
+          tags: tags: julimarpimentel/cacsystem_web:latest
