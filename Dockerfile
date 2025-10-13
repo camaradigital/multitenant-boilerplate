@@ -43,7 +43,6 @@ RUN npm run build
 FROM php:8.3-fpm-alpine
 
 # Instala dependências de sistema, compila as extensões PHP e remove as dependências de build em um único passo.
-# Isso cria uma imagem final mais enxuta e segura.
 RUN apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         libzip-dev \
@@ -72,6 +71,10 @@ RUN apk add --no-cache --virtual .build-deps \
     && pecl install redis && docker-php-ext-enable redis \
     && apk del .build-deps
 
+# *** CORREÇÃO APLICADA AQUI ***
+# Copia o executável do Composer de uma imagem oficial para usá-lo temporariamente.
+COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
+
 # Copia os arquivos de configuração do ambiente.
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/web/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -80,21 +83,22 @@ COPY docker/web/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 WORKDIR /var/www/html
 
 # --- COPIA OS ARTEFATOS DOS ESTÁGIOS ANTERIORES ---
-# Copia o código-fonte COMPLETO do diretório 'src'.
 COPY src/ .
-# Copia a pasta 'vendor' já pronta do estágio 'vendor'.
 COPY --from=vendor /app/vendor/ ./vendor/
-# Copia a pasta 'build' com os assets compilados do estágio 'frontend'.
 COPY --from=frontend /app/public/build ./public/build
 
-# --- OTIMIZAÇÕES E PERMISSÕES FINAIS ---
+# --- OTIMIZAÇÕES, PERMISSÕES E LIMPEZA FINAIS ---
 # Otimiza o autoloader do Composer com o contexto completo da aplicação.
 RUN composer dump-autoload --optimize
 
 # Roda as otimizações do Laravel que geram arquivos de cache.
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# *** LIMPEZA ADICIONADA AQUI ***
+# Remove o Composer após o uso para manter a imagem final enxuta.
+RUN rm /usr/local/bin/composer
 
 # Ajusta as permissões APENAS nas pastas que precisam de escrita.
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
