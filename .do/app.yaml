@@ -1,0 +1,11 @@
+name: camaradigital # O nome da sua aplicação na DigitalOcean
+services:
+  - name: cacsystem-web # O nome do seu serviço web
+    # Aponta para o seu repositório do GitHub
+    github:
+      repo: camaradigital/camaradigital
+      branch: main
+    # AQUI ESTÁ A MÁGICA: especificamos o caminho exato do Dockerfile
+    dockerfile_path: docker/web/Dockerfile
+    # Define a porta que o serviço expõe
+    http_port: 80
