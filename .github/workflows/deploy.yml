@@ -20,7 +20,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: .
-          file: ./camaradigital/docker/web/Dockerfile
+          context: ./camaradigital
+          file: ./docker/web/Dockerfile
           push: true
           tags: julimarpimentel/cacsystem_web:latest
