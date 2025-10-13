@@ -1,0 +1,31 @@
+# Nome do seu fluxo de trabalho
+name: Build and Push Docker Image to Docker Hub
+
+# Gatilho: Este workflow vai rodar toda vez que houver um push na branch 'main'
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # O trabalho rodará em uma máquina virtual Ubuntu
+    steps:
+      # 1. Pega o seu código do repositório
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      # 2. Faz o login no Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # Seu usuário do Docker Hub
+          password: ${{ secrets.DOCKERHUB_TOKEN }}   # Seu token de acesso do Docker Hub
+
+      # 3. Constrói a imagem Docker e faz o push
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: . # Usa o diretório raiz para o contexto do build
+          file: ./Dockerfile # Caminho para o seu Dockerfile
+          push: true # Garante que a imagem será enviada para o registry
+          tags: SEU_USUARIO_DOCKERHUB/NOME_DA_SUA_IMAGEM:latest # Ex: joaodasilva/meu-app:latest
