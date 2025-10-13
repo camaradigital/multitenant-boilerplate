@@ -1,15 +1,81 @@
 version: '3.8'
 
+# -----------------------------------------------------------------------------
+# ARQUIVO DE ORQUESTRAÇÃO PARA O AMBIENTE DE PRODUÇÃO
+# -----------------------------------------------------------------------------
+# Este arquivo é otimizado para segurança e performance.
+# As credenciais são lidas do arquivo '.env' na raiz do projeto.
+#
+# Comandos para deploy via GitHub Actions (ou manual no servidor):
+# 1. docker-compose -f docker-compose.prod.yml build --no-cache
+# 2. docker-compose -f docker-compose.prod.yml up -d
+# 3. docker-compose -f docker-compose.prod.yml exec web php artisan migrate --force
+# -----------------------------------------------------------------------------
+
 services:
-  # Serviço Web focado APENAS em construir a imagem para produção
+  # --- Serviço da Aplicação Web (Nginx + PHP-FPM) ---
   web:
-    # Adicionamos o nome da imagem aqui para simplificar os comandos
-    image: julimarpimentel/cacsystem_web:latest
     build:
       context: .
       dockerfile: ./docker/web/Dockerfile
-    #
-    # REMOVEMOS os 'volumes' e 'ports'.
-    # O código já vai estar DENTRO da imagem por causa do comando 'COPY'
-    # no Dockerfile. As portas serão gerenciadas pela Digital Ocean.
-    #
+    container_name: cacsystem_web_prod
+    restart: unless-stopped
+    working_dir: /var/www/html
+    ports:
+      - "80:80"
+      # Descomente a porta 443 após configurar o SSL/HTTPS no seu Nginx
+      # - "443:443"
+    volumes:
+      # Volume para dados persistentes (uploads de usuários, etc.).
+      # O código-fonte NÃO é montado aqui; ele já está na imagem.
+      - cacsystem_storage_prod:/var/www/html/storage/app/public
+    networks:
+      - cacsystem_network
+    depends_on:
+      - db
+      - redis
+    # Carrega as variáveis do arquivo .env da raiz do projeto.
+    # Crie um arquivo .env no seu servidor com as credenciais de produção.
+    env_file:
+      - .env
+
+  # --- Serviço de Banco de Dados (MySQL) ---
+  db:
+    image: mysql:8.0
+    container_name: cacsystem_db_prod
+    restart: unless-stopped
+    environment:
+      # As credenciais são lidas do arquivo .env na raiz do projeto.
+      # Exemplo: MYSQL_DATABASE=${DB_CENTRAL_DATABASE}
+      MYSQL_DATABASE: ${DB_CENTRAL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD} # Use uma senha forte em produção
+      MYSQL_USER: ${DB_CENTRAL_USERNAME}
+      MYSQL_PASSWORD: ${DB_CENTRAL_PASSWORD}
+    volumes:
+      # Volume para persistir os dados do banco de dados.
+      - cacsystem_db_data_prod:/var/lib/mysql
+    networks:
+      - cacsystem_network
+    # IMPORTANTE: Nenhuma porta do banco de dados é exposta publicamente.
+    # A comunicação com o serviço 'web' ocorre pela rede interna do Docker.
+
+  # --- Serviço de Cache e Filas (Redis) ---
+  redis:
+    image: redis:alpine
+    container_name: cacsystem_redis_prod
+    restart: unless-stopped
+    networks:
+      - cacsystem_network
+    # IMPORTANTE: Nenhuma porta do Redis é exposta publicamente.
+
+# --- Rede interna para comunicação entre os containers ---
+networks:
+  cacsystem_network:
+    driver: bridge
+
+# --- Volumes para persistência de dados ---
+volumes:
+  cacsystem_db_data_prod:
+    driver: local
+  cacsystem_storage_prod:
+    driver: local
