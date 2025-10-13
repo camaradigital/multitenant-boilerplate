@@ -139,7 +139,7 @@ const submitForm = () => {
                     <div v-animate-on-scroll class="mt-12" style="animation-delay: 0.4s;">
                         <a href="#contact" class="inline-flex items-center bg-green-600 text-white font-bold py-3.5 px-9 rounded-full shadow-lg hover:shadow-xl hover:bg-green-700 transition-colors duration-300">
                             <Star class="h-5 w-5 mr-3" />
-                            Solicite uma Demonstração TESTE
+                            Solicite uma Demonstração
                         </a>
                     </div>
                 </div>
