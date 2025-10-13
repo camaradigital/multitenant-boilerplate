@@ -19,9 +19,6 @@ RUN composer install \
     --optimize-autoloader \
     --ignore-platform-reqs
 
-# Adiciona os scripts do Laravel de volta.
-RUN composer run-script post-autoload-dump --no-dev
-
 # --- ESTÁGIO 2: ASSETS DE FRONTEND (NPM/VITE) ---
 # Usamos uma imagem do Node.js para compilar os assets.
 # Chamamos este estágio de "frontend".
@@ -86,6 +83,8 @@ COPY --from=frontend /app/public/build ./public/build
 
 # --- OTIMIZAÇÕES E PERMISSÕES FINAIS ---
 # Roda as otimizações do Laravel que geram arquivos de cache.
+RUN composer dump-autoload --optimize
+
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan view:cache
