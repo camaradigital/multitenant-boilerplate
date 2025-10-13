@@ -10,7 +10,7 @@ COPY src/database/ database/
 COPY src/composer.json src/composer.lock ./
 
 # Instala apenas as dependências de produção, otimizando o autoloader.
-# ADICIONAMOS A FLAG --ignore-platform-reqs PARA RESOLVER O ERRO.
+# A flag --ignore-platform-reqs resolve o erro de extensões faltando neste estágio.
 RUN composer install \
     --no-interaction \
     --no-dev \
@@ -42,30 +42,35 @@ RUN npm run build
 # Começamos com uma imagem base limpa e leve (alpine).
 FROM php:8.3-fpm-alpine
 
-# Instala apenas as dependências de sistema ESTRITAMENTE necessárias para rodar a aplicação.
-# Usamos 'apk' em vez de 'apt-get' por ser uma imagem Alpine.
-RUN apk add --no-cache \
-    nginx \
-    supervisor \
-    libzip-dev \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    oniguruma-dev
-
-# Instala as extensões PHP necessárias e habilita OPcache (essencial para performance).
-# A extensão 'gd' é instalada corretamente aqui.
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+# Instala dependências de sistema, compila as extensões PHP e remove as dependências de build em um único passo.
+# Isso cria uma imagem final mais enxuta e segura.
+RUN apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        libzip-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        oniguruma-dev \
+    && apk add --no-cache \
+        nginx \
+        supervisor \
+        libzip \
+        libpng \
+        libjpeg-turbo \
+        freetype \
+        oniguruma \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    gd \
-    zip \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
     && docker-php-ext-enable opcache \
-    && pecl install redis && docker-php-ext-enable redis
+    && pecl install redis && docker-php-ext-enable redis \
+    && apk del .build-deps
 
 # Copia os arquivos de configuração do ambiente.
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
@@ -83,9 +88,10 @@ COPY --from=vendor /app/vendor/ ./vendor/
 COPY --from=frontend /app/public/build ./public/build
 
 # --- OTIMIZAÇÕES E PERMISSÕES FINAIS ---
-# Roda as otimizações do Laravel que geram arquivos de cache.
+# Otimiza o autoloader do Composer com o contexto completo da aplicação.
 RUN composer dump-autoload --optimize
 
+# Roda as otimizações do Laravel que geram arquivos de cache.
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan view:cache
