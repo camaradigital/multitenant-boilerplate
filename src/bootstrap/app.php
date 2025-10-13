@@ -36,7 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // CORREÇÃO 1: Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
+        $middleware->trustProxies(at: '*');
+        // Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
         $middleware->appendToGroup('web', [
             'auth.session',
         ]);

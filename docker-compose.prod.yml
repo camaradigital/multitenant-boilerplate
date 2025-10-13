@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  # Serviço Web focado APENAS em construir a imagem para produção
+  web:
+    # Adicionamos o nome da imagem aqui para simplificar os comandos
+    image: julimarpimentel/cacsystem_web:latest
+    build:
+      context: .
+      dockerfile: ./docker/web/Dockerfile
+    #
+    # REMOVEMOS os 'volumes' e 'ports'.
+    # O código já vai estar DENTRO da imagem por causa do comando 'COPY'
+    # no Dockerfile. As portas serão gerenciadas pela Digital Ocean.
+    #

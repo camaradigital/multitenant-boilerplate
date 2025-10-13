@@ -1,25 +1,23 @@
 version: '3.8'
 
 services:
-
-  # Serviço Web unificado (Nginx + PHP-FPM)
+  # Serviço Web para DESENVOLVIMENTO
   web:
     build:
-      # O contexto agora aponta para o novo diretório com o Dockerfile unificado.
-      context: ./docker/web
-      dockerfile: Dockerfile
-    container_name: cacsystem_web
+      context: .
+      # Garante que o Dockerfile correto está sendo usado.
+      dockerfile: ./docker/web/Dockerfile
+    container_name: cacsystem_web_dev # Renomeado para indicar que é de dev
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
-      # Mapeia o código da sua aplicação para dentro do container.
+      # ESSENCIAL PARA DEV: Mapeia o código local para dentro do container
+      # para que as alterações sejam refletidas em tempo real.
       - ./src:/var/www/html
     ports:
-      # Expõe a porta 80 do Nginx para a sua máquina.
       - "80:80"
     networks:
       - cacsystem_network
-    # A dependência agora é dos outros serviços, se necessário.
     depends_on:
       - db
       - redis
@@ -27,7 +25,7 @@ services:
   # Banco de Dados (MySQL)
   db:
     image: mysql:8.0
-    container_name: cacsystem_db
+    container_name: cacsystem_db_dev
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: cac_central
@@ -44,7 +42,7 @@ services:
   # Cache (Redis)
   redis:
     image: redis:alpine
-    container_name: cacsystem_redis
+    container_name: cacsystem_redis_dev
     restart: unless-stopped
     ports:
       - "6379:6379"

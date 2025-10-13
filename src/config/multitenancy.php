@@ -19,7 +19,8 @@ return [
         'localhost',
         '127.0.0.1',
         'cacsystem.test', // exemplo local
-        'cacsystem.com.br', // produção
+        'camaradigital.app', // produção
+        'cacsystem-web-i2x24.ondigitalocean.app', // Adicione aqui
     ],
 
     /*

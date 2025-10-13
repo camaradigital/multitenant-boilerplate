@@ -56,25 +56,35 @@ return [
     'redis' => [
         'client' => env('REDIS_CLIENT', 'phpredis'),
         'options' => [
-            'cluster' => env('REDIS_CLUSTER', 'redis'),
+            'cluster' => env('REDIS_CLUSTER', 'none'), // DigitalOcean não usa cluster
             'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'CACSystem')).'-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', 'redis'),
-            'username' => env('REDIS_USERNAME'),
+            'username' => env('REDIS_USERNAME', 'default'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            'scheme' => env('REDIS_SCHEME', 'tcp'),
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => false, // Para evitar problemas com hostname
+            ],
         ],
         'cache' => [
+            'scheme' => env('REDIS_SCHEME', 'tcp'),
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', 'redis'),
-            'username' => env('REDIS_USERNAME'),
+            'username' => env('REDIS_USERNAME', 'default'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => false,
+            ],
         ],
     ],
 ];

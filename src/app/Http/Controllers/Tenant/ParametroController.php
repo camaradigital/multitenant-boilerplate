@@ -21,7 +21,7 @@ class ParametroController extends Controller
     public function index()
     {
         // Usa a Policy para verificar a permissão 'configuracoes.visualizar'
-        $this->authorize('view', Tenant::class);
+        $this->authorize('manage-tenant-config', $tenant);
 
         $tenant = Tenant::current();
 
@@ -57,7 +57,7 @@ class ParametroController extends Controller
     public function update(Request $request)
     {
         // Usa a Policy para verificar a permissão 'configuracoes.atualizar'
-        $this->authorize('update', Tenant::class);
+        $this->authorize('manage-tenant-config', $tenant);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

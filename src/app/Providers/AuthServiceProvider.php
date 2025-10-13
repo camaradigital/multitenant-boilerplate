@@ -30,6 +30,7 @@ use App\Models\Tenant\TipoServico;
 use App\Models\Tenant\User;
 use App\Models\Tenant\Vaga;
 // Policies
+use App\Policies\Central\TenantPolicy;
 use App\Policies\Tenant\AchadoEPerdidoDocumentoPolicy;
 use App\Policies\Tenant\ActivityLogPolicy;
 use App\Policies\Tenant\BairroPolicy;
@@ -96,7 +97,7 @@ class AuthServiceProvider extends ServiceProvider
         Convenio::class => ConvenioPolicy::class,
 
         // Administração do Sistema
-        Tenant::class => ConfiguracaoPolicy::class, // Para a página de Parâmetros
+        Tenant::class => TenantPolicy::class, // Mapeamento para o TenantController da app central.
         Relatorio::class => RelatorioPolicy::class,
         Permission::class => PermissionPolicy::class,
         Role::class => RolePolicy::class,
@@ -116,6 +117,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+        Gate::define('manage-tenant-config', [ConfiguracaoPolicy::class, 'update']);
         // Define as permissões para visualizar os diferentes dashboards
         Gate::define('view-cidadao-dashboard', [DashboardPolicy::class, 'viewCidadaoDashboard']);
         Gate::define('view-admin-dashboard', [DashboardPolicy::class, 'viewAdminDashboard']);

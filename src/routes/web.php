@@ -72,3 +72,4 @@ Route::get('/unsubscribe/{lead}', function (\App\Models\Central\Lead $lead) {
 */
 Route::get('/consultar-cnpj/{cnpj}', [CnpjController::class, 'consultarCnpj'])
     ->name('api.cnpj.consulta'); // Agora o nome e a URL estão corretos!
+
