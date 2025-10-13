@@ -50,7 +50,8 @@ RUN apk add --no-cache \
     libzip-dev \
     libpng-dev \
     libjpeg-turbo-dev \
-    freetype-dev
+    freetype-dev \
+    oniguruma-dev
 
 # Instala as extensões PHP necessárias e habilita OPcache (essencial para performance).
 # A extensão 'gd' é instalada corretamente aqui.
