@@ -10,12 +10,14 @@ COPY src/database/ database/
 COPY src/composer.json src/composer.lock ./
 
 # Instala apenas as dependências de produção, otimizando o autoloader.
+# ADICIONAMOS A FLAG --ignore-platform-reqs PARA RESOLVER O ERRO.
 RUN composer install \
     --no-interaction \
     --no-dev \
     --no-scripts \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --ignore-platform-reqs
 
 # Adiciona os scripts do Laravel de volta.
 RUN composer run-script post-autoload-dump --no-dev
@@ -54,6 +56,7 @@ RUN apk add --no-cache \
     freetype-dev
 
 # Instala as extensões PHP necessárias e habilita OPcache (essencial para performance).
+# A extensão 'gd' é instalada corretamente aqui.
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
     pdo_mysql \
@@ -67,8 +70,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && pecl install redis && docker-php-ext-enable redis
 
 # Copia os arquivos de configuração do ambiente.
-# Opcional, mas recomendado: crie um php.ini otimizado para produção.
-# COPY docker/web/php.ini /usr/local/etc/php/conf.d/99-prod.ini
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/web/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/web/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
@@ -85,13 +86,11 @@ COPY --from=frontend /app/public/build ./public/build
 
 # --- OTIMIZAÇÕES E PERMISSÕES FINAIS ---
 # Roda as otimizações do Laravel que geram arquivos de cache.
-# Isso acelera muito a aplicação em produção.
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan view:cache
 
 # Ajusta as permissões APENAS nas pastas que precisam de escrita.
-# Isso é mais seguro e rápido do que alterar o dono de tudo.
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expõe a porta do Nginx e inicia o Supervisor.
