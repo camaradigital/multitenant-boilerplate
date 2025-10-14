@@ -71,7 +71,6 @@ RUN apk add --no-cache --virtual .build-deps \
     && pecl install redis && docker-php-ext-enable redis \
     && apk del .build-deps
 
-# *** CORREÇÃO APLICADA AQUI ***
 # Copia o executável do Composer de uma imagem oficial para usá-lo temporariamente.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
@@ -81,6 +80,11 @@ COPY docker/web/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/web/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/web/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
+# Copia o script de inicialização.
+COPY docker/web/run.sh /usr/local/bin/run.sh
+RUN sed -i 's/\r$//' /usr/local/bin/run.sh \
+    && chmod +x /usr/local/bin/run.sh
+    
 WORKDIR /var/www/html
 
 # --- COPIA OS ARTEFATOS DOS ESTÁGIOS ANTERIORES ---
@@ -92,7 +96,6 @@ COPY --from=frontend /app/public/build ./public/build
 # Otimiza o autoloader do Composer com o contexto completo da aplicação.
 RUN composer dump-autoload --optimize
 
-# *** LIMPEZA ADICIONADA AQUI ***
 # Remove o Composer após o uso para manter a imagem final enxuta.
 RUN rm /usr/local/bin/composer
 
