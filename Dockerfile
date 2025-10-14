@@ -93,9 +93,9 @@ COPY --from=frontend /app/public/build ./public/build
 RUN composer dump-autoload --optimize
 
 # Roda as otimizações do Laravel que geram arquivos de cache.
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# RUN php artisan config:cache \
+#   && php artisan route:cache \
+#   && php artisan view:cache
 
 # *** LIMPEZA ADICIONADA AQUI ***
 # Remove o Composer após o uso para manter a imagem final enxuta.
