@@ -77,7 +77,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 # Copia os arquivos de configuração do ambiente.
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
-RUN cat /etc/nginx/nginx.conf
 COPY docker/web/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/web/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
