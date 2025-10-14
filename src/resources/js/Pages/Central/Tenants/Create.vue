@@ -195,7 +195,7 @@ const submit = () => {
                                 <LinkIcon class="form-input-icon" />
                                 <input id="subdomain" v-model="form.subdomain" type="text" class="form-input" required>
                             </div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Ex: `camara-sp`. O acesso será `camara-sp.localhost`</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Ex: `camara-mg`. O acesso será `camara-mg.camaradigital.app`</p>
                             <div v-if="form.errors.subdomain" class="form-error">{{ form.errors.subdomain }}</div>
                         </div>
 
