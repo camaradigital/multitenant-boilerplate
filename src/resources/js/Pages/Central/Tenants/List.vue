@@ -99,7 +99,7 @@ const editTenant = (tenant) => {
                                     {{ tenant.name }}
                                 </th>
                                 <td class="px-6 py-4">
-                                    <a :href="`http://${tenant.subdomain}.localhost`" target="_blank" class="link-hover">
+                                    <a :href="`http://${tenant.subdomain}.camaradigital.app`" target="_blank" class="link-hover">
                                         {{ tenant.subdomain }}
                                     </a>
                                 </td>
