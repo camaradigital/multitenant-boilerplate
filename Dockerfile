@@ -92,11 +92,6 @@ COPY --from=frontend /app/public/build ./public/build
 # Otimiza o autoloader do Composer com o contexto completo da aplicação.
 RUN composer dump-autoload --optimize
 
-# Roda as otimizações do Laravel que geram arquivos de cache.
-# RUN php artisan config:cache \
-#   && php artisan route:cache \
-#   && php artisan view:cache
-
 # *** LIMPEZA ADICIONADA AQUI ***
 # Remove o Composer após o uso para manter a imagem final enxuta.
 RUN rm /usr/local/bin/composer
@@ -110,4 +105,4 @@ HEALTHCHECK --interval=5s --timeout=3s --start-period=1s \
   
 # Expõe a porta do Nginx e inicia o Supervisor.
 EXPOSE 80
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/local/bin/run.sh"]
