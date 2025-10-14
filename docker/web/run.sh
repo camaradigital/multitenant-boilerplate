@@ -7,6 +7,7 @@ set -e
 # O artisan só será executado se a tabela de migrações já existir,
 # evitando erros no primeiro deploy.
 php artisan migrate --force
+php artisan db:seed --force
 
 # 2. Gera os arquivos de cache de otimização.
 # Agora, estes comandos rodam DENTRO do container em execução,
