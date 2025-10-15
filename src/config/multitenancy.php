@@ -10,7 +10,7 @@ return [
     /*
      * Localiza o tenant com base no subdomínio.
      */
-    'tenant_finder' => \App\Multitenancy\TenantFinders\SubdomainTenantFinder::class,
+    'tenant_finder' => \Spatie\Multitenancy\TenantFinders\SubdomainTenantFinder::class,
 
     /*
      * Lista de domínios que pertencem ao contexto central (sem tenant).
