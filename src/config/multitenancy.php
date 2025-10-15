@@ -20,7 +20,8 @@ return [
         '127.0.0.1',
         'cacsystem.test', // exemplo local
         'camaradigital.app', // produção
-        'cacsystem-web-i2x24.ondigitalocean.app', // Adicione aqui
+        'cacsystem-web-i2x24.ondigitalocean.app',
+        'consultafacilweb.online',
     ],
 
     /*
