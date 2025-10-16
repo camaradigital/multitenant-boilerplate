@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Tasks;
+namespace App\Multitenancy\Tasks;
 
 use Illuminate\Support\Facades\DB;
 use Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask as BaseSwitchTenantDatabaseTask;
