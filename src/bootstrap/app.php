@@ -1,13 +1,31 @@
 <?php
 
-use App\Console\Commands\VerificarRenovacaoMesaCommand; // <-- ADICIONADO
-use App\Console\Commands\VerificarSolicitacoesParadas; // <-- ADICIONADO
-use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
+use App\Console\Commands\VerificarRenovacaoMesaCommand;
+use App\Console\Commands\VerificarSolicitacoesParadas;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+
+// Função auxiliar para obter o Host real (ajuda a resolver a intermitência na App Platform)
+if (!function_exists('get_real_host')) {
+    function get_real_host(): string
+    {
+        $request = request();
+        // 1. Prioriza o cabeçalho X-Forwarded-Host (o host real enviado pelo Cloudflare/DigitalOcean)
+        $forwardedHost = $request->header('X-Forwarded-Host');
+
+        if ($forwardedHost) {
+            return $forwardedHost;
+        }
+
+        // 2. Fallback para o host padrão
+        return $request->getHost();
+    }
+}
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,7 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            $host = request()->getHost();
+            // Usa a função auxiliar para garantir que o host correto seja lido
+            $host = get_real_host();
 
             if (in_array($host, config('multitenancy.central_domains', []))) {
                 // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
@@ -36,7 +55,9 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // O TrustProxies ainda é importante, mas o Host já foi resolvido acima para o roteamento.
         $middleware->trustProxies(at: '*');
+        
         // Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
         $middleware->appendToGroup('web', [
             'auth.session',
