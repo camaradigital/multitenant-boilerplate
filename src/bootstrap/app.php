@@ -79,7 +79,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Middlewares específicos para a lógica multi-tenant
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-            \App\Http\Middleware\EnsureTenantConnection::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
