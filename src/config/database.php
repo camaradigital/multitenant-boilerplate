@@ -23,6 +23,8 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // Adicionado timeout para maior estabilidade
+                PDO::ATTR_TIMEOUT => 5, 
             ]) : [],
         ],
 
@@ -42,6 +44,8 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // Adicionado timeout para falhar rápido em caso de intermitência 🎯
+                PDO::ATTR_TIMEOUT => 5,
             ]) : [],
         ],
 
@@ -56,7 +60,7 @@ return [
     'redis' => [
         'client' => env('REDIS_CLIENT', 'phpredis'),
         'options' => [
-            'cluster' => env('REDIS_CLUSTER', 'none'), // DigitalOcean não usa cluster
+            'cluster' => env('REDIS_CLUSTER', 'none'),
             'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'CACSystem')).'-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
@@ -70,7 +74,7 @@ return [
             'scheme' => env('REDIS_SCHEME', 'tcp'),
             'ssl' => [
                 'verify_peer' => true,
-                'verify_peer_name' => false, // Para evitar problemas com hostname
+                'verify_peer_name' => false,
             ],
         ],
         'cache' => [
