@@ -13,14 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Configuração correta e robusta para proxies (essencial)
+        // CORREÇÃO: Usando argumentos posicionais em vez de nomeados para compatibilidade.
         $middleware->trustProxies(
-            proxies: '*',
-            headers: Request::HEADER_X_FORWARDED_FOR |
-                     Request::HEADER_X_FORWARDED_HOST |
-                     Request::HEADER_X_FORWARDED_PORT |
-                     Request::HEADER_X_FORWARDED_PROTO |
-                     Request::HEADER_X_FORWARDED_AWS_ELB
+            '*', // 1º argumento: proxies
+            Request::HEADER_X_FORWARDED_FOR | // 2º argumento: headers
+            Request::HEADER_X_FORWARDED_HOST |
+            Request::HEADER_X_FORWARDED_PORT |
+            Request::HEADER_X_FORWARDED_PROTO |
+            Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
         // Define o grupo de middleware 'tenant' para ser usado no RouteServiceProvider.
