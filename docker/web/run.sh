@@ -17,11 +17,6 @@ php artisan config:clear
 php artisan view:clear
 php artisan clear-compiled
 
-# Limpa o OPcache (cache de opcode em memória do PHP)
-# Esta é a etapa crucial que deve resolver a intermitência.
-echo "A limpar o OPcache do PHP-FPM..."
-cachetool opcache:reset --fcgi=127.0.0.1:9000 || echo "Falhou ao limpar o OPcache, mas a continuar."
-
 # --- SETUP DA APLICAÇÃO ---
 echo "A executar migrações da base de dados..."
 php artisan migrate --force
