@@ -71,6 +71,10 @@ RUN apk add --no-cache --virtual .build-deps \
     && pecl install redis && docker-php-ext-enable redis \
     && apk del .build-deps
 
+    # Instala o cachetool para limpar o OPcache
+RUN wget https://github.com/gordalina/cachetool/releases/latest/download/cachetool.phar -O /usr/local/bin/cachetool && \
+    chmod +x /usr/local/bin/cachetool
+
 # Copia o executável do Composer de uma imagem oficial para usá-lo temporariamente.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
