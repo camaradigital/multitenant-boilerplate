@@ -16,12 +16,12 @@ return [
      * Lista de domínios que pertencem ao contexto central (sem tenant).
      */
     'central_domains' => [
-        'localhost',
-        '127.0.0.1',
         'cacsystem.test', // exemplo local
         'camaradigital.app', // produção
-        'cacsystem-web-i2x24.ondigitalocean.app',
+        'www.camaradigital.app', // produção
         'consultafacilweb.online',
+        'www.consultafacilweb.online',
+
     ],
 
     /*
