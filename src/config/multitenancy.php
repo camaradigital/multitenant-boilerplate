@@ -28,7 +28,8 @@ return [
      * Tasks executadas quando o contexto de tenant muda.
      */
     'switch_tenant_tasks' => [
-        \Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
+    //    \Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
+        \App\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
         \Spatie\Multitenancy\Tasks\PrefixCacheTask::class,
 
         // ATIVE ESTA TAREFA PARA QUE A AUTENTICAÇÃO FUNCIONE NOS TENANTS
