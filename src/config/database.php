@@ -21,17 +21,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            
-            // --- CORREÇÃO DE ESTABILIDADE DA CONEXÃO NA NUVEM (DIGITALOCEAN) ---
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                // Aumenta o timeout para 10 segundos
-                PDO::ATTR_TIMEOUT => 10, 
-                // Permite reconexão após timeout (importante para apps em nuvem)
-                PDO::MYSQL_ATTR_RECONNECT => true, 
-                // Define o SSL CA se a variável de ambiente existir
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
-            // -------------------------------------------------------------------
         ],
 
         'tenant' => [
@@ -48,17 +40,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            
-            // --- CORREÇÃO DE ESTABILIDADE DA CONEXÃO NA NUVEM (DIGITALOCEAN) ---
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                // Aumenta o timeout para 10 segundos
-                PDO::ATTR_TIMEOUT => 10,
-                // Permite reconexão após timeout (importante para apps em nuvem)
-                PDO::MYSQL_ATTR_RECONNECT => true,
-                // Define o SSL CA se a variável de ambiente existir
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
-            // -------------------------------------------------------------------
         ],
 
         // Outras conexões (sqlite, mariadb, pgsql, sqlsrv) podem ser mantidas se necessário
