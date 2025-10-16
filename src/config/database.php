@@ -61,7 +61,7 @@ return [
         'client' => env('REDIS_CLIENT', 'phpredis'),
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'none'),
-            //'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'CACSystem')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'CACSystem')).'-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
         'default' => [
