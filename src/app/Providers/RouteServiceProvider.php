@@ -7,30 +7,51 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Log;
 
 class RouteServiceProvider extends ServiceProvider
 {
     /**
-     * Define a sua configuração de rotas.
+     * The path to your application's "home" route.
+     *
+     * Typically, users are redirected here after authentication.
+     *
+     * @var string
+     */
+    public const HOME = '/home';
+
+    /**
+     * Define your route model bindings, pattern filters, and other route configuration.
      */
     public function boot(): void
     {
-        $this->routes(function (Request $request) {
-            // A lógica agora é executada aqui, de forma segura.
-            $host = $request->getHost();
+        $this->configureRateLimiting();
 
-            if (in_array($host, config('multitenancy.central_domains', []))) {
-                // Se o host pertence aos domínios centrais, carrega as rotas do landlord.
-                Log::info("[RouteServiceProvider] Host '{$host}' é central. Carregando 'routes/web.php'.");
-                Route::middleware('web')
-                    ->group(base_path('routes/web.php'));
-            } else {
-                // Caso contrário, carrega as rotas do tenant.
-                Log::info("[RouteServiceProvider] Host '{$host}' é de tenant. Carregando 'routes/tenant.php'.");
-                Route::middleware('tenant')
-                    ->group(base_path('routes/tenant.php'));
-            }
+        $this->routes(function () {
+            // Rotas de API, geralmente stateless e podem ou não ser para tenants.
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/api.php'));
+
+            // Rotas para os domínios centrais (landlord).
+            // Elas utilizam o grupo de middleware 'web' padrão.
+            Route::middleware('web')
+                ->group(base_path('routes/web.php'));
+
+            // Rotas para os domínios dos tenants.
+            // Elas utilizam um grupo de middleware 'tenant' personalizado.
+            // Este grupo será configurado no Kernel.php para identificar o tenant.
+            Route::middleware('tenant')
+                ->group(base_path('routes/tenant.php'));
+        });
+    }
+
+    /**
+     * Configure the rate limiters for the application.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
     }
 }
