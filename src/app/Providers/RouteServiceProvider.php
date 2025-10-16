@@ -6,7 +6,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Route;
+// A importação do 'Route' não é mais necessária aqui se você não definir rotas.
+// use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -24,25 +25,10 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // A lógica de carregamento de rotas foi movida para bootstrap/app.php.
+        // No entanto, ainda precisamos chamar a configuração do Rate Limiting aqui
+        // para que ela seja registrada na aplicação.
         $this->configureRateLimiting();
-
-        $this->routes(function () {
-            // Rotas de API, geralmente stateless e podem ou não ser para tenants.
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/api.php'));
-
-            // Rotas para os domínios centrais (landlord).
-            // Elas utilizam o grupo de middleware 'web' padrão.
-            Route::middleware('web')
-                ->group(base_path('routes/web.php'));
-
-            // Rotas para os domínios dos tenants.
-            // Elas utilizam um grupo de middleware 'tenant' personalizado.
-            // Este grupo será configurado no Kernel.php para identificar o tenant.
-            Route::middleware('tenant')
-                ->group(base_path('routes/tenant.php'));
-        });
     }
 
     /**
@@ -55,3 +41,4 @@ class RouteServiceProvider extends ServiceProvider
         });
     }
 }
+
