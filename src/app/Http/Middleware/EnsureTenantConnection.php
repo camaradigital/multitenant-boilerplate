@@ -30,7 +30,7 @@ class EnsureTenantConnection
             // O pacote da Spatie troca a conexão PADRÃO dinamicamente.
             // Então, testamos a conexão padrão, que neste ponto DEVE ser a do tenant.
             // O 'getPdo()' força uma conexão real.
-            DB::connection(config('database.default'))->getPdo();
+            DB::connection('tenant')->getPdo();
 
         } catch (Throwable $e) {
             // Se a conexão falhar (timeout, credenciais erradas, etc.),
