@@ -34,6 +34,7 @@ return [
         // ATIVE ESTA TAREFA PARA QUE A AUTENTICAÇÃO FUNCIONE NOS TENANTS
         \App\Multitenancy\Tasks\SwitchAuthConfigTask::class,
         \App\Multitenancy\Tasks\SwitchPermissionModelsTask::class,
+        \Spatie\Multitenancy\Tasks\DisconnectFromLandlordDatabaseTask::class,
     ],
 
     /*
