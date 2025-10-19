@@ -36,35 +36,36 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-    $middleware->trustProxies(at: '*');
-    
-    $middleware->appendToGroup('web', [
-        'auth.session',
-    ]);
+        $middleware->trustProxies(at: '*');
 
-    // Define o grupo de middleware 'tenant' com a ordem explícita e correta.
-    $middleware->group('tenant', [
-        // ✅ 1. Middlewares de Multitenancy executados primeiro
-        \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-        \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+        $middleware->appendToGroup('web', [
+            'auth.session',
+        ]);
 
-        // 2. Middlewares padrão do grupo 'web' para sessão, cookies, etc.
-        \Illuminate\Cookie\Middleware\EncryptCookies::class,
-        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-        \Illuminate\Session\Middleware\StartSession::class,
-        'auth.session', // Alias para \Illuminate\Session\Middleware\AuthenticateSession::class
-        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-        \Illuminate\Routing\Middleware\SubstituteBindings::class,
-        
-        // 3. Middleware da sua aplicação
-        \App\Http\Middleware\HandleInertiaRequests::class,
-    ]);
+        // Define o grupo de middleware 'tenant' com a ordem correta.
+        $middleware->group('tenant', [
+            // Middlewares essenciais para sessão, cookies, etc.
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
 
-    $middleware->alias([
-        'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-    ]);
-})
+            'auth.session',
+
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+
+            // Middlewares do Spatie para a lógica multi-tenant
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+            \App\Http\Middleware\HandleInertiaRequests::class, // Se você usa Inertia
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
+
+        $middleware->alias([
+            'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+        ]);
+    })
     // --- BLOCO DE AGENDAMENTO ---
     ->withSchedule(function (Schedule $schedule) {
         // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
