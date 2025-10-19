@@ -32,8 +32,8 @@ return [
         \Spatie\Multitenancy\Tasks\PrefixCacheTask::class,
 
         // ATIVE ESTA TAREFA PARA QUE A AUTENTICAÇÃO FUNCIONE NOS TENANTS
-        //\App\Multitenancy\Tasks\SwitchAuthConfigTask::class,
-        //\App\Multitenancy\Tasks\SwitchPermissionModelsTask::class,
+        \App\Multitenancy\Tasks\SwitchAuthConfigTask::class,
+        \App\Multitenancy\Tasks\SwitchPermissionModelsTask::class,
     ],
 
     /*
