@@ -36,46 +36,36 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-    $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: '*');
 
-    $middleware->appendToGroup('web', [
-        'auth.session',
-    ]);
+        $middleware->appendToGroup('web', [
+            'auth.session',
+        ]);
 
-    // Define o grupo de middleware 'tenant' com a ordem explícita e correta.
-    $middleware->group('tenant', [
-        // Middlewares padrão essenciais que não dependem de banco de dados
-        \Illuminate\Cookie\Middleware\EncryptCookies::class,
-        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        // Define o grupo de middleware 'tenant' com a ordem correta.
+        $middleware->group('tenant', [
+            // Middlewares essenciais para sessão, cookies, etc.
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
 
-        // 1. IDENTIFICA O TENANT E TROCA A CONEXÃO DO BANCO
-        // Este é o passo mais crítico. Deve vir antes de qualquer middleware
-        // que possa tentar acessar o banco de dados, como o StartSession.
-        \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            'auth.session',
 
-        // 2. INICIA A SESSÃO
-        // Agora que a conexão aponta para o banco do tenant, a sessão
-        // será iniciada no lugar correto.
-        \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
-        // 3. VALIDA A SESSÃO DO TENANT
-        // Com a sessão já iniciada, este middleware pode verificar
-        // se o tenant da sessão é o mesmo do subdomínio atual.
-        \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+            // Middlewares do Spatie para a lógica multi-tenant
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+            \App\Http\Middleware\HandleInertiaRequests::class, // Se você usa Inertia
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
 
-        // 4. RESTANTE DOS MIDDLEWARES
-        // Middlewares de autenticação, compartilhamento de erros, CSRF, etc.
-        'auth.session', // Alias para \Illuminate\Session\Middleware\AuthenticateSession::class
-        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-        \Illuminate\Routing\Middleware\SubstituteBindings::class,
-        \App\Http\Middleware\HandleInertiaRequests::class,
-    ]);
-
-    $middleware->alias([
-        'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-    ]);
-})
+        $middleware->alias([
+            'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+        ]);
+    })
     // --- BLOCO DE AGENDAMENTO ---
     ->withSchedule(function (Schedule $schedule) {
         // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
