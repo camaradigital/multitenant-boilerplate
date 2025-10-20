@@ -2,10 +2,10 @@
 
 set -e
 
-# Inicia o Supervisor em background para que o Nginx e o PHP-FPM arranquem.
+# Inicia o Supervisor em background...
 /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &
 
-# Espera 5 segundos para garantir que o PHP-FPM está pronto a aceitar comandos.
+# Espera 5 segundos...
 echo "A aguardar pelo arranque do PHP-FPM..."
 sleep 5
 
@@ -21,6 +21,11 @@ php artisan clear-compiled
 echo "A executar migrações da base de dados..."
 php artisan migrate --force
 
+# --- ADICIONE ESTA LINHA ---
+echo "A criar link simbólico do storage..."
+php artisan storage:link
+# --------------------------
+
 echo "A recriar caches otimizados..."
 php artisan config:cache
 php artisan route:cache
@@ -28,6 +33,5 @@ php artisan view:cache
 
 echo "Setup completo. A aplicação está a correr."
 
-# Coloca o processo do Supervisor em foreground para manter o container vivo.
-# A partir daqui, pode ver os logs do Nginx e FPM.
+# Coloca o processo do Supervisor em foreground...
 wait
