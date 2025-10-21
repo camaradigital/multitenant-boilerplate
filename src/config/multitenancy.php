@@ -20,8 +20,6 @@ return [
         'camaradigital.app', // produção
         'www.camaradigital.app', // produção
         'consultafacilweb.online',
-        'www.consultafacilweb.online',
-
     ],
 
     /*
