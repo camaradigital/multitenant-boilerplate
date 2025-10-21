@@ -20,6 +20,7 @@ return [
         'camaradigital.app', // produção
         'www.camaradigital.app', // produção
         'consultafacilweb.online',
+        'qvbfit7dkyi3ggzw14597.cleavr.one',
     ],
 
     /*
