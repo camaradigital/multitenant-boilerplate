@@ -9,13 +9,6 @@ set -e
 echo "A aguardar pelo arranque do PHP-FPM..."
 sleep 5
 
-# --- MUDANÇA IMPORTANTE ---
-# Navega para o diretório da aplicação.
-# O seu Nginx (default.conf) aponta para /var/www/html/public
-# Então, a aplicação está em /var/www/html
-cd /var/www/html
-# --------------------------
-
 # --- LIMPEZA DE CACHES (TODAS AS CAMADAS) ---
 echo "A limpar caches da aplicação Laravel..."
 php artisan cache:clear
