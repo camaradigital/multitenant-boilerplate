@@ -1,10 +1,8 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
-
-// Ícones Lucide para o novo tema
 import { Mail, KeyRound, LogIn, Eye, EyeOff, Loader2 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -12,7 +10,7 @@ const props = defineProps({
     status: String,
 });
 
-const page = usePage(); // ✅ ADICIONAR ESTA LINHA
+const page = usePage();
 
 const form = useForm({
     email: '',
@@ -20,31 +18,26 @@ const form = useForm({
     remember: false,
 });
 
-// ✅ MERGE AUTOMÁTICO DOS ERRORBAGS PARA form.errors
-watch(
-    () => page.props.jetstream?.errorBags?.default,
-    (errorBags) => {
-        if (errorBags) {
-            // Copia os erros do errorBags para form.errors
-            Object.entries(errorBags).forEach(([field, errors]) => {
-                form.setError(field, errors[0]); // Pega o primeiro erro
-            });
-        }
-    },
-    { deep: true }
-);
-
 const showPassword = ref(false);
+
+// ✅ DEBUG: Log todos os erros
+console.log('PAGE PROPS:', page.props);
 
 const submit = () => {
     form.transform(data => ({
         ...data,
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
-        onError: (errors) => {
-            console.log('Erros do form:', errors); // ✅ DEBUG
-            form.password = '';
-        },
+        // ❌ COMENTAR ESTA PARTE TEMPORARIAMENTE
+        // onError: () => {
+        //     form.password = '';
+        // },
+        
+        onFinish: () => {
+            console.log('Form errors após submit:', form.errors);
+            console.log('Page errors:', page.props.errors);
+            console.log('Page jetstream errorBags:', page.props.jetstream?.errorBags);
+        }
     });
 };
 
