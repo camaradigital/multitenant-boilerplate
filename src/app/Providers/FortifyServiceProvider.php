@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
@@ -74,6 +75,11 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Fortify::authenticateUsing(function (Request $request) {
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+
             if ($tenant = Tenant::current()) {
                 $user = TenantUser::where('email', $request->email)->first();
                 if ($user && Hash::check($request->password, $user->password)) {
@@ -84,12 +90,12 @@ class FortifyServiceProvider extends ServiceProvider
                 if ($user && Hash::check($request->password, $user->password)) {
                     return $user;
                 }
-                }
-    
-        throw \Illuminate\Validation\ValidationException::withMessages([
-            'email' => [__('auth.failed')],
-        ]);
-    });
+            }
+
+            throw ValidationException::withMessages([
+                'email' => [__('auth.failed')],
+            ]);
+        });
 
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
