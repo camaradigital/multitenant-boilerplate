@@ -4,6 +4,7 @@ namespace App\Providers;
 
 // Imports para a lógica de autenticação multi-tenant
 use App\Actions\Fortify\CreateNewUser;
+use App\Actions\Fortify\Tenant\AttemptToAuthenticate;
 use App\Actions\Fortify\Tenant\ResetUserPassword as TenantResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 // Imports para as customizações de Login e Logout
@@ -23,8 +24,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
@@ -41,7 +42,10 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // ✅ REMOVIDO: $this->app->singleton(AttemptToAuthenticateContract::class, AttemptToAuthenticate::class);
+        $this->app->singleton(
+            AttemptToAuthenticateContract::class,
+            AttemptToAuthenticate::class
+        );
 
         $this->app->singleton(
             \Laravel\Fortify\Contracts\ProfileInformationUpdatedResponse::class,
@@ -70,11 +74,6 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Fortify::authenticateUsing(function (Request $request) {
-            $request->validate([
-                'email' => 'required|email',
-                'password' => 'required',
-            ]);
-
             if ($tenant = Tenant::current()) {
                 $user = TenantUser::where('email', $request->email)->first();
                 if ($user && Hash::check($request->password, $user->password)) {
@@ -87,9 +86,7 @@ class FortifyServiceProvider extends ServiceProvider
                 }
             }
 
-            throw ValidationException::withMessages([
-                'email' => ['Credenciais fornecidas não correspondem aos nossos registros.'],
-            ]);
+            return null;
         });
 
         Fortify::createUsersUsing(CreateNewUser::class);
