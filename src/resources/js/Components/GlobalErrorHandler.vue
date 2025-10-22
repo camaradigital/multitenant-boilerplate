@@ -52,6 +52,7 @@ const fieldTitle = (field) => {
         ...props.fieldsMap
     };
     // Tenta mapear o 'field'. Se não encontrar, usa 'Erro Geral' como padrão.
+    // A palavra 'section' foi removida daqui.
     return map[field] || 'Erro Geral';
 };
 
@@ -76,8 +77,8 @@ watch(errorBag, (newErrors) => {
     }
     to {
         transform: translateX(0);
-        opacity: 1;
-    }
+        opacity: 1; 
+            }
 }
 .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out;
