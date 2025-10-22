@@ -1,6 +1,5 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-// 'watch' e 'usePage' foram removidos daqui
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
 import GlobalErrorHandler from '@/Components/GlobalErrorHandler.vue';
@@ -14,10 +13,10 @@ const form = useForm({
     email: '',
 });
 
-// O 'watch' que existia aqui foi REMOVIDO.
-// Ele estava tentando mover os erros do 'errorBags' para o 'form.errors',
-// causando a duplicidade de mensagens.
-// O GlobalErrorHandler agora cuida disso, e o InputError já cuida do 'form.errors.email'.
+// O 'watch' foi removido daqui para evitar que erros gerais
+// (como 'passwords.user') apareçam duplicados.
+// O GlobalErrorHandler cuida dos erros gerais.
+// O InputError cuida dos erros de campo (form.errors).
 
 const submit = () => {
     form.post(route('password.email'));
@@ -50,23 +49,23 @@ const submit = () => {
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
-               <div class="input-container">
-                    <label for="email" class="form-label">E-mail</label>
-                    <div class="relative">
-                        <span class="input-icon"><Mail :size="16" /></span>
-                        <input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
-                            class="form-input"
-                            required
-                            autofocus
-                            autocomplete="username"
-                            placeholder="seuemail@exemplo.com"
-                        />
-                    </div>
-                    <InputError class="form-error" :message="form.errors.email" />
-                </div>
+                                        <div class="input-container">
+                        <label for="email" class="form-label">E-mail</label>
+                        <div class="relative">
+                            <span class="input-icon"><Mail :size="16" /></span>
+                            <input
+                                id="email"
+                                v-model="form.email"
+                                type="email"
+                                class="form-input"
+                                required
+                                autofocus
+                                autocomplete="username"
+                                placeholder="seuemail@exemplo.com"
+                            />
+                        </div>
+                                                <InputError class="form-error" :message="form.errors.email" />
+                    </div>
 
                     <div class="pt-4 space-y-4">
                         <button type="submit" class="btn btn-primary w-full !text-base !font-bold flex items-center justify-center" :class="{ 'opacity-50': form.processing }" :disabled="form.processing">
@@ -74,7 +73,7 @@ const submit = () => {
                         </button>
 
                         <div class="text-center">
-                             <Link :href="route('login')" class="text-sm font-medium text-emerald-600 hover:underline dark:text-green-400 inline-flex items-center">
+                            <Link :href="route('login')" class="text-sm font-medium text-emerald-600 hover:underline dark:text-green-400 inline-flex items-center">
                                 <ArrowLeft :size="14" class="mr-1.5" />
                                 Voltar para o Login
                             </Link>
@@ -134,11 +133,11 @@ const submit = () => {
 
 .form-input {
     @apply block w-full text-sm rounded-xl transition-all duration-300;
-    @apply h-12 py-3.5 pl-11 pr-5;
-    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400;
-    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
-    @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500;
-    @apply dark:focus:ring-green-500 dark:focus:border-green-500;
+    @apply h-12 py-3.5 pl-11 pr-5;
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400;
+    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
+    @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500;
+    @apply dark:focus:ring-green-500 dark:focus:border-green-500;
 }
 
 .form-error {
