@@ -36,7 +36,6 @@ const showErrors = ref(true);
 
 const errorBag = computed(() => {
     // Foca APENAS nos erros do errorBags (Jetstream/Fortify)
-    // O componente <InputError> já cuida do page.props.errors (erros de validação de campo)
     return page.props.errorBags?.default || {};
 });
 
@@ -51,17 +50,13 @@ const fieldTitle = (field) => {
         'user': 'Atenção', // Chave para o 'passwords.user'
         ...props.fieldsMap
     };
-    // Tenta mapear o 'field'. Se não encontrar, usa 'Erro Geral' como padrão.
-    // A palavra 'section' foi removida daqui.
     return map[field] || 'Erro Geral';
 };
 
 watch(errorBag, (newErrors) => {
     if (Object.keys(newErrors).length > 0) {
-        // 1. Mostra a caixa de erro
         showErrors.value = true;
         
-        // 2. Agenda para esconder a caixa após 8 segundos
         setTimeout(() => {
             showErrors.value = false;
         }, 8000);
@@ -77,8 +72,8 @@ watch(errorBag, (newErrors) => {
     }
     to {
         transform: translateX(0);
-        opacity: 1; 
-            }
+        opacity: 1;
+    }
 }
 .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out;
