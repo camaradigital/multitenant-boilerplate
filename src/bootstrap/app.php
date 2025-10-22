@@ -6,6 +6,8 @@ use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\TrustProxies; // <-- Ensure this use statement is present
+use Illuminate\Http\Request; // <-- Ensure this use statement is present
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +38,15 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
+
+        $middleware->trustProxies(
+            '*', 
+            Request::HEADER_X_FORWARDED_FOR |
+            Request::HEADER_X_FORWARDED_HOST |
+            Request::HEADER_X_FORWARDED_PORT |
+            Request::HEADER_X_FORWARDED_PROTO
+        );
+        
         // CORREÇÃO 1: Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
         $middleware->appendToGroup('web', [
             'auth.session',
