@@ -6,8 +6,8 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Foundation\Http\Middleware\TrustProxies; // <-- Importante para configuração de proxy
-use Illuminate\Http\Request; // <-- Importante para constantes de header
+use Illuminate\Foundation\Http\Middleware\TrustProxies; // <-- Ensure this use statement is present
+use Illuminate\Http\Request; // <-- Ensure this use statement is present
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -64,16 +64,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
-        // --- Configuração do TrustProxies ---
+        // --- Configuração do TrustProxies (Sintaxe Corrigida) ---
         // Configura globalmente para confiar em headers X-Forwarded-* de qualquer proxy.
-        // Essencial para obter o Host e IP corretos atrás do Nginx do Cleavr.
+        // Passando argumentos posicionalmente: 1º $proxies, 2º $headers
         $middleware->trustProxies(
-            proxies: '*', // Confia em qualquer proxy (adequado para DO + Cleavr)
-            headers: Request::HEADER_X_FORWARDED_FOR |
-                     Request::HEADER_X_FORWARDED_HOST |
-                     Request::HEADER_X_FORWARDED_PORT |
-                     Request::HEADER_X_FORWARDED_PROTO
-                     // Request::HEADER_X_FORWARDED_AWS_ELB // Remova se não estiver usando AWS ELB
+            '*', // 1º argumento: Confia em qualquer proxy
+            Request::HEADER_X_FORWARDED_FOR | // 2º argumento: Headers a confiar
+            Request::HEADER_X_FORWARDED_HOST |
+            Request::HEADER_X_FORWARDED_PORT |
+            Request::HEADER_X_FORWARDED_PROTO
+            // Request::HEADER_X_FORWARDED_AWS_ELB // Remova se não estiver usando AWS ELB
         );
         // --- Fim da Configuração do TrustProxies ---
 
@@ -133,11 +133,5 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect('/');
         });
         // Você pode adicionar outros handlers de exceção aqui, se necessário
-        // Exemplo:
-        // $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
-        //     if ($request->is('api/*')) {
-        //         return response()->json(['message' => 'Not Found.'], 404);
-        //     }
-        // });
     })
     ->create();
