@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreSolicitacaoServicoRequest;
-use App\Models\Central\Tenant;
 use App\Models\Tenant\Servico;
+use Spatie\Multitenancy\Models\Tenant;
 use App\Models\Tenant\SolicitacaoServico;
 use App\Models\Tenant\StatusSolicitacao;
 use App\Models\Tenant\TipoServico;
