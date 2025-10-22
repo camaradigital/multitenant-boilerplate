@@ -52,8 +52,6 @@ Route::middleware([
         Route::resource('leads', LeadController::class)->except(['show']);
         Route::get('campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
         Route::post('campaigns/send', [CampaignController::class, 'send'])->name('campaigns.send');
-
-        Route::get('/health', [HealthCheckController::class, 'index']);
     });
 
 Route::get('/unsubscribe/{lead}', function (\App\Models\Central\Lead $lead) {
