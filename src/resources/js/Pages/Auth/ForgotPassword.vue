@@ -134,10 +134,10 @@ const submit = () => {
 
 .form-input {
     @apply block w-full text-sm rounded-xl transition-all duration-300;
-    @apply h-12 py-3.5 pl-11 pr-5;
-    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400;
-    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
-    @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500;
+    @apply h-12 py-3.5 pl-11 pr-5;
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400;
+    @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500;
+    @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500;
     @apply dark:focus:ring-green-500 dark:focus:border-green-500;
 }
 
