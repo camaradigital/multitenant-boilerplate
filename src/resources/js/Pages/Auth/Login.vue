@@ -3,7 +3,8 @@ import { ref, computed, watch } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
-import { Mail, KeyRound, LogIn, Eye, EyeOff, Loader2 } from 'lucide-vue-next';
+import GlobalErrorHandler from '@/Components/GlobalErrorHandler.vue';
+import { Mail, KeyRound, LogIn, Eye, EyeOff, Loader2, MailOpen } from 'lucide-vue-next';
 
 const props = defineProps({
     canResetPassword: Boolean,
@@ -49,6 +50,12 @@ const statusClass = computed(() => {
     <Head title="Entrar" />
 
     <div class="page-container font-sans">
+        <!-- ✅ GLOBAL ERROR HANDLER -->
+        <GlobalErrorHandler :fields-map="{
+            email: 'E-mail',
+            password: 'Senha'
+        }" />
+
         <div class="flex flex-col items-center justify-center min-h-screen p-6">
 
             <div class="form-container w-full max-w-md">
@@ -62,20 +69,6 @@ const statusClass = computed(() => {
 
                 <div v-if="status" class="mb-4 font-medium text-sm text-center" :class="statusClass">
                     {{ status }}
-                </div>
-
-                <!-- ✅ MENSAGEM DE ERRO GLOBAL - FORÇADA -->
-                <div v-if="$page.props.errorBags?.default?.email" 
-                     class="p-4 bg-red-50 border-2 border-red-200 rounded-xl mb-6 animate-pulse">
-                    <div class="flex items-start">
-                        <svg class="w-6 h-6 text-red-500 mr-3 mt-0.5 flex-shrink-0">❌</svg>
-                        <div>
-                            <h3 class="font-bold text-lg text-red-800 mb-1">Erro de Login</h3>
-                            <p class="text-red-700 text-sm" v-for="error in $page.props.errorBags.default.email" :key="error">
-                                {{ error }}
-                            </p>
-                        </div>
-                    </div>
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
@@ -96,7 +89,6 @@ const statusClass = computed(() => {
                                 placeholder="seuemail@exemplo.com"
                             />
                         </div>
-                        <!-- ✅ ERRO DO FORM (backup) -->
                         <InputError class="form-error" :message="form.errors.email" />
                     </div>
 
@@ -132,7 +124,9 @@ const statusClass = computed(() => {
                             <input id="remember" type="checkbox" v-model="form.remember" class="form-checkbox">
                             <label for="remember" class="form-checkbox-label">Lembrar-me</label>
                         </div>
-                        <Link v-if="canResetPassword" :href="route('password.request')" class="text-sm text-emerald-600 hover:underline dark:text-green-400">
+                        <Link v-if="canResetPassword" :href="route('password.request')" 
+                              class="flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-green-400 dark:hover:text-green-500 transition-colors duration-200 hover:underline">
+                            <MailOpen :size="16" class="mr-1" />
                             Esqueceu a senha?
                         </Link>
                     </div>
@@ -265,13 +259,6 @@ const statusClass = computed(() => {
 
 <style>
 html {
-    /*
-      O valor padrão da fonte na maioria dos navegadores é 16px.
-      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
-
-      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
-      - 15px: Redução mais sutil.
-    */
     font-size: 14px;
 }
 </style>
