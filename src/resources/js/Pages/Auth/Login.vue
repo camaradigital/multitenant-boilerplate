@@ -25,7 +25,12 @@ const submit = () => {
         ...data,
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onError: () => {
+            // O método 'form.reset()' limpa os erros de validação.
+            // Para manter os erros e apenas limpar o campo da senha,
+            // definimos o valor manualmente.
+            form.password = '';
+        },
     });
 };
 
