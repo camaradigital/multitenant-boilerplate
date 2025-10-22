@@ -96,6 +96,10 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(TenantResetUserPassword::class);
+        
+        // Rotas de reset de senha
+        Fortify::requestPasswordResetLinkView(fn () => inertia('Auth/ForgotPassword'));
+        Fortify::resetPasswordView(fn (request) => inertia('Auth/ResetPassword', ['request' => request]));
 
         Fortify::loginView(fn () => inertia('Auth/Login'));
 
