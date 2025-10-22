@@ -16,12 +16,12 @@ return [
      * Lista de domínios que pertencem ao contexto central (sem tenant).
      */
     'central_domains' => [
-     env('APP_CENTRAL_DOMAIN'), // Lê a variável do .env
-     // Remova ou comente as linhas hardcoded:
-     // 'cacsystem.test',
-     // 'camaradigital.app',
-     // 'www.camaradigital.app',
-     // 'consultafacilweb.online',
+         'cacsystem.test',
+         'camaradigital.app',
+         'www.camaradigital.app',
+         'consultafacilweb.online',
+         'www.consultafacilweb.online',
+
     ],
 
     /*
