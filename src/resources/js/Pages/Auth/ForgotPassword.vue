@@ -50,23 +50,23 @@ const submit = () => {
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
-                                        <div class="input-container">
-                        <label for="email" class="form-label">E-mail</label>
-                        <div class="relative">
-                            <span class="input-icon"><Mail :size="16" /></span>
-                            <input
-                                id="email"
-                                v-model="form.email"
-                                type="email"
-                                class="form-input"
-                                required
-                                autofocus
-                                autocomplete="username"
-                                placeholder="seuemail@exemplo.com"
-                            />
-                        </div>
-                                                <InputError class="form-error" :message="form.errors.email" />
-                    </div>
+               <div class="input-container">
+                    <label for="email" class="form-label">E-mail</label>
+                    <div class="relative">
+                        <span class="input-icon"><Mail :size="16" /></span>
+                        <input
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            class="form-input"
+                            required
+                            autofocus
+                            autocomplete="username"
+                            placeholder="seuemail@exemplo.com"
+                        />
+                    </div>
+                    <InputError class="form-error" :message="form.errors.email" />
+                </div>
 
                     <div class="pt-4 space-y-4">
                         <button type="submit" class="btn btn-primary w-full !text-base !font-bold flex items-center justify-center" :class="{ 'opacity-50': form.processing }" :disabled="form.processing">
