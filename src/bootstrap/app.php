@@ -60,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
-            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            //\Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
