@@ -18,17 +18,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            $host = request()->getHost();
+            // A lógica AQUI deve ser IDÊNTICA à do seu TenantFinder
+            $host = request()->header('X-Forwarded-Host') ?? request()->getHost(); // <--- CORREÇÃO
 
             if (in_array($host, config('multitenancy.central_domains', []))) {
-                // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
-                // com o grupo de middleware 'web' padrão.
+                // Domínio CENTRAL
                 Log::info("[DEBUG] Host '{$host}' é central. Carregando rotas de web.php.");
                 Route::middleware('web')
                     ->group(base_path('routes/web.php'));
             } else {
-                // Domínio de TENANT: Carrega APENAS as rotas de 'tenant.php'
-                // com o grupo de middleware 'tenant' customizado.
+                // Domínio de TENANT
                 Log::info("[DEBUG] Carregando rotas de tenant para host '{$host}'.");
                 Route::middleware('tenant')
                     ->group(base_path('routes/tenant.php'));
