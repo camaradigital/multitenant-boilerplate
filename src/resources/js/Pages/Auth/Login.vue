@@ -64,6 +64,20 @@ const statusClass = computed(() => {
                     {{ status }}
                 </div>
 
+                <!-- ✅ MENSAGEM DE ERRO GLOBAL - FORÇADA -->
+                <div v-if="$page.props.errorBags?.default?.email" 
+                     class="p-4 bg-red-50 border-2 border-red-200 rounded-xl mb-6 animate-pulse">
+                    <div class="flex items-start">
+                        <svg class="w-6 h-6 text-red-500 mr-3 mt-0.5 flex-shrink-0">❌</svg>
+                        <div>
+                            <h3 class="font-bold text-lg text-red-800 mb-1">Erro de Login</h3>
+                            <p class="text-red-700 text-sm" v-for="error in $page.props.errorBags.default.email" :key="error">
+                                {{ error }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <form @submit.prevent="submit" class="space-y-6">
                     <input type="hidden" name="_token" :value="$page.props.csrf_token" />
 
@@ -82,6 +96,7 @@ const statusClass = computed(() => {
                                 placeholder="seuemail@exemplo.com"
                             />
                         </div>
+                        <!-- ✅ ERRO DO FORM (backup) -->
                         <InputError class="form-error" :message="form.errors.email" />
                     </div>
 
