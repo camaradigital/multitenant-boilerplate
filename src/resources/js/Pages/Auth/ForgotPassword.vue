@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link, useForm, usePage, watch } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { watch } from 'vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
 import GlobalErrorHandler from '@/Components/GlobalErrorHandler.vue';
