@@ -20,13 +20,15 @@ class ParametroController extends Controller
      */
     public function index()
     {
-        // Usa a Policy para verificar a permissão 'configuracoes.visualizar'
-        $this->authorize('manage-tenant-config', $tenant);
+        $currentTenant = tenant();
 
-        $tenant = Tenant::current();
+        // Usa a Policy para verificar a permissão 'configuracoes.visualizar'
+        $this->authorize('manage-tenant-config', $currentTenant);
+
+        // Não precisa mais buscar o tenant aqui, já temos em $currentTenant
 
         return Inertia::render('Tenant/Parametros/Index', [
-            'tenant' => $tenant->only(
+            'tenant' => $currentTenant->only( // Usa a variável correta
                 'id',
                 'name',
                 'site_url',
@@ -56,8 +58,11 @@ class ParametroController extends Controller
      */
     public function update(Request $request)
     {
+        // Obtém o tenant atual ANTES de usá-lo na autorização e validação
+        $currentTenant = tenant();
+
         // Usa a Policy para verificar a permissão 'configuracoes.atualizar'
-        $this->authorize('manage-tenant-config', $tenant);
+        $this->authorize('manage-tenant-config', $currentTenant);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -76,37 +81,44 @@ class ParametroController extends Controller
             'publicar_achados_e_perdidos' => 'required|boolean',
             'publicar_pessoas_desaparecidas' => 'required|boolean',
             'publicar_memoria_legislativa' => 'required|boolean',
-            'publicar_vagas_emprego' => 'required|boolean',
+            'publicar_vagas_emprego' => 'required|boolean', // Faltava esta validação
             'terms_of_service' => 'nullable|string',
             'privacy_policy' => 'nullable|string',
         ]);
 
-        $tenant = Tenant::current();
+        // Não precisa buscar de novo, já temos em $currentTenant
 
         if ($request->hasFile('logotipo')) {
-            if ($tenant->logotipo_url) {
-                Storage::disk('public')->delete($tenant->logotipo_url);
+            if ($currentTenant->logotipo_url) {
+                Storage::disk('public')->delete($currentTenant->logotipo_url);
             }
-            $path = $request->file('logotipo')->store('tenants/'.$tenant->id.'/logos', 'public');
-            $tenant->logotipo_url = $path;
+            $path = $request->file('logotipo')->store('tenants/'.$currentTenant->id.'/logos', 'public');
+            $currentTenant->logotipo_url = $path;
         }
 
-        $tenant->name = $validated['name'];
-        $tenant->site_url = $validated['site_url'];
-        $tenant->cor_primaria = $validated['cor_primaria'];
-        $tenant->cor_secundaria = $validated['cor_secundaria'];
-        $tenant->permite_cadastro_cidade_externa = $validated['permite_cadastro_cidade_externa'];
-        $tenant->limite_renda_juridico = $validated['limite_renda_juridico'];
-        $tenant->exigir_renda_juridico = $validated['exigir_renda_juridico'];
-        $tenant->publicar_achados_e_perdidos = $validated['publicar_achados_e_perdidos'];
-        $tenant->publicar_pessoas_desaparecidas = $validated['publicar_pessoas_desaparecidas'];
-        $tenant->publicar_memoria_legislativa = $validated['publicar_memoria_legislativa'];
-        $tenant->terms_of_service = $validated['terms_of_service'];
-        $tenant->privacy_policy = $validated['privacy_policy'];
+        // Atualiza os campos usando a variável correta
+        $currentTenant->name = $validated['name'];
+        $currentTenant->site_url = $validated['site_url'];
+        $currentTenant->cor_primaria = $validated['cor_primaria'];
+        $currentTenant->cor_secundaria = $validated['cor_secundaria'];
+        $currentTenant->telefone_contato = $validated['telefone_contato']; // Adicionado
+        $currentTenant->whatsapp = $validated['whatsapp']; // Adicionado
+        $currentTenant->email_contato = $validated['email_contato']; // Adicionado
+        $currentTenant->instagram = $validated['instagram']; // Adicionado
+        $currentTenant->youtube = $validated['youtube']; // Adicionado
+        $currentTenant->permite_cadastro_cidade_externa = $validated['permite_cadastro_cidade_externa'];
+        $currentTenant->limite_renda_juridico = $validated['limite_renda_juridico'];
+        $currentTenant->exigir_renda_juridico = $validated['exigir_renda_juridico'];
+        $currentTenant->publicar_achados_e_perdidos = $validated['publicar_achados_e_perdidos'];
+        $currentTenant->publicar_pessoas_desaparecidas = $validated['publicar_pessoas_desaparecidas'];
+        $currentTenant->publicar_memoria_legislativa = $validated['publicar_memoria_legislativa'];
+        $currentTenant->publicar_vagas_emprego = $validated['publicar_vagas_emprego']; // Adicionado
+        $currentTenant->terms_of_service = $validated['terms_of_service'];
+        $currentTenant->privacy_policy = $validated['privacy_policy'];
 
-        $tenant->save();
+        $currentTenant->save();
 
-        cache()->forget('tenant_settings_'.$tenant->id);
+        cache()->forget('tenant_settings_'.$currentTenant->id);
 
         return Redirect::back()->with('success', 'Parâmetros atualizados com sucesso.');
     }
