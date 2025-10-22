@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Central\Tenant;
-// Importa a nova Policy
+// use App\Models\Central\Tenant; // <-- REMOVA ISTO
+use Spatie\Multitenancy\Models\Tenant;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -20,7 +20,8 @@ class ParametroController extends Controller
      */
     public function index()
     {
-        $currentTenant = tenant();
+        // $currentTenant = tenant(); // <-- LINHA DO ERRO
+        $currentTenant = Tenant::current(); // <-- CORREÇÃO
 
         // Usa a Policy para verificar a permissão 'configuracoes.visualizar'
         $this->authorize('manage-tenant-config', $currentTenant);
@@ -59,7 +60,8 @@ class ParametroController extends Controller
     public function update(Request $request)
     {
         // Obtém o tenant atual ANTES de usá-lo na autorização e validação
-        $currentTenant = tenant();
+        // $currentTenant = tenant(); // <-- LINHA DO ERRO
+        $currentTenant = Tenant::current(); // <-- CORREÇÃO
 
         // Usa a Policy para verificar a permissão 'configuracoes.atualizar'
         $this->authorize('manage-tenant-config', $currentTenant);
