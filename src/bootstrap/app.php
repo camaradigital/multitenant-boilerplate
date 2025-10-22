@@ -6,6 +6,8 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\TrustProxies; // <-- Importante para configuração de proxy
+use Illuminate\Http\Request; // <-- Importante para constantes de header
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -22,11 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // Use $_SERVER diretamente para capturar os headers crus o mais cedo possível
             $serverHttpHost = $_SERVER['HTTP_HOST'] ?? 'N/A';
             $serverForwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? 'N/A';
-            // Para comparação, pegue também os valores que o objeto Request do Laravel interpreta (após TrustProxies rodar)
+            // Para comparação, pegue também os valores que o objeto Request do Laravel interpreta (após TrustProxies ter sido configurado)
             $laravelForwardedHost = request()->header('X-Forwarded-Host');
             $laravelHostHeader = request()->header('Host'); // Header Host original recebido
             $laravelGetHost = request()->getHost(); // O que o Laravel pensa que é o host após processamento
-            $ip = $_SERVER['REMOTE_ADDR'] ?? request()->ip(); // IP do cliente (pode ser o IP do proxy se TrustProxies não rodou ainda ou está mal configurado)
+            $ip = $_SERVER['REMOTE_ADDR'] ?? request()->ip(); // IP do cliente (pode ser o IP do proxy se TrustProxies não está configurado)
 
             Log::info("--- [DEBUG-ROUTING START v2] ---");
             Log::info("[DEBUG-ROUTING] Request IP (REMOTE_ADDR): {$ip}");
@@ -61,45 +63,57 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Garante que TrustProxies rode cedo para ambos os grupos
-        $middleware->prependToGroup('web', \App\Http\Middleware\TrustProxies::class);
-        $middleware->prependToGroup('tenant', \App\Http\Middleware\TrustProxies::class);
 
-        // Adiciona outros middlewares ao grupo 'web'
+        // --- Configuração do TrustProxies ---
+        // Configura globalmente para confiar em headers X-Forwarded-* de qualquer proxy.
+        // Essencial para obter o Host e IP corretos atrás do Nginx do Cleavr.
+        $middleware->trustProxies(
+            proxies: '*', // Confia em qualquer proxy (adequado para DO + Cleavr)
+            headers: Request::HEADER_X_FORWARDED_FOR |
+                     Request::HEADER_X_FORWARDED_HOST |
+                     Request::HEADER_X_FORWARDED_PORT |
+                     Request::HEADER_X_FORWARDED_PROTO
+                     // Request::HEADER_X_FORWARDED_AWS_ELB // Remova se não estiver usando AWS ELB
+        );
+        // --- Fim da Configuração do TrustProxies ---
+
+
+        // Define os middlewares para o grupo 'web' (Landlord/Central)
         $middleware->appendToGroup('web', [
-            \Illuminate\Cookie\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            'auth.session', // Alias do Fortify/Jetstream
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            // Adicione HandleInertiaRequests se o landlord usar Inertia
-             \App\Http\Middleware\HandleInertiaRequests::class,
+             \Illuminate\Cookie\Middleware\EncryptCookies::class,
+             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+             \Illuminate\Session\Middleware\StartSession::class,
+             'auth.session', // Alias do Fortify/Jetstream para autenticação de sessão web
+             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+             \App\Http\Middleware\HandleInertiaRequests::class, // Necessário se o landlord usa Inertia.js
         ]);
 
         // Define o grupo de middleware 'tenant' com a ordem explícita e correta.
-        // TrustProxies já foi adicionado com prependToGroup
         $middleware->group('tenant', [
-            // Middlewares padrão do grupo 'web' (exceto TrustProxies que já está no início)
+            // Middlewares essenciais para funcionamento web (sessão, cookies, CSRF, bindings)
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
-            'auth.session', // Alias do Fortify/Jetstream
+            'auth.session', // Alias do Fortify/Jetstream para autenticação de sessão tenant
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
             // Middlewares específicos para a lógica multi-tenant (após os de sessão/auth)
+            // NeedsTenant tentará encontrar o tenant baseado no SubdomainTenantFinder
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            // EnsureValidTenantSession garante que a sessão pertence ao tenant atual
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
-            \App\Http\Middleware\HandleInertiaRequests::class, // Inertia para tenant
+            // HandleInertiaRequests configura o Inertia.js para o tenant
+            \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
         // Mantém os aliases necessários.
         $middleware->alias([
             'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-            // Adicione outros aliases se precisar
+            // Adicione outros aliases personalizados se você os utiliza nas rotas
         ]);
     })
     // --- BLOCO DE AGENDAMENTO ---
@@ -109,12 +123,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // Verifica a renovação da Mesa Diretora no primeiro dia de cada mês, às 9h da manhã.
         $schedule->command(VerificarRenovacaoMesaCommand::class)->monthlyOn(1, '09:00');
     })
+    // --- BLOCO DE EXCEÇÕES ---
     ->withExceptions(function (Exceptions $exceptions) {
+        // Handler para a exceção específica da Spatie quando nenhum tenant é encontrado
         $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e) {
-             // Em caso de erro ao encontrar tenant, redireciona para a home central
+             // Em caso de erro ao encontrar tenant (ex: subdomínio inválido após a verificação inicial),
+             // redireciona para a home central para evitar erros genéricos.
             Log::warning('[DEBUG-EXCEPTION] NoCurrentTenantException capturada. Redirecionando para /');
             return redirect('/');
         });
-        // Adicione outros handlers de exceção se necessário
+        // Você pode adicionar outros handlers de exceção aqui, se necessário
+        // Exemplo:
+        // $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+        //     if ($request->is('api/*')) {
+        //         return response()->json(['message' => 'Not Found.'], 404);
+        //     }
+        // });
     })
     ->create();
