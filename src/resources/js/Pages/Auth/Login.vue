@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
 
@@ -12,11 +12,27 @@ const props = defineProps({
     status: String,
 });
 
+const page = usePage(); // ✅ ADICIONAR ESTA LINHA
+
 const form = useForm({
     email: '',
     password: '',
     remember: false,
 });
+
+// ✅ MERGE AUTOMÁTICO DOS ERRORBAGS PARA form.errors
+watch(
+    () => page.props.jetstream?.errorBags?.default,
+    (errorBags) => {
+        if (errorBags) {
+            // Copia os erros do errorBags para form.errors
+            Object.entries(errorBags).forEach(([field, errors]) => {
+                form.setError(field, errors[0]); // Pega o primeiro erro
+            });
+        }
+    },
+    { deep: true }
+);
 
 const showPassword = ref(false);
 
@@ -25,17 +41,14 @@ const submit = () => {
         ...data,
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
-        onError: () => {
-            // O método 'form.reset()' limpa os erros de validação.
-            // Para manter os erros e apenas limpar o campo da senha,
-            // definimos o valor manualmente.
+        onError: (errors) => {
+            console.log('Erros do form:', errors); // ✅ DEBUG
             form.password = '';
         },
     });
 };
 
 const statusClass = computed(() => {
-    // Adiciona uma classe para mensagens de sucesso (como redefinição de senha)
     return props.status ? 'text-emerald-600 dark:text-emerald-400' : '';
 });
 </script>
