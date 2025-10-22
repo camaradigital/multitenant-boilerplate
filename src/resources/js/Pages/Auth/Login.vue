@@ -1,16 +1,16 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
+
+// Ícones Lucide para o novo tema
 import { Mail, KeyRound, LogIn, Eye, EyeOff, Loader2 } from 'lucide-vue-next';
 
 const props = defineProps({
     canResetPassword: Boolean,
     status: String,
 });
-
-const page = usePage();
 
 const form = useForm({
     email: '',
@@ -20,28 +20,22 @@ const form = useForm({
 
 const showPassword = ref(false);
 
-// ✅ DEBUG: Log todos os erros
-console.log('PAGE PROPS:', page.props);
-
 const submit = () => {
     form.transform(data => ({
         ...data,
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
-        // ❌ COMENTAR ESTA PARTE TEMPORARIAMENTE
-        // onError: () => {
-        //     form.password = '';
-        // },
-        
-        onFinish: () => {
-            console.log('Form errors após submit:', form.errors);
-            console.log('Page errors:', page.props.errors);
-            console.log('Page jetstream errorBags:', page.props.jetstream?.errorBags);
-        }
+        onError: () => {
+            // O método 'form.reset()' limpa os erros de validação.
+            // Para manter os erros e apenas limpar o campo da senha,
+            // definimos o valor manualmente.
+            form.password = '';
+        },
     });
 };
 
 const statusClass = computed(() => {
+    // Adiciona uma classe para mensagens de sucesso (como redefinição de senha)
     return props.status ? 'text-emerald-600 dark:text-emerald-400' : '';
 });
 </script>
