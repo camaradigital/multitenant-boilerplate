@@ -7,7 +7,6 @@ use App\Http\Controllers\Central\DashboardController;
 use App\Http\Controllers\Central\LeadController;
 use App\Http\Controllers\Central\RolePermissionController;
 use App\Http\Controllers\Central\TenantController;
-use App\Http\Controllers\HealthCheckController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
