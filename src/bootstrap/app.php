@@ -18,21 +18,37 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // A lógica AQUI deve ser IDÊNTICA à do seu TenantFinder
-            $host = request()->header('X-Forwarded-Host') ?? request()->getHost(); // <--- CORREÇÃO
+    // === DEBUG ADICIONAL ===
+    $forwardedHost = request()->header('X-Forwarded-Host');
+    $hostHeader = request()->header('Host'); // Pega o header Host original
+    $getHost = request()->getHost(); // O que o Laravel pensa que é o host
+    $ip = request()->ip(); // IP que o Laravel vê
 
-            if (in_array($host, config('multitenancy.central_domains', []))) {
-                // Domínio CENTRAL
-                Log::info("[DEBUG] Host '{$host}' é central. Carregando rotas de web.php.");
-                Route::middleware('web')
-                    ->group(base_path('routes/web.php'));
-            } else {
-                // Domínio de TENANT
-                Log::info("[DEBUG] Carregando rotas de tenant para host '{$host}'.");
-                Route::middleware('tenant')
-                    ->group(base_path('routes/tenant.php'));
-            }
-        }
+    Log::info("--- [DEBUG-ROUTING START] ---");
+    Log::info("[DEBUG-ROUTING] Request IP: {$ip}");
+    Log::info("[DEBUG-ROUTING] X-Forwarded-Host Header: " . ($forwardedHost ?? 'N/A'));
+    Log::info("[DEBUG-ROUTING] Host Header: " . ($hostHeader ?? 'N/A'));
+    Log::info("[DEBUG-ROUTING] request()->getHost(): {$getHost}");
+    // === FIM DEBUG ADICIONAL ===
+
+    // Lógica principal (mantém a correção anterior)
+    $hostParaVerificacao = $forwardedHost ?? $getHost;
+    Log::info("[DEBUG-ROUTING] Host Usado para Verificação: {$hostParaVerificacao}");
+
+    $centralDomains = config('multitenancy.central_domains', []);
+    Log::info("[DEBUG-ROUTING] Domínios Centrais Configurados: " . implode(', ', $centralDomains));
+
+    if (in_array($hostParaVerificacao, $centralDomains)) {
+        Log::info("[DEBUG-ROUTING] DECISÃO: Host '{$hostParaVerificacao}' É central. Carregando web.php.");
+        Route::middleware('web')
+            ->group(base_path('routes/web.php'));
+    } else {
+        Log::info("[DEBUG-ROUTING] DECISÃO: Host '{$hostParaVerificacao}' NÃO é central. Carregando tenant.php.");
+        Route::middleware('tenant')
+            ->group(base_path('routes/tenant.php'));
+    }
+    Log::info("--- [DEBUG-ROUTING END] ---");
+}
     )
     ->withMiddleware(function (Middleware $middleware) {
         // CORREÇÃO 1: Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
