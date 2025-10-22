@@ -124,7 +124,7 @@ const statusClass = computed(() => {
                             <input id="remember" type="checkbox" v-model="form.remember" class="form-checkbox">
                             <label for="remember" class="form-checkbox-label">Lembrar-me</label>
                         </div>
-                        <Link v-if="canResetPassword" :href="route('password.request')" 
+                        <Link :href="route('password.request')" 
                               class="flex items-center text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-green-400 dark:hover:text-green-500 transition-colors duration-200 hover:underline">
                             <MailOpen :size="16" class="mr-1" />
                             Esqueceu a senha?
