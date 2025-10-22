@@ -84,10 +84,12 @@ class FortifyServiceProvider extends ServiceProvider
                 if ($user && Hash::check($request->password, $user->password)) {
                     return $user;
                 }
-            }
-
-            return null;
-        });
+                }
+    
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'email' => [__('auth.failed')],
+        ]);
+    });
 
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
