@@ -4,7 +4,6 @@ namespace App\Providers;
 
 // Imports para a lógica de autenticação multi-tenant
 use App\Actions\Fortify\CreateNewUser;
-use App\Actions\Fortify\Tenant\AttemptToAuthenticate;
 use App\Actions\Fortify\Tenant\ResetUserPassword as TenantResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 // Imports para as customizações de Login e Logout
@@ -26,7 +25,6 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Laravel\Fortify\Contracts\AttemptToAuthenticate as AttemptToAuthenticateContract;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
@@ -43,10 +41,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(
-            AttemptToAuthenticateContract::class,
-            AttemptToAuthenticate::class
-        );
+        // ✅ REMOVIDO: $this->app->singleton(AttemptToAuthenticateContract::class, AttemptToAuthenticate::class);
 
         $this->app->singleton(
             \Laravel\Fortify\Contracts\ProfileInformationUpdatedResponse::class,
@@ -93,7 +88,7 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             throw ValidationException::withMessages([
-                'email' => [__('auth.failed')],
+                'email' => ['Credenciais fornecidas não correspondem aos nossos registros.'],
             ]);
         });
 
