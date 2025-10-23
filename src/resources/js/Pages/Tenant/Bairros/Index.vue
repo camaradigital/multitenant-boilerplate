@@ -4,12 +4,14 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
-import { MapPin, Plus, Pencil, Trash2 } from 'lucide-vue-next';
+import { MapPin, Plus, Pencil, Trash2, CheckCircle, AlertTriangle } from 'lucide-vue-next'; // Ícones adicionados
 
 const props = defineProps({
-    bairros: Object,
+    bairros: Object, // Bairros aprovados (paginados)
+    bairrosPendentes: Array, // Bairros pendentes (não paginados)
 });
 
+// --- Lógica de Exclusão (sem alterações) ---
 const confirmingBairroDeletion = ref(false);
 const bairroToDelete = ref(null);
 
@@ -22,7 +24,7 @@ const deleteBairro = () => {
     router.delete(route('admin.bairros.destroy', bairroToDelete.value.id), {
         preserveScroll: true,
         onSuccess: () => closeModal(),
-        onError: () => closeModal(),
+        onError: () => closeModal(), // Considerar mostrar mensagem de erro
     });
 };
 
@@ -30,6 +32,15 @@ const closeModal = () => {
     confirmingBairroDeletion.value = false;
     bairroToDelete.value = null;
 };
+
+// --- Lógica de Aprovação ---
+const approveBairro = (bairro) => {
+    router.patch(route('admin.bairros.approve', bairro.id), {}, { // Envia um objeto vazio como dados
+        preserveScroll: true,
+        // onSuccess e onError podem ser adicionados para feedback
+    });
+};
+
 </script>
 
 <template>
@@ -41,21 +52,68 @@ const closeModal = () => {
         </template>
 
         <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-7xl">
-                <div class="form-icon"><MapPin :size="32" class="icon-in-badge" /></div>
-
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
-                    <div>
-                        <h2 class="header-title">Gerenciar Bairros</h2>
-                        <p class="form-subtitle">Adicione, edite e remova os bairros do município.</p>
+            <div class="content-container w-full max-w-7xl space-y-8"> {/* Adicionado space-y-8 */}
+                {/* --- SEÇÃO CABEÇALHO E NOVO BAIRRO --- */}
+                <div class="relative"> {/* Movido form-icon para cá */}
+                    <div class="form-icon"><MapPin :size="32" class="icon-in-badge" /></div>
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
+                        <div>
+                            <h2 class="header-title">Gerenciar Bairros</h2>
+                            <p class="form-subtitle">Adicione, edite e remova os bairros do município.</p>
+                        </div>
+                        <Link :href="route('admin.bairros.create')" class="btn-primary flex-shrink-0">
+                            <Plus class="w-4 h-4 mr-2"/>
+                            Novo Bairro
+                        </Link>
                     </div>
-                    <Link :href="route('admin.bairros.create')" class="btn-primary flex-shrink-0">
-                        <Plus class="w-4 h-4 mr-2"/>
-                        Novo Bairro
-                    </Link>
                 </div>
 
+                {/* --- SEÇÃO DE BAIRROS PENDENTES --- */}
+                <div v-if="bairrosPendentes && bairrosPendentes.length > 0" class="p-4 md:p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                    <div class="flex items-center mb-4">
+                         <AlertTriangle class="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
+                         <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200">Bairros Pendentes de Aprovação</h3>
+                    </div>
+                     <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+                        Estes bairros foram sugeridos por cidadãos durante o cadastro. Aprove-os para adicioná-los à lista oficial ou exclua-os se forem inválidos ou duplicados.
+                    </p>
+                    <div class="overflow-x-auto rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                            <thead class="text-xs text-yellow-700 uppercase bg-yellow-100 dark:bg-yellow-900/30">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Nome Sugerido</th>
+                                    <th scope="col" class="px-6 py-3 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800/30 divide-y divide-yellow-200 dark:divide-yellow-800">
+                                <tr v-for="bairroPendente in bairrosPendentes" :key="'pendente-' + bairroPendente.id" class="hover:bg-yellow-50 dark:hover:bg-yellow-900/40">
+                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                        {{ bairroPendente.nome }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button @click="approveBairro(bairroPendente)" class="table-action-btn hover:text-green-600 dark:hover:text-green-400" title="Aprovar Bairro">
+                                                <CheckCircle class="w-5 h-5" />
+                                            </button>
+                                            <button @click="confirmDeletion(bairroPendente)" class="table-action-btn hover:text-red-600 dark:hover:text-red-400" title="Excluir Sugestão">
+                                                <Trash2 class="w-5 h-5" />
+                                            </button>
+                                            {/* Botão Mesclar (opcional, sem funcionalidade ainda)
+                                            <button class="table-action-btn hover:text-blue-600 dark:hover:text-blue-400" title="Mesclar com Bairro Existente">
+                                                <Combine class="w-5 h-5" /> Icone exemplo
+                                            </button>
+                                            */}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* --- SEÇÃO DE BAIRROS APROVADOS --- */}
                 <div class="p-4 md:p-6">
+                     <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Bairros Aprovados</h3>
                     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">
                         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-white/5">
@@ -68,7 +126,7 @@ const closeModal = () => {
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800/50 divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr v-if="bairros.data.length === 0">
-                                    <td colspan="4" class="px-6 py-10 text-center">Nenhum bairro encontrado.</td>
+                                    <td colspan="4" class="px-6 py-10 text-center">Nenhum bairro aprovado encontrado.</td>
                                 </tr>
                                 <tr v-for="bairro in bairros.data" :key="bairro.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50">
                                     <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
@@ -99,10 +157,11 @@ const closeModal = () => {
             </div>
         </div>
 
+        {/* --- Modal de Confirmação (sem alterações) --- */}
         <ConfirmationModal
             :show="confirmingBairroDeletion"
             title="Excluir Bairro"
-            :message="`Tem certeza de que deseja excluir o bairro '${bairroToDelete?.nome}'? Esta ação é irreversível.`"
+            :message="`Tem certeza de que deseja excluir o bairro '${bairroToDelete?.nome}'? Esta ação não pode ser desfeita.`"
             @close="closeModal"
             @confirm="deleteBairro"
         />
