@@ -79,13 +79,16 @@ Route::get('/vagas/{vaga}', [VagaController::class, 'showPublic'])->name('portal
 // --- Rota para a página de registro ---
 Route::get('/register', function () {
     $customFields = CustomField::all();
-    $bairros = Bairro::orderBy('nome')->get(['id', 'nome']);
+    // $bairros = Bairro::orderBy('nome')->get(['id', 'nome']); // <-- REMOVIDO
 
     return Inertia::render('Auth/Register', [
         'customFields' => $customFields,
-        'bairros' => $bairros,
+        // 'bairros' => $bairros, // <-- REMOVIDO
     ]);
 })->name('register');
+
+// --- ADICIONADO: Rota pública para busca de bairros no registro ---
+Route::get('/bairros/search', [BairroController::class, 'search'])->name('bairros.search');
 
 // --- ROTA DE VALIDAÇÃO DE DADOS ---
 Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
@@ -268,7 +271,7 @@ Route::middleware([
         Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
         Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
         Route::resource('bairros', BairroController::class);
-        Route::patch('bairros/{bairro}/approve', [BairroController::class, 'approve'])->name('bairros.approve');
+        Route::patch('bairros/{bairro}/approve', [BairroController::class, 'approve'])->name('bairros.approve'); // <-- Rota de aprovação (correta)
         Route::resource('tags', TagController::class);
 
         // Rotas para Sugestões de Projetos de Lei (ADMIN)
@@ -289,12 +292,15 @@ Route::middleware([
     // --- ROTAS DE PERFIL DE UTILIZADOR --- (Ainda dentro do middleware 'auth:tenant', 'verified')
     Route::get('/user/profile', function () {
         return Inertia::render('Profile/Show', [
-            'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
+            // --- CORRIGIDO: Adicionado where('aprovado', true) ---
+            'bairros' => Bairro::where('aprovado', true)->orderBy('nome')->get(['id', 'nome']),
             'customFields' => CustomField::all(),
         ]);
     })->name('profile.show');
 
     Route::put('/user/profile-information', function (Request $request) {
+        // ATENÇÃO: Se o perfil do usuário puder sugerir bairros,
+        // a lógica de 'is_numeric' também precisará ser aplicada aqui.
         app(UpdatesUserProfileInformation::class)->update(Auth::user(), $request->all());
         return back()->with('success', 'Perfil atualizado com sucesso.');
     })->name('user-profile-information.update');
