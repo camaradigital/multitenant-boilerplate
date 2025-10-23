@@ -19,6 +19,7 @@ class TenantDatabaseSeeder extends Seeder
         $this->call([
             PermissionsSeeder::class,
             RolePermissionSeeder::class,
+            StatusSolicitacaoSeeder::class,
         ]);
 
         // Este seeder PRECISA do objeto $tenant para pegar o e-mail do admin.
