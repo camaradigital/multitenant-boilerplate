@@ -1,12 +1,11 @@
 <?php
 
-use App\Console\Commands\VerificarRenovacaoMesaCommand;
-use App\Console\Commands\VerificarSolicitacoesParadas;
-use Illuminate\Console\Scheduling\Schedule;
+use App\Console\Commands\VerificarRenovacaoMesaCommand; // <-- ADICIONADO
+use App\Console\Commands\VerificarSolicitacoesParadas; // <-- ADICIONADO
+use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request; // <-- ADICIONADO (do seu segundo arquivo)
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -19,8 +18,6 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // MÉTODO SEGURO (do seu primeiro arquivo):
-            // Usa o helper 'request()' que respeita os 'trustProxies'.
             $host = request()->getHost();
 
             if (in_array($host, config('multitenancy.central_domains', []))) {
@@ -39,47 +36,28 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // ADICIONADO (do seu segundo arquivo):
-        // Confia no proxy reverso (NGINX, etc.) para obter o host correto.
-        // Isso é essencial para 'request()->getHost()' funcionar.
-        $middleware->trustProxies(
-            '*',
-            Request::HEADER_X_FORWARDED_FOR |
-            Request::HEADER_X_FORWARDED_HOST |
-            Request::HEADER_X_FORWARDED_PORT |
-            Request::HEADER_X_FORWARDED_PROTO
-        );
-
-        // Grupo 'web' (para domínios centrais)
+        // CORREÇÃO 1: Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
         $middleware->appendToGroup('web', [
             'auth.session',
         ]);
 
-        // Grupo 'tenant' (para domínios de tenant) com ORDEM CORRIGIDA
+        // Define o grupo de middleware 'tenant' com a ordem explícita e correta.
         $middleware->group('tenant', [
-            // 1. Middlewares básicos (não dependem de sessão/DB)
+            // Middlewares padrão do grupo 'web' para sessão, cookies, etc.
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            
-            // 2. ETAPA DE TENANT (ANTES DA SESSÃO)
-            // Identifica o tenant e troca a conexão do DB
-            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
-            // Garante que a sessão (se houver) pertence a este tenant
-            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
-
-            // 3. ETAPA DE SESSÃO E AUTH (DEPOIS DO TENANT)
-            // Inicia a sessão (agora usando a conexão DB do tenant)
             \Illuminate\Session\Middleware\StartSession::class,
-            // Compartilha erros da sessão
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            // Verifica o token CSRF (depende da sessão)
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-            // Carrega a sessão de autenticação
-            'auth.session', 
 
-            // 4. ETAPA DA APLICAÇÃO
-            // Middleware do Inertia (depende da sessão/auth)
+            // CORREÇÃO 2: Adiciona o middleware de autenticação de sessão usando seu alias.
+            'auth.session',
+
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+
+            // Middlewares específicos para a lógica multi-tenant
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
@@ -92,12 +70,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
         $schedule->command(VerificarSolicitacoesParadas::class)->dailyAt('09:00');
-        // Verifica a renovação da Mesa Diretora no primeiro dia de cada mês, às 9h da manhã.
+        // [NOVO] Verifica a renovação da Mesa Diretora no primeiro dia de cada mês, às 9h da manhã.
         $schedule->command(VerificarRenovacaoMesaCommand::class)->monthlyOn(1, '09:00');
     })
-    // --- BLOCO DE EXCEÇÕES ---
     ->withExceptions(function (Exceptions $exceptions) {
-        // Isso captura 'NoCurrentTenantException' e previne o loop de redirect
         $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e) {
             return redirect('/');
         });
