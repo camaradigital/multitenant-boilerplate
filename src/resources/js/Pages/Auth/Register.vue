@@ -41,7 +41,7 @@ const generateProfileDataStructure = (fields) => {
         telefone: '', data_nascimento: '', genero: '',
         nome_mae: '', nome_pai: '', endereco_cep: '',
         endereco_logradouro: '', endereco_numero: '', 
-        // 'endereco_bairro' não é mais usado, usamos 'bairro_id' no form principal
+        // endereco_bairro foi removido daqui, pois agora usamos 'bairro_id'
         endereco_cidade: '', endereco_estado: '',
     };
     if (fields) {
@@ -60,7 +60,8 @@ const form = useForm({
     terms: false,
     privacy: false,
     cpf: '',
-    bairro_id: '', // Campo correto para o v-select
+    // ADICIONADO: Este campo irá guardar o ID do bairro selecionado.
+    bairro_id: '',
     profile_data: generateProfileDataStructure(props.customFields),
 });
 
@@ -103,6 +104,7 @@ const validateStep2 = () => {
            form.profile_data.data_nascimento && !realtimeErrors.value.data_nascimento;
 };
 
+// ATUALIZADO: Agora valida se um bairro_id foi selecionado.
 const validateStep3 = () => {
     return form.profile_data.endereco_cep && !realtimeErrors.value.cep &&
            form.profile_data.endereco_cidade && form.bairro_id;
@@ -116,6 +118,7 @@ const nextStep = () => {
     } else if (currentStep.value === 3 && validateStep3()) {
         currentStep.value++;
     } else {
+        // Força a validação de todos os campos da etapa atual para exibir os erros
         form.validate();
         console.error("Validação da etapa falhou.");
     }
@@ -175,7 +178,6 @@ const fetchBairros = async (search, loading) => {
 // 5. Cria a versão "debounced" para evitar muitas chamadas à API
 const debouncedFetchBairros = debounce(fetchBairros, 300);
 // --- FIM DA ADIÇÃO ---
-
 </script>
 
 <template>
@@ -225,7 +227,7 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
                                                 <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairrosOptions="bairrosOptions"
+                            :bairrosOptions="bairrosOptions" 
                             @buscar-cep="buscarCep"
                             @search-bairros="debouncedFetchBairros"
                         />
@@ -251,17 +253,17 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
                         </button>
 
                         <button
-                    M         type="button"
+                            type="button"
                             v-if="currentStep < 4"
                             @click="nextStep"
                             class="btn btn-primary"
                         >
                             Avançar
-                       </button>
+                        </button>
 
                         <button
                             type="submit"
-                           v-if="currentStep === 4"
+                            v-if="currentStep === 4"
                             class="btn btn-primary w-full !text-base !font-bold"
                             :class="{ 'opacity-50 cursor-not-allowed': form.processing || !form.terms || !form.privacy }"
                             :disabled="form.processing || !form.terms || !form.privacy"
@@ -273,7 +275,7 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
                     <div class="text-center mt-4" v-if="currentStep === 4">
                         <Link :href="route('login')" class="text-sm font-medium text-emerald-600 hover:underline dark:text-green-400">
                             Já possui uma conta?
-                         </Link>
+                        </Link>
                     </div>
                 </form>
             </div>
