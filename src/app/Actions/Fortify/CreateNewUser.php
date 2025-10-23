@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Tenant\Bairro; // <-- ADICIONADO
 use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,11 @@ class CreateNewUser implements CreatesNewUsers
             'profile_data.endereco_cep' => ['nullable', 'string', 'max:9'],
             'profile_data.endereco_logradouro' => ['nullable', 'string', 'max:255'],
             'profile_data.endereco_numero' => ['nullable', 'string', 'max:20'],
-            'bairro_id' => ['nullable', 'integer', 'exists:tenant.bairros,id'],
+            
+            // --- ALTERADO (Etapa 1.2) ---
+            // Remove 'integer' e 'exists' para aceitar a string de um novo bairro
+            'bairro_id' => ['required'], 
+
             'profile_data.endereco_cidade' => ['required', 'string', 'max:100'],
             'profile_data.endereco_estado' => ['nullable', 'string', 'max:2'],
 
@@ -63,14 +68,33 @@ class CreateNewUser implements CreatesNewUsers
 
         // MODIFICADO: Utiliza uma transação e o bairro_id diretamente.
         return DB::transaction(function () use ($input) {
-            // A lógica de firstOrCreate foi removida, pois o ID já vem validado do frontend.
+            
+            // --- LÓGICA PARA BAIRRO NOVO OU EXISTENTE (Etapa 1.2) ---
+            $bairroId = $input['bairro_id'] ?? null;
+
+            // Se o 'bairro_id' não for um número, significa que é um novo bairro (string)
+            if ($bairroId && !is_numeric($bairroId)) {
+                // Cria um novo bairro com o status 'aprovado' = false
+                $novoBairro = Bairro::create([
+                    'nome' => $bairroId,
+                    'aprovado' => false,
+                ]);
+                // Usa o ID do bairro recém-criado
+                $bairroId = $novoBairro->id;
+            }
+            // --- FIM DA LÓGICA ---
+
             $user = User::create([
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
                 'cpf' => $input['cpf'] ?? null,
                 'profile_data' => $input['profile_data'] ?? [],
-                'bairro_id' => $input['bairro_id'] ?? null, // Associa diretamente o ID do bairro vindo do formulário
+                
+                // --- ALTERADO (Etapa 1.2) ---
+                // Associa o ID do bairro (existente ou novo)
+                'bairro_id' => $bairroId, 
+                
                 // --- REGISTRO DO CONSENTIMENTO LGPD ---
                 'terms_accepted_at' => now(),
                 'privacy_accepted_at' => now(),
