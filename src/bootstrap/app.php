@@ -18,24 +18,29 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // MÉTODO CORRETO: Ler $_SERVER diretamente.
+            // Isso funciona antes do 'trustProxies'.
             $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? null;
+            $centralDomains = config('multitenancy.central_domains', []);
 
-            if (in_array($host, config('multitenancy.central_domains', []))) {
-                // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
-                // com o grupo de middleware 'web' padrão.
-                Log::info("[DEBUG] Host '{$host}' é central. Carregando rotas de web.php.");
-                Route::middleware('web')
-                    ->group(base_path('routes/web.php'));
-            } else {
-                // Domínio de TENANT: Carrega APENAS as rotas de 'tenant.php'
-                // com o grupo de middleware 'tenant' customizado.
-                Log::info("[DEBUG] Carregando rotas de tenant para host '{$host}'.");
+            // LÓGICA CORRIGIDA (Previne o Erro 500):
+            // Um host é um tenant APENAS SE ele existir (não for null) 
+            // E NÃO estiver na lista de domínios centrais.
+            if ($host && !in_array($host, $centralDomains)) {
+                // Domínio de TENANT
+                Log::debug("[Routing] Host '{$host}' é tenant. Carregando routes/tenant.php.");
                 Route::middleware('tenant')
                     ->group(base_path('routes/tenant.php'));
+            } else {
+                // Domínio CENTRAL (ou null)
+                Log::debug("[Routing] Host '{$host}' é central. Carregando routes/web.php.");
+                Route::middleware('web')
+                    ->group(base_path('routes/web.php'));
             }
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Confia no proxy reverso (NGINX, etc.)
         $middleware->trustProxies(
             '*',
             Request::HEADER_X_FORWARDED_FOR |
@@ -43,25 +48,30 @@ return Application::configure(basePath: dirname(__DIR__))
             Request::HEADER_X_FORWARDED_PORT |
             Request::HEADER_X_FORWARDED_PROTO
         );
+
+        // Grupo 'web' (para domínios centrais)
         $middleware->appendToGroup('web', [
             'auth.session',
         ]);
 
-        // Define o grupo de middleware 'tenant' com a ordem explícita e correta.
+        // Grupo 'tenant' com ORDEM CORRIGIDA (Previne o Vazamento)
         $middleware->group('tenant', [
-            // Middlewares padrão do grupo 'web' para sessão, cookies, etc.
+            // 1. Middlewares básicos (não dependem de sessão/DB)
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-
-            'auth.session',
-
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-
+            
+            // 2. ETAPA DE TENANT (ANTES DA SESSÃO)
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+
+            // 3. ETAPA DE SESSÃO E AUTH (DEPOIS DO TENANT)
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            'auth.session', 
+
+            // 4. ETAPA DA APLICAÇÃO
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
@@ -71,13 +81,16 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     // --- BLOCO DE AGENDAMENTO ---
     ->withSchedule(function (Schedule $schedule) {
-        // Roda o comando `app:verificar-solicitacoes-paradas` todos os dias às 09:00.
         $schedule->command(VerificarSolicitacoesParadas::class)->dailyAt('09:00');
-        // [NOVO] Verifica a renovação da Mesa Diretora no primeiro dia de cada mês, às 9h da manhã.
         $schedule->command(VerificarRenovacaoMesaCommand::class)->monthlyOn(1, '09:00');
     })
+    // --- BLOCO DE EXCEÇÕES ---
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e) {
+        $exceptions->render(function (\Spatie\Multitenancy\Exceptions\NoCurrentTenantException $e, Request $request) {
+            Log::warning("[Tenant] NoCurrentTenantException capturada. Redirecionando para /.", [
+                'host' => $request->getHost(),
+                'url' => $request->fullUrl()
+            ]);
             return redirect('/');
         });
     })
