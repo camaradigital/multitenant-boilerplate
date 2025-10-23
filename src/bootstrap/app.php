@@ -13,15 +13,12 @@ use Illuminate\Support\Facades\Route;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         // Deixamos 'web' nulo para controlar o carregamento manualmente.
-        // Isto é crucial para separar os contextos central e de tenant.
         web: null,
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // MÉTODO SEGURO (do seu primeiro arquivo):
-            // Usa o helper 'request()' que respeita os 'trustProxies'.
-            $host = request()->getHost();
+            $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? null;
 
             if (in_array($host, config('multitenancy.central_domains', []))) {
                 // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
