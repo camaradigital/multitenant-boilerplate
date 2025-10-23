@@ -1,24 +1,24 @@
 <?php
 
-use App\Console\Commands\VerificarRenovacaoMesaCommand;
-use App\Console\Commands\VerificarSolicitacoesParadas;
-use Illuminate\Console\Scheduling\Schedule;
+use App\Console\Commands\VerificarRenovacaoMesaCommand; // <-- ADICIONADO
+use App\Console\Commands\VerificarSolicitacoesParadas; // <-- ADICIONADO
+use Illuminate\Console\Scheduling\Schedule; // <-- ADICIONADO
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         // Deixamos 'web' nulo para controlar o carregamento manualmente.
+        // Isto é crucial para separar os contextos central e de tenant.
         web: null,
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? null;
+            $host = request()->getHost();
 
             if (in_array($host, config('multitenancy.central_domains', []))) {
                 // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
@@ -36,13 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->trustProxies(
-            '*',
-            Request::HEADER_X_FORWARDED_FOR |
-            Request::HEADER_X_FORWARDED_HOST |
-            Request::HEADER_X_FORWARDED_PORT |
-            Request::HEADER_X_FORWARDED_PROTO
-        );
+        // CORREÇÃO 1: Adiciona o middleware do Fortify ao grupo 'web' usando seu alias.
         $middleware->appendToGroup('web', [
             'auth.session',
         ]);
@@ -54,17 +48,20 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
 
+            // CORREÇÃO 2: Adiciona o middleware de autenticação de sessão usando seu alias.
             'auth.session',
 
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
-            //\Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            // Middlewares específicos para a lógica multi-tenant
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        // Mantém os aliases necessários.
         $middleware->alias([
             'needs_tenant' => \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
         ]);
