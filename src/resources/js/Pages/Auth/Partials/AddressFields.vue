@@ -8,7 +8,7 @@ import 'vue-select/dist/vue-select.css';
 defineProps({
     form: Object,
     realtimeErrors: Object,
-    bairrosOptions: Array,
+    bairrosOptions: Array, // <-- Recebe as opções da busca (vem do Register.vue)
 });
 
 const emit = defineEmits(['buscar-cep', 'search-bairros']);
@@ -18,7 +18,7 @@ const handleBairroSearch = (search, loading) => {
     if (search.length > 2) {
         // Ativa o spinner do v-select
         loading(true); 
-        // Emite para o componente pai fazer a chamada API
+        // Emite para o componente pai (Register.vue) fazer a chamada API
         emit('search-bairros', search, loading);
     } else {
         // Garante que o spinner pare se o usuário apagar o texto
