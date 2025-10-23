@@ -20,8 +20,6 @@ return [
          'camaradigital.app',
          'www.camaradigital.app',
          'consultafacilweb.online',
-         'www.consultafacilweb.online',
-
     ],
 
     /*
