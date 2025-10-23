@@ -40,8 +40,8 @@ const generateProfileDataStructure = (fields) => {
     const profileData = {
         telefone: '', data_nascimento: '', genero: '',
         nome_mae: '', nome_pai: '', endereco_cep: '',
-        endereco_logradouro: '', endereco_numero: '', 
-        // endereco_bairro foi removido daqui, pois agora usamos 'bairro_id'
+        endereco_logradouro: '', endereco_numero: '',
+        // 'endereco_bairro' não é mais usado, usamos 'bairro_id' no form principal
         endereco_cidade: '', endereco_estado: '',
     };
     if (fields) {
@@ -227,7 +227,7 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
                                                 <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairrosOptions="bairrosOptions" 
+                            :bairrosOptions="bairrosOptions"
                             @buscar-cep="buscarCep"
                             @search-bairros="debouncedFetchBairros"
                         />
