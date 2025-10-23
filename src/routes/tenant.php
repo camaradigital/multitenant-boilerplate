@@ -268,6 +268,7 @@ Route::middleware([
         Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
         Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
         Route::resource('bairros', BairroController::class);
+        Route::patch('bairros/{bairro}/approve', [BairroController::class, 'approve'])->name('bairros.approve');
         Route::resource('tags', TagController::class);
 
         // Rotas para Sugestões de Projetos de Lei (ADMIN)
