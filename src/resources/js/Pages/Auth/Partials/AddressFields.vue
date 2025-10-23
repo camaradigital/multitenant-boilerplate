@@ -1,5 +1,8 @@
 <script setup>
 import InputError from '@/Components/InputError.vue';
+import { MapPin } from 'lucide-vue-next';
+import vSelect from 'vue-select'; // Importa o vue-select
+import 'vue-select/dist/vue-select.css'; // Importa o CSS do vue-select
 // ADICIONADO: Ícones para o novo slot
 import { MapPin, Search, Loader2 } from 'lucide-vue-next'; 
 import vSelect from 'vue-select';
@@ -8,17 +11,21 @@ import 'vue-select/dist/vue-select.css';
 defineProps({
     form: Object,
     realtimeErrors: Object,
-    bairrosOptions: Array, // <-- Recebe as opções da busca (vem do Register.vue)
+    // ATUALIZADO: Prop renomeada para 'bairrosOptions' para refletir a lista dinâmica
+    bairrosOptions: Array,
 });
 
+// ATUALIZADO: Adicionado 'search-bairros' aos emits
 const emit = defineEmits(['buscar-cep', 'search-bairros']);
 
+// ATUALIZADO: Função para emitir o evento de busca para o componente pai
 // ATUALIZADO: Lógica de busca melhorada
 const handleBairroSearch = (search, loading) => {
+    emit('search-bairros', search, loading);
     if (search.length > 2) {
         // Ativa o spinner do v-select
         loading(true); 
-        // Emite para o componente pai (Register.vue) fazer a chamada API
+        // Emite para o componente pai fazer a chamada API
         emit('search-bairros', search, loading);
     } else {
         // Garante que o spinner pare se o usuário apagar o texto
@@ -34,18 +41,7 @@ const handleBairroSearch = (search, loading) => {
         <div class="input-container md:col-span-2">
             <label for="cep" class="form-label">CEP</label>
             <div class="relative">
-                <span class="input-icon"><MapPin :size="16" /></span>
-                <input
-                    id="cep"
-                    v-model="form.profile_data.endereco_cep"
-                    @blur="emit('buscar-cep')"
-                    type="text"
-                    class="form-input"
-                    :class="{ 'input-invalid': realtimeErrors.cep, 'input-valid': !realtimeErrors.cep && form.profile_data.endereco_cep }"
-                    placeholder="00000-000"
-                    v-maska data-maska="#####-###"
-                />
-            </div>
+@@ -41,32 +49,59 @@ const handleBairroSearch = (search, loading) => {
             <InputError class="form-error" :message="form.errors['profile_data.endereco_cep']" />
             <div v-if="realtimeErrors.cep" class="form-error">{{ realtimeErrors.cep }}</div>
         </div>
@@ -62,6 +58,21 @@ const handleBairroSearch = (search, loading) => {
 
         <div class="input-container md:col-span-4">
             <label for="bairro" class="form-label">Bairro/Córrego</label>
+            <v-select
+                id="bairro"
+                v-model="form.bairro_id"
+                :options="bairrosOptions"
+                label="nome"
+                :reduce="bairro => bairro.id"
+                @search="handleBairroSearch"
+                :filterable="false"
+                taggable  
+                placeholder="Digite para buscar ou criar um novo bairro"
+            >
+                <template #no-options="{ search, searching, loading }">
+                    {{ search.length > 2 ? 'Nenhum bairro encontrado. Pressione Enter para adicionar.' : 'Digite ao menos 3 letras para buscar.' }}
+                </template>
+            </v-select>
             
             <div class="relative">
                 <span class="input-icon"><MapPin :size="16" /></span>
@@ -105,8 +116,7 @@ const handleBairroSearch = (search, loading) => {
             <InputError class="form-error" :message="form.errors.bairro_id" />
         </div>
 
-        <div class="input-container md:col-span-4">
-            <label for="cidade" class="form-label">Cidade</label>
+@@ -75,9 +110,90 @@ const handleBairroSearch = (search, loading) => {
             <input id="cidade" v-model="form.profile_data.endereco_cidade" type="text" class="form-input !pl-5" placeholder="Sua cidade" disabled/>
             <InputError class="form-error" :message="form.errors['profile_data.endereco_cidade']" />
         </div>
