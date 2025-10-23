@@ -18,20 +18,25 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // Lógica do SEGUNDO arquivo (correta para identificação)
             $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? null;
+            
+            $centralDomains = config('multitenancy.central_domains', []);
 
-            if (in_array($host, config('multitenancy.central_domains', []))) {
-                // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
-                // com o grupo de middleware 'web' padrão.
-                Log::info("[DEBUG] Host '{$host}' é central. Carregando rotas de web.php.");
-                Route::middleware('web')
-                    ->group(base_path('routes/web.php'));
-            } else {
+            // LÓGICA CORRIGIDA:
+            // Um host é um tenant SE ele existir (não for null) E NÃO estiver
+            // na lista de domínios centrais.
+            if ($host && !in_array($host, $centralDomains)) {
                 // Domínio de TENANT: Carrega APENAS as rotas de 'tenant.php'
-                // com o grupo de middleware 'tenant' customizado.
                 Log::info("[DEBUG] Carregando rotas de tenant para host '{$host}'.");
                 Route::middleware('tenant')
                     ->group(base_path('routes/tenant.php'));
+            } else {
+                // Domínio CENTRAL: Carrega APENAS as rotas de 'web.php'
+                // O 'else' agora captura domínios centrais E o caso 'null'.
+                Log::info("[DEBUG] Host '{$host}' é central. Carregando rotas de web.php.");
+                Route::middleware('web')
+                    ->group(base_path('routes/web.php'));
             }
         }
     )
