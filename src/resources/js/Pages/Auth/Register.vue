@@ -2,11 +2,6 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
-// --- ADICIONADO: Imports para a busca da API ---
-import axios from 'axios';
-import { debounce } from 'lodash';
-// --- FIM ADIÇÃO ---
-
 // Lógica (Composables)
 import { useRealtimeValidation } from '@/Composables/useRealtimeValidation';
 import { useCepLookup } from '@/Composables/useCepLookup';
@@ -22,8 +17,9 @@ import TermsAndPrivacy from './Partials/TermsAndPrivacy.vue';
 
 const props = defineProps({
     customFields: Array,
-    // REMOVIDO: A prop 'bairros: Array' foi removida.
-    // A lista agora será buscada dinamicamente pela API.
+    // ADICIONADO: Recebe a lista de bairros do backend.
+    // Cada bairro deve ser um objeto com 'id' e 'nome'.
+    bairros: Array,
 });
 
 // --- LÓGICA DE ETAPAS ---
@@ -40,8 +36,7 @@ const generateProfileDataStructure = (fields) => {
     const profileData = {
         telefone: '', data_nascimento: '', genero: '',
         nome_mae: '', nome_pai: '', endereco_cep: '',
-        endereco_logradouro: '', endereco_numero: '',
-        // 'endereco_bairro' não é mais usado, usamos 'bairro_id' no form principal
+        endereco_logradouro: '', endereco_numero: '', endereco_bairro: '',
         endereco_cidade: '', endereco_estado: '',
     };
     if (fields) {
@@ -152,32 +147,6 @@ const tryOpenModal = (modalType) => {
         if (modalType === 'privacy') showPrivacyModal.value = true;
     }
 };
-
-// --- ADICIONADO: LÓGICA DE BUSCA DE BAIRROS ---
-// 1. Cria uma ref reativa para as opções do v-select
-const bairrosOptions = ref([]);
-
-// 2. Cria a função que busca na API
-const fetchBairros = async (search, loading) => {
-    try {
-        // Usa a rota 'bairros.search' que definimos no Laravel
-        const response = await axios.get(route('bairros.search', { term: search }));
-        // 3. Atualiza as opções com o resultado da API
-        bairrosOptions.value = response.data;
-    } catch (error) {
-        console.error("Erro ao buscar bairros:", error);
-        bairrosOptions.value = [];
-    } finally {
-        // 4. Diz ao v-select que a busca terminou
-        if (loading) {
-            loading(false);
-        }
-    }
-};
-
-// 5. Cria a versão "debounced" para evitar muitas chamadas à API
-const debouncedFetchBairros = debounce(fetchBairros, 300);
-// --- FIM DA ADIÇÃO ---
 </script>
 
 <template>
@@ -224,14 +193,13 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
                     </div>
 
                     <div v-show="currentStep === 3" class="mt-4">
-                                                <AddressFields
+                        <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairrosOptions="bairrosOptions"
+                            :bairros="props.bairros"
                             @buscar-cep="buscarCep"
-                            @search-bairros="debouncedFetchBairros"
                         />
-                        <CustomFieldsSection :custom-fields="customFields" :form="form" />
+                         <CustomFieldsSection :custom-fields="customFields" :form="form" />
                     </div>
 
                     <div v-show="currentStep === 4" class="mt-4">
@@ -320,6 +288,13 @@ const debouncedFetchBairros = debounce(fetchBairros, 300);
 
 <style>
 html {
+    /*
+      O valor padrão da fonte na maioria dos navegadores é 16px.
+      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+
+      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
+      - 15px: Redução mais sutil.
+    */
     font-size: 14px;
 }
 </style>
