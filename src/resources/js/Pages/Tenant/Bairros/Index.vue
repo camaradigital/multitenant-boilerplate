@@ -52,9 +52,8 @@ const approveBairro = (bairro) => {
         </template>
 
         <div class="flex justify-center items-start py-12 px-4">
-            <div class="content-container w-full max-w-7xl space-y-8"> {/* Adicionado space-y-8 */}
-                {/* --- SEÇÃO CABEÇALHO E NOVO BAIRRO --- */}
-                <div class="relative"> {/* Movido form-icon para cá */}
+            <div class="content-container w-full max-w-7xl space-y-8">
+                <div class="relative">
                     <div class="form-icon"><MapPin :size="32" class="icon-in-badge" /></div>
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b-dynamic">
                         <div>
@@ -68,7 +67,6 @@ const approveBairro = (bairro) => {
                     </div>
                 </div>
 
-                {/* --- SEÇÃO DE BAIRROS PENDENTES --- */}
                 <div v-if="bairrosPendentes && bairrosPendentes.length > 0" class="p-4 md:p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                     <div class="flex items-center mb-4">
                          <AlertTriangle class="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
@@ -102,7 +100,6 @@ const approveBairro = (bairro) => {
                                             <button class="table-action-btn hover:text-blue-600 dark:hover:text-blue-400" title="Mesclar com Bairro Existente">
                                                 <Combine class="w-5 h-5" /> Icone exemplo
                                             </button>
-                                            */}
                                         </div>
                                     </td>
                                 </tr>
@@ -111,7 +108,6 @@ const approveBairro = (bairro) => {
                     </div>
                 </div>
 
-                {/* --- SEÇÃO DE BAIRROS APROVADOS --- */}
                 <div class="p-4 md:p-6">
                      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Bairros Aprovados</h3>
                     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">
@@ -157,7 +153,6 @@ const approveBairro = (bairro) => {
             </div>
         </div>
 
-        {/* --- Modal de Confirmação (sem alterações) --- */}
         <ConfirmationModal
             :show="confirmingBairroDeletion"
             title="Excluir Bairro"
