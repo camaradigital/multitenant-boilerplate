@@ -382,3 +382,16 @@ body {
     filter: brightness(110%);
 }
 </style>
+<style>
+html {
+    /*
+      O valor padrão da fonte na maioria dos navegadores é 16px.
+      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+      fiquem proporcionalmente menores, resultando em um layout mais denso.
+
+      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
+      - 15px: Redução mais sutil.
+    */
+    font-size: 14px;
+}
+</style>
