@@ -40,11 +40,11 @@ const handleBairroSearch = (search, loading) => {
         </div>
         <div class="input-container md:col-span-4">
             <label for="logradouro" class="form-label">Logradouro</label>
-            <input id="logradouro" v-model="form.profile_data.endereco_logradouro" type="text" class="form-input !pl-5" placeholder="Rua, Avenida..." />
+            <input id="logradouro" v-model="form.profile_data.endereco_logradouro" type="text" class="form-input pl-5" placeholder="Rua, Avenida..." />
         </div>
         <div class="input-container md:col-span-2">
             <label for="numero" class="form-label">Número</label>
-            <input id="numero" v-model="form.profile_data.endereco_numero" type="text" class="form-input !pl-5" placeholder="Ex: 123" />
+            <input id="numero" v-model="form.profile_data.endereco_numero" type="text" class="form-input pl-5" placeholder="Ex: 123" />
         </div>
         <div class="input-container md:col-span-4">
             <label for="bairro" class="form-label">Bairro/Córrego</label>
@@ -56,7 +56,6 @@ const handleBairroSearch = (search, loading) => {
                 :reduce="bairro => bairro.id"
                 @search="handleBairroSearch"
                 :filterable="false"
-                taggable
                 placeholder="Digite para buscar ou criar um novo bairro"
             >
                 <template #no-options="{ search }">
@@ -67,12 +66,12 @@ const handleBairroSearch = (search, loading) => {
         </div>
         <div class="input-container md:col-span-4">
             <label for="cidade" class="form-label">Cidade</label>
-            <input id="cidade" v-model="form.profile_data.endereco_cidade" type="text" class="form-input !pl-5" placeholder="Sua cidade" disabled />
+            <input id="cidade" v-model="form.profile_data.endereco_cidade" type="text" class="form-input pl-5" placeholder="Sua cidade" disabled />
             <InputError class="form-error" :message="form.errors['profile_data.endereco_cidade']" />
         </div>
         <div class="input-container md:col-span-2">
             <label for="estado" class="form-label">Estado</label>
-            <input id="estado" v-model="form.profile_data.endereco_estado" type="text" class="form-input !pl-5" placeholder="UF" disabled />
+            <input id="estado" v-model="form.profile_data.endereco_estado" type="text" class="form-input pl-5" placeholder="UF" disabled />
         </div>
     </div>
 </template>
