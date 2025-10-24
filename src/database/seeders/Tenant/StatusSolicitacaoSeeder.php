@@ -73,8 +73,5 @@ class StatusSolicitacaoSeeder extends Seeder
                 // 'ordem' => 3,
             ]
         );
-
-        // Mensagem no console (opcional)
-        $this->command->info('Status de Solicitação semeados com sucesso!');
     }
 }
