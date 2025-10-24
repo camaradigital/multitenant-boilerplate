@@ -1,5 +1,4 @@
 <script setup>
-<script setup>
 import { ref, computed, watch } from 'vue';
 import { useForm, Head, Link } from '@inertiajs/vue3';
 import axios from 'axios'; // Import axios for API calls
