@@ -217,7 +217,7 @@ watch(() => props.form.profile_data.endereco_bairro, (newBairroName) => {
 }
 
 /* Error state border */
-.form-input.p-0.border-0.\\!border-red-500 .vs__dropdown-toggle {
+.form-input.p-0.border-0.\!border-red-500 .vs__dropdown-toggle {
     @apply !border-red-500 focus:!border-red-500 focus:!ring-red-500 dark:!border-red-400 dark:focus:!border-red-400 dark:focus:!ring-red-400;
 }
 
