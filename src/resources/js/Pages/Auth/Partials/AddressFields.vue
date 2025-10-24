@@ -32,8 +32,7 @@ const handleBairroSearch = (search, loading) => {
                     class="form-input"
                     :class="{ 'input-invalid': realtimeErrors.cep, 'input-valid': !realtimeErrors.cep && form.profile_data.endereco_cep }"
                     placeholder="00000-000"
-                    v-maska
-                    data-maska="#####-###"
+                    v-maska="'#####-###'"
                 />
             </div>
             <InputError class="form-error" :message="form.errors['profile_data.endereco_cep']" />
