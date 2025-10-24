@@ -199,10 +199,8 @@ const tryOpenModal = (modalType) => {
                     <div class="flex items-center">
                         <template v-for="(step, index) in steps" :key="step.id">
                             <div class="flex flex-col items-center text-center">
-                                <div
-                                    class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
-                                    :class="currentStep >= step.id ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
-                                >
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
+                                    :class="currentStep >= step.id ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'">
                                     <svg v-if="currentStep > step.id" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     <span v-else>{{ step.id }}</span>
                                 </div>
