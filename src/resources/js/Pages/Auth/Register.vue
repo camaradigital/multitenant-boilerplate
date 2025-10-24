@@ -11,15 +11,14 @@ import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import LgpdModal from '@/Components/LgpdModal.vue';
 import AccessDataFields from './Partials/AccessDataFields.vue';
 import PersonalDataFields from './Partials/PersonalDataFields.vue';
-import AddressFields from './Partials/AddressFields.vue';
+import AddressFields from './Partials/AddressFields.vue'; // This component will handle the autocomplete logic
 import CustomFieldsSection from './Partials/CustomFieldsSection.vue';
 import TermsAndPrivacy from './Partials/TermsAndPrivacy.vue';
 
 const props = defineProps({
     customFields: Array,
-    // ADICIONADO: Recebe a lista de bairros do backend.
-    // Cada bairro deve ser um objeto com 'id' e 'nome'.
-    bairros: Array,
+    // REMOVIDO: A lista de bairros não é mais passada como prop estática.
+    // bairros: Array,
 });
 
 // --- LÓGICA DE ETAPAS ---
@@ -36,7 +35,8 @@ const generateProfileDataStructure = (fields) => {
     const profileData = {
         telefone: '', data_nascimento: '', genero: '',
         nome_mae: '', nome_pai: '', endereco_cep: '',
-        endereco_logradouro: '', endereco_numero: '', endereco_bairro: '',
+        endereco_logradouro: '', endereco_numero: '',
+        // Removido 'endereco_bairro' como texto livre, será gerenciado por 'bairro_id'
         endereco_cidade: '', endereco_estado: '',
     };
     if (fields) {
@@ -55,8 +55,8 @@ const form = useForm({
     terms: false,
     privacy: false,
     cpf: '',
-    // ADICIONADO: Este campo irá guardar o ID do bairro selecionado.
-    bairro_id: '',
+    // MODIFICADO: 'bairro_id' agora pode ser ID numérico ou string (nome sugerido).
+    bairro_id: null, // Inicializado como null ou ''
     profile_data: generateProfileDataStructure(props.customFields),
 });
 
@@ -80,7 +80,22 @@ const formattedDataNascimento = computed({
 
 // --- Invocando Composables ---
 const { realtimeErrors } = useRealtimeValidation(form, formattedDataNascimento);
-const { buscarCep } = useCepLookup(form, realtimeErrors);
+// Passando a função para definir bairro_id após busca de CEP
+const { buscarCep } = useCepLookup(form, realtimeErrors, (bairroNome, bairroId) => {
+    // Se a busca de CEP retornar um bairro ID, preenchemos o form.
+    // A busca por CEP geralmente retorna o nome exato, assumimos que já existe.
+    if (bairroId) {
+        form.bairro_id = bairroId;
+    } else if (bairroNome) {
+        // Se retornar apenas o nome (caso comum em CEP único sem ID direto),
+        // preenchemos para que o autocomplete possa tentar encontrar ou sugerir.
+        // O AddressFields precisará ter uma ref para o autocomplete para definir seu valor inicial.
+        // Ou, mais simples, AddressFields pode observar form.profile_data.endereco_bairro (se o trouxermos de volta temporariamente)
+        // Ou ainda, podemos passar o nome retornado como prop para AddressFields iniciar o autocomplete.
+        // Por ora, vamos focar na digitação manual no autocomplete.
+        // form.bairro_id = bairroNome; // Poderia ser setado aqui se AddressFields ouvisse
+    }
+});
 
 const submit = () => {
     form.post(route('register'), {
@@ -99,29 +114,40 @@ const validateStep2 = () => {
            form.profile_data.data_nascimento && !realtimeErrors.value.data_nascimento;
 };
 
-// ATUALIZADO: Agora valida se um bairro_id foi selecionado.
+// ATUALIZADO: Valida se 'bairro_id' não está vazio/null. Funciona para ID ou string.
 const validateStep3 = () => {
     return form.profile_data.endereco_cep && !realtimeErrors.value.cep &&
            form.profile_data.endereco_cidade && form.bairro_id;
 };
 
 const nextStep = () => {
-    if (currentStep.value === 1 && validateStep1()) {
-        currentStep.value++;
-    } else if (currentStep.value === 2 && validateStep2()) {
-        currentStep.value++;
-    } else if (currentStep.value === 3 && validateStep3()) {
-        currentStep.value++;
+    // Limpa erros específicos antes de validar a próxima etapa
+    form.clearErrors('bairro_id', 'profile_data.endereco_cidade');
+
+    if (currentStep.value === 1) {
+        form.validate('name', 'email', 'password', 'password_confirmation');
+        if (validateStep1()) currentStep.value++;
+    } else if (currentStep.value === 2) {
+         form.validate('cpf', 'profile_data.telefone', 'profile_data.data_nascimento');
+         if (validateStep2()) currentStep.value++;
+    } else if (currentStep.value === 3) {
+        form.validate('profile_data.endereco_cep', 'profile_data.endereco_cidade', 'bairro_id');
+        if (validateStep3()) currentStep.value++;
     } else {
-        // Força a validação de todos os campos da etapa atual para exibir os erros
-        form.validate();
-        console.error("Validação da etapa falhou.");
+        // Para a etapa 4, não há validação extra antes de submeter
+        // A submissão já valida tudo
+    }
+    // Mostra erros gerais se houver
+    if (form.hasErrors) {
+        console.error("Validação da etapa falhou. Erros:", form.errors);
     }
 };
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--;
+        // Limpa erros ao voltar, pois o usuário pode corrigir
+        form.clearErrors();
     }
 };
 
@@ -188,7 +214,7 @@ const tryOpenModal = (modalType) => {
                         <PersonalDataFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            v-model="formattedDataNascimento"
+                            v-model:dataNascimento="formattedDataNascimento"
                         />
                     </div>
 
@@ -196,7 +222,7 @@ const tryOpenModal = (modalType) => {
                         <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairros="props.bairros"
+                            {{-- REMOVIDO :bairros="props.bairros" --}}
                             @buscar-cep="buscarCep"
                         />
                          <CustomFieldsSection :custom-fields="customFields" :form="form" />
@@ -274,6 +300,16 @@ const tryOpenModal = (modalType) => {
 :deep(.form-label) { @apply block mb-1.5 text-sm font-medium transition-colors duration-500; @apply text-gray-700 dark:text-gray-300; }
 :deep(.input-icon) { @apply absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-500; @apply text-gray-400 dark:text-gray-500; }
 :deep(.form-input) { @apply block w-full text-sm rounded-xl transition-all duration-300; @apply h-12 py-3.5 pl-11 pr-5; @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400; @apply focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500; @apply dark:bg-[#102523] dark:border-[#2a413d] dark:text-white dark:placeholder-gray-500; @apply dark:focus:ring-green-500 dark:focus:border-green-500; }
+/* Estilos específicos para o vue-select podem precisar ser ajustados aqui ou globalmente */
+:deep(.vs__dropdown-toggle) { @apply !rounded-xl !border-gray-300 dark:!border-[#2a413d] !h-12; }
+:deep(.vs__selected-options) { @apply !p-0 !pl-5; } /* Ajuste padding para alinhar com outros inputs */
+:deep(.vs__search) { @apply !pl-5 !py-3.5 !text-sm; } /* Ajuste padding e tamanho da fonte */
+:deep(.vs__selected) { @apply !py-0 !pl-0 !text-sm !text-gray-900 dark:!text-white; } /* Ajuste padding e cor do texto selecionado */
+:deep(.vs__dropdown-menu) { @apply !rounded-xl !border-gray-300 dark:!border-[#2a413d] dark:!bg-[#102523]; }
+:deep(.vs__dropdown-option) { @apply !text-sm dark:!text-gray-300; }
+:deep(.vs__dropdown-option--highlight) { @apply !bg-emerald-600/20 dark:!bg-[#43DB9E]/20 !text-emerald-800 dark:!text-green-300; }
+:deep(.vs__no-options) { @apply !text-sm !text-gray-500 dark:!text-gray-400; }
+
 :deep(select.form-input) { @apply appearance-none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
 :deep(.dark select.form-input) { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); }
 :deep(.form-error) { @apply text-xs mt-1.5 transition-colors duration-500; @apply text-red-600 dark:text-red-400; }
@@ -288,13 +324,8 @@ const tryOpenModal = (modalType) => {
 
 <style>
 html {
-    /*
-      O valor padrão da fonte na maioria dos navegadores é 16px.
-      Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
-
-      - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
-      - 15px: Redução mais sutil.
-    */
     font-size: 14px;
 }
+/* Estilos globais para vue-select se necessário */
+@import "vue-select/dist/vue-select.css";
 </style>
