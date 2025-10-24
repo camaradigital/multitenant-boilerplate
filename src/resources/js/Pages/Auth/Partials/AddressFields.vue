@@ -10,6 +10,8 @@ import { MapPin } from 'lucide-vue-next';
 const props = defineProps({
     form: Object,
     realtimeErrors: Object,
+    // REMOVED: Bairros are fetched dynamically now
+    // bairros: Array,
 });
 
 const emit = defineEmits(['buscar-cep']);
@@ -17,6 +19,7 @@ const emit = defineEmits(['buscar-cep']);
 // --- Autocomplete Logic ---
 const bairroOptions = ref([]); // Options for v-select
 const isLoading = ref(false);
+const selectedBairro = ref(null); // Local ref to manage v-select's object selection
 
 // Function to fetch bairros from the API
 const fetchBairros = debounce(async (search, loading) => {
@@ -25,13 +28,20 @@ const fetchBairros = debounce(async (search, loading) => {
         return;
     }
     loading(true);
-    isLoading.value = true;
+    isLoading.value = true; // Also manage our own loading state if needed elsewhere
     try {
         const response = await axios.get(route('bairros.search', { term: search }));
         const foundBairros = response.data;
 
-        // Add a "suggest" option ONLY if no results are found AND search is long enough
-        if (foundBairros.length === 0 && search.length >= 3) {
+        // If exact match found, select it (helps with CEP lookup pre-fill)
+        const exactMatch = foundBairros.find(b => b.nome.toLowerCase() === search.toLowerCase());
+        if (exactMatch) {
+            selectedBairro.value = exactMatch; // Pre-select if found
+             props.form.bairro_id = exactMatch.id; // Update form immediately
+        }
+
+        // Add a "suggest" option if no results are found
+        if (foundBairros.length === 0) {
              bairroOptions.value = [{
                  id: search, // Use the search term itself as the ID for suggestion
                  nome: `Sugerir "${search}" como novo bairro`,
@@ -50,13 +60,40 @@ const fetchBairros = debounce(async (search, loading) => {
     }
 }, 350); // Debounce time in ms
 
-// Function to handle changes (optional, useful for clearing errors)
-const onBairroChange = (value) => {
-    // value here is already the reduced one (id or string) due to :reduce
-    if (value) {
+// Function called when a bairro is selected or deselected
+const onBairroSelected = (selectedOption) => {
+    if (selectedOption) {
+        // If it's a suggestion, form.bairro_id gets the string name
+        // Otherwise, it gets the numeric id
+        props.form.bairro_id = selectedOption.id;
+        selectedBairro.value = selectedOption; // Keep v-select model updated
+         // Clear any previous bairro_id error when a selection is made
         props.form.clearErrors('bairro_id');
+    } else {
+        // When cleared, reset form.bairro_id and the local ref
+        props.form.bairro_id = null;
+        selectedBairro.value = null;
     }
 };
+
+// --- Watch for CEP lookup potentially setting the bairro name ---
+// This is tricky because useCepLookup sets form.profile_data.endereco_bairro,
+// but we now use form.bairro_id which expects an ID or a suggestion string.
+// A potential solution is to modify useCepLookup OR trigger a search here.
+// Let's try triggering a search if form.profile_data.endereco_bairro is set by CEP
+/*
+watch(() => props.form.profile_data.endereco_bairro, (newBairroName) => {
+    if (newBairroName && !props.form.bairro_id) {
+        // If CEP lookup provided a name, but we don't have an ID yet,
+        // trigger a search for that name to try and find/select it.
+        // We pass a dummy loading function as fetchBairros expects it.
+        fetchBairros(newBairroName, () => {});
+    }
+});
+*/
+// Simpler approach: If CEP returns a bairro ID (if API supports it), useCepLookup should set form.bairro_id directly.
+// If CEP only returns name, let the user confirm via autocomplete.
+
 
 </script>
 
@@ -98,16 +135,14 @@ const onBairroChange = (value) => {
                 id="bairro"
                 :options="bairroOptions"
                 label="nome"
-                :reduce="bairro => bairro.id"
-                v-model="form.bairro_id"
+                :reduce="bairro => bairro.id" {{-- Ensure only the id or suggestion string is bound --}}
+                v-model="form.bairro_id" {{-- Direct binding to form.bairro_id --}}
                 @search="fetchBairros"
-                @update:modelValue="onBairroChange" :filterable="false"
+                :filterable="false" {{-- Important for server-side search --}}
                 :loading="isLoading"
                 placeholder="Digite para buscar ou sugerir..."
-                :class="[
-                    'form-input p-0 border-0', // Base wrapper reset styles
-                    { '!border-red-500 dark:!border-red-400': form.errors.bairro_id } // Conditional error class for the wrapper
-                ]"
+                class="form-input p-0 border-0" {{-- Remove padding/border from wrapper --}}
+                 :class="{ '!border-red-500 dark:!border-red-400': form.errors.bairro_id }"
             >
                  {{-- Custom appearance for options --}}
                 <template #option="{ nome, isSuggestion }">
@@ -116,14 +151,16 @@ const onBairroChange = (value) => {
                  {{-- Message when no options match --}}
                 <template #no-options="{ search, searching, loading }">
                     <span v-if="loading || searching">Buscando...</span>
-                     <span v-else-if="search.length >= 3 && bairroOptions.length === 0">Nenhum bairro encontrado.</span>
+                     {{-- This slot might not be needed if fetchBairros handles the suggestion option --}}
+                    <span v-else-if="search.length >= 3">Nenhum bairro encontrado.</span>
                     <span v-else>Digite ao menos 3 caracteres.</span>
                 </template>
-                 {{-- Display selected option label --}}
-                 <template #selected-option="option">
-                      {{-- Attempt to display the label even if the full option object isn't available --}}
-                      {{ option.nome || (typeof form.bairro_id === 'string' ? form.bairro_id : '') }}
+                 {{-- Make selected option appearance consistent --}}
+                 <template #selected-option-container="{ option }">
+                     <span class="vs__selected">{{ option.label || option.nome }}</span>
                  </template>
+
+
             </v-select>
             <InputError class="form-error" :message="form.errors.bairro_id" />
         </div>
@@ -142,25 +179,19 @@ const onBairroChange = (value) => {
 </template>
 
 <style>
-/* Global or :deep() styles for v-select (Unchanged from previous version) */
+/* Scoped styles might not reach vue-select, define globally or use :deep() in parent */
 .vs__dropdown-toggle {
   @apply !min-h-[3rem] !rounded-xl !border-gray-300 dark:!border-[#2a413d] dark:!bg-[#102523] dark:!text-white;
+  /* Match your form-input height and border */
 }
 .vs__search {
-   @apply !text-sm !py-0 !px-0 dark:!text-white;
-}
-/* Ensure placeholder is visible and styled */
-input.vs__search::placeholder {
-    @apply text-gray-400 dark:text-gray-500 text-sm;
+   @apply !text-sm !py-0 !px-0 dark:!text-white; /* Adjust padding if needed */
 }
 .vs__selected {
-  @apply !text-sm !py-0 !pl-0 !m-0 !text-gray-900 dark:!text-white;
+  @apply !text-sm !py-0 !pl-0 !m-0 !text-gray-900 dark:!text-white; /* Adjust padding */
 }
 .vs__selected-options {
-    @apply !p-0 !pl-5 !flex !items-center; /* Add flex items-center */
-    padding-top: 0.875rem; /* ~ py-3.5 */
-    padding-bottom: 0.875rem; /* ~ py-3.5 */
-    min-height: 3rem; /* Match form-input */
+    @apply !p-0 !pl-5; /* Match form-input left padding */
 }
 .vs__clear, .vs__open-indicator {
     @apply dark:fill-gray-400;
@@ -181,14 +212,17 @@ input.vs__search::placeholder {
     @apply !border-emerald-600 dark:!border-green-400;
 }
 
-/* Base border style applied via the wrapper div's class logic */
+/* Add red border on error */
+.form-input.p-0.border-0.vs--open, /* Keep border consistent when dropdown is open */
 .form-input.p-0.border-0 .vs__dropdown-toggle {
     /* Apply base border style from :deep(.form-input) */
-     @apply !border bg-white !border-gray-300 dark:!bg-[#102523] dark:!border-[#2a413d];
+    @apply border bg-white border-gray-300 dark:bg-[#102523] dark:border-[#2a413d];
 }
 
-/* Error state border applied via the wrapper div's class logic */
+/* Error state border */
 .form-input.p-0.border-0.\\!border-red-500 .vs__dropdown-toggle {
-    @apply !border-red-500 focus-within:!ring-1 focus-within:!ring-red-500 dark:!border-red-400 dark:focus-within:!ring-red-400;
+    @apply !border-red-500 focus:!border-red-500 focus:!ring-red-500 dark:!border-red-400 dark:focus:!border-red-400 dark:focus:!ring-red-400;
 }
+
+
 </style>
