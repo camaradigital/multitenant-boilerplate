@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
+import vSelect from 'vue-select';
+import 'vue-select/dist/vue-select.css';
 
 // Lógica (Composables)
 import { useRealtimeValidation } from '@/Composables/useRealtimeValidation';
@@ -17,9 +20,6 @@ import TermsAndPrivacy from './Partials/TermsAndPrivacy.vue';
 
 const props = defineProps({
     customFields: Array,
-    // ADICIONADO: Recebe a lista de bairros do backend.
-    // Cada bairro deve ser um objeto com 'id' e 'nome'.
-    bairros: Array,
 });
 
 // --- LÓGICA DE ETAPAS ---
@@ -55,8 +55,8 @@ const form = useForm({
     terms: false,
     privacy: false,
     cpf: '',
-    // ADICIONADO: Este campo irá guardar o ID do bairro selecionado.
-    bairro_id: '',
+    // Este campo irá guardar o ID do bairro selecionado.
+    bairro_id: null,
     profile_data: generateProfileDataStructure(props.customFields),
 });
 
@@ -86,6 +86,32 @@ const submit = () => {
     form.post(route('register'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
+};
+
+// --- LÓGICA DE AUTOCOMPLETE DO BAIRRO ---
+const bairrosOptions = ref([]);
+let searchTimeout = null;
+
+const onBairroSearch = (search, loading) => {
+    if (search.length >= 3) { // Inicia a busca a partir de 3 caracteres
+        loading(true);
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchBairros(search, loading);
+        }, 500); // Debounce de 500ms para evitar requisições excessivas
+    }
+};
+
+const searchBairros = async (term, loading) => {
+    try {
+        const response = await axios.get(route('public.bairros.search', { term }));
+        bairrosOptions.value = response.data;
+    } catch (error) {
+        console.error('Erro ao buscar bairros:', error);
+        bairrosOptions.value = [];
+    } finally {
+        if (loading) loading(false);
+    }
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO E VALIDAÇÃO POR ETAPA ---
@@ -196,7 +222,8 @@ const tryOpenModal = (modalType) => {
                         <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairros="props.bairros"
+                            :bairros-options="bairrosOptions"
+                            @search-bairros="onBairroSearch"
                             @buscar-cep="buscarCep"
                         />
                          <CustomFieldsSection :custom-fields="customFields" :form="form" />
@@ -291,10 +318,69 @@ html {
     /*
       O valor padrão da fonte na maioria dos navegadores é 16px.
       Reduzir este valor faz com que todos os elementos que usam a unidade 'rem'
+      sejam proporcionalmente menores.
 
       - 14px: Reduz o tamanho geral em cerca de 12.5% (bom para um layout mais compacto).
       - 15px: Redução mais sutil.
     */
     font-size: 14px;
+}
+
+/* Estilos para customizar o v-select para combinar com seu layout */
+:root {
+    --vs-border-color: #D1D5DB;
+    --vs-border-radius: 0.75rem;
+    --vs-line-height: 1.5;
+    --vs-search-input-placeholder-color: #9CA3AF;
+    --vs-font-size: .875rem; /* text-sm */
+    --vs-controls-color: #4B5563;
+}
+
+.dark:root {
+     --vs-border-color: #2a413d;
+     --vs-controls-color: #9CA3AF;
+     --vs-search-input-color: #FFFFFF;
+     --vs-search-input-placeholder-color: #6B7280;
+     --vs-dropdown-bg: #102523;
+     --vs-dropdown-option-color: #D1D5DB;
+     --vs-dropdown-option--active-bg: #10B981;
+     --vs-dropdown-option--active-color: #FFFFFF;
+     --vs-dropdown-bg: #102523;
+}
+
+.vs__dropdown-toggle {
+    height: 3rem; /* h-12 */
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    border-width: 1px;
+    background: white;
+}
+
+.dark .vs__dropdown-toggle {
+    background: #102523;
+}
+
+.vs--open .vs__dropdown-toggle {
+    border-color: #10B981;
+}
+
+.vs__search {
+    padding-left: 0 !important;
+}
+
+.vs__selected {
+    padding-left: 0 !important;
+}
+
+.vs__search::placeholder,
+.vs__dropdown-toggle,
+.vs__selected {
+    color: #374151;
+}
+
+.dark .vs__search::placeholder,
+.dark .vs__dropdown-toggle,
+.dark .vs__selected {
+    color: white;
 }
 </style>
