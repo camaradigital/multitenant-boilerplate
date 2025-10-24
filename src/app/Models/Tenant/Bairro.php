@@ -13,7 +13,7 @@ class Bairro extends Model
 {
     use HasFactory, LogsActivity, UsesTenantConnection;
 
-    protected $fillable = ['nome', 'tipo_logradouro'];
+    protected $fillable = ['nome', 'tipo_logradouro', 'aprovado']; // <--- 'aprovado' foi adicionado
 
     public function getActivitylogOptions(): LogOptions
     {
