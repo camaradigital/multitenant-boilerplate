@@ -60,7 +60,7 @@ const handleBairroSearch = (search, loading) => {
                 :reduce="bairro => bairro.id"
                 @search="handleBairroSearch"
                 :filterable="false"
-                taggable  
+                taggable
                 placeholder="Digite para buscar ou criar um novo bairro"
             >
                 <template #no-options="{ search }">
