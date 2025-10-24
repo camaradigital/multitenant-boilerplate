@@ -2,12 +2,6 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
-// --- IMPORTAÇÕES ADICIONADAS ---
-import axios from 'axios';
-import vSelect from 'vue-select';
-import 'vue-select/dist/vue-select.css';
-// --- FIM DAS IMPORTAÇÕES ---
-
 // Lógica (Composables)
 import { useRealtimeValidation } from '@/Composables/useRealtimeValidation';
 import { useCepLookup } from '@/Composables/useCepLookup';
