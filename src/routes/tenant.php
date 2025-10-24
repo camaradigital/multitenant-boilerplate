@@ -76,22 +76,21 @@ Route::get('/memoria-legislativa', [MemoriaLegislativaController::class, 'show']
 Route::get('/vagas', [VagaController::class, 'indexPublic'])->name('portal.vagas.index');
 Route::get('/vagas/{vaga}', [VagaController::class, 'showPublic'])->name('portal.vagas.show');
 
-// --- Rota para a página de registro ---
-Route::get('/register', function () {
-    $customFields = CustomField::all();
-    // $bairros = Bairro::orderBy('nome')->get(['id', 'nome']); // <-- REMOVIDO
+Route::get('/api/bairros/search', [BairroController::class, 'search'])->name('public.bairros.search');
 
-    return Inertia::render('Auth/Register', [
-        'customFields' => $customFields,
-        // 'bairros' => $bairros, // <-- REMOVIDO
-    ]);
-})->name('register');
+    // --- Rota para a página de registro ---
+    Route::get('/register', function () {
+        $customFields = CustomField::all();
+        // **CORREÇÃO 2: REMOÇÃO DA BUSCA DE BAIRROS**
+        // A lista de bairros não é mais passada aqui, pois o frontend
+        // irá buscá-la dinamicamente através da API acima.
+        return Inertia::render('Auth/Register', [
+            'customFields' => $customFields,
+        ]);
+    })->name('register');
 
-// --- ADICIONADO: Rota pública para busca de bairros no registro ---
-Route::get('/bairros/search', [BairroController::class, 'search'])->name('bairros.search');
-
-// --- ROTA DE VALIDAÇÃO DE DADOS ---
-Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
+    // --- ROTA DE VALIDAÇÃO DE DADOS (LOCAL CORRETO) ---
+    Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
 
 // --- ROTAS DE REDEFINIÇÃO DE SENHA E VERIFICAÇÃO DE E-MAIL ---
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
