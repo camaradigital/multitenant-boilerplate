@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Tenant\Bairro; // <-- ADICIONADO: Importar o model Bairro
 use App\Models\Tenant\Role;
 use App\Models\Tenant\User;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,6 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
-
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:tenant.users'],
@@ -43,7 +43,12 @@ class CreateNewUser implements CreatesNewUsers
             'profile_data.endereco_cep' => ['nullable', 'string', 'max:9'],
             'profile_data.endereco_logradouro' => ['nullable', 'string', 'max:255'],
             'profile_data.endereco_numero' => ['nullable', 'string', 'max:20'],
-            'bairro_id' => ['nullable', 'integer', 'exists:tenant.bairros,id'],
+            
+            // ATUALIZADO: Validação do Bairro
+            // Agora é 'required' (conforme lógica do form) e não mais 'integer' ou 'exists'.
+            // Pode ser um ID (int) ou um nome de bairro (string).
+            'bairro_id' => ['required'], 
+            
             'profile_data.endereco_cidade' => ['required', 'string', 'max:100'],
             'profile_data.endereco_estado' => ['nullable', 'string', 'max:2'],
 
@@ -61,16 +66,34 @@ class CreateNewUser implements CreatesNewUsers
             }
         }
 
-        // MODIFICADO: Utiliza uma transação e o bairro_id diretamente.
+        // MODIFICADO: Utiliza uma transação e a lógica de verificação do bairro_id.
         return DB::transaction(function () use ($input) {
-            // A lógica de firstOrCreate foi removida, pois o ID já vem validado do frontend.
+
+            // --- INÍCIO: LÓGICA DE BAIRRO NOVO OU EXISTENTE ---
+            $bairroId = $input['bairro_id'] ?? null;
+
+            // Verifica se o valor recebido é um texto (string) em vez de um ID (numérico).
+            if ($bairroId && !is_numeric($bairroId)) {
+                // É um texto, então é um novo bairro sugerido.
+                // Criamos o novo bairro com o nome recebido e o marcamos como 'não aprovado'.
+                $novoBairro = Bairro::create([
+                    'nome' => $bairroId,       // $bairroId aqui contém o texto, ex: "Vila da Paz"
+                    'aprovado' => false,   // Nasce como pendente de aprovação
+                ]);
+                
+                // Atualiza a variável $bairroId para o ID do registro recém-criado.
+                $bairroId = $novoBairro->id;
+            }
+            // Se $bairroId já era numérico, ele passa direto e é usado.
+            // --- FIM: LÓGICA DE BAIRRO ---
+
             $user = User::create([
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
                 'cpf' => $input['cpf'] ?? null,
                 'profile_data' => $input['profile_data'] ?? [],
-                'bairro_id' => $input['bairro_id'] ?? null, // Associa diretamente o ID do bairro vindo do formulário
+                'bairro_id' => $bairroId, // Associa o ID do bairro (seja o existente ou o novo)
                 // --- REGISTRO DO CONSENTIMENTO LGPD ---
                 'terms_accepted_at' => now(),
                 'privacy_accepted_at' => now(),
