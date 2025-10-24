@@ -17,7 +17,6 @@ const emit = defineEmits(['buscar-cep']);
 // --- Autocomplete Logic ---
 const bairroOptions = ref([]); // Options for v-select
 const isLoading = ref(false);
-// Removed selectedBairro ref, directly bind v-model to form.bairro_id with :reduce
 
 // Function to fetch bairros from the API
 const fetchBairros = debounce(async (search, loading) => {
@@ -95,15 +94,14 @@ const onBairroChange = (value) => {
 
         <div class="input-container md:col-span-4">
             <label for="bairro" class="form-label">Bairro/Córrego</label>
-             <v-select
+            <v-select
                 id="bairro"
                 :options="bairroOptions"
                 label="nome"
                 :reduce="bairro => bairro.id"
                 v-model="form.bairro_id"
                 @search="fetchBairros"
-                @update:modelValue="onBairroChange" {{-- Call clearErrors on selection --}}
-                :filterable="false"
+                @update:modelValue="onBairroChange" :filterable="false"
                 :loading="isLoading"
                 placeholder="Digite para buscar ou sugerir..."
                 :class="[
@@ -123,7 +121,8 @@ const onBairroChange = (value) => {
                 </template>
                  {{-- Display selected option label --}}
                  <template #selected-option="option">
-                     {{ option.nome || form.bairro_id }} {{-- Show label or the raw value if needed --}}
+                      {{-- Attempt to display the label even if the full option object isn't available --}}
+                      {{ option.nome || (typeof form.bairro_id === 'string' ? form.bairro_id : '') }}
                  </template>
             </v-select>
             <InputError class="form-error" :message="form.errors.bairro_id" />
@@ -143,12 +142,16 @@ const onBairroChange = (value) => {
 </template>
 
 <style>
-/* Global or :deep() styles for v-select */
+/* Global or :deep() styles for v-select (Unchanged from previous version) */
 .vs__dropdown-toggle {
   @apply !min-h-[3rem] !rounded-xl !border-gray-300 dark:!border-[#2a413d] dark:!bg-[#102523] dark:!text-white;
 }
 .vs__search {
    @apply !text-sm !py-0 !px-0 dark:!text-white;
+}
+/* Ensure placeholder is visible and styled */
+input.vs__search::placeholder {
+    @apply text-gray-400 dark:text-gray-500 text-sm;
 }
 .vs__selected {
   @apply !text-sm !py-0 !pl-0 !m-0 !text-gray-900 dark:!text-white;
@@ -159,13 +162,6 @@ const onBairroChange = (value) => {
     padding-bottom: 0.875rem; /* ~ py-3.5 */
     min-height: 3rem; /* Match form-input */
 }
-
-/* Ensure placeholder is visible and styled */
-input.vs__search::placeholder {
-    @apply text-gray-400 dark:text-gray-500 text-sm;
-}
-
-
 .vs__clear, .vs__open-indicator {
     @apply dark:fill-gray-400;
 }
@@ -173,7 +169,7 @@ input.vs__search::placeholder {
   @apply !rounded-xl !border-gray-300 dark:!border-[#2a413d] dark:!bg-[#102523];
 }
 .vs__dropdown-option {
-  @apply !text-sm !py-2.5 dark:!text-gray-300;
+  @apply !text-sm !py-2.5 dark:!text-gray-300; /* Match form-input vertical padding roughly */
 }
 .vs__dropdown-option--highlight {
    @apply !bg-emerald-600/20 dark:!bg-[#43DB9E]/20 !text-emerald-800 dark:!text-green-300;
@@ -195,10 +191,4 @@ input.vs__search::placeholder {
 .form-input.p-0.border-0.\\!border-red-500 .vs__dropdown-toggle {
     @apply !border-red-500 focus-within:!ring-1 focus-within:!ring-red-500 dark:!border-red-400 dark:focus-within:!ring-red-400;
 }
-/* Valid state border (optional, if you want green border on valid) */
-/*
-.form-input.p-0.border-0.input-valid .vs__dropdown-toggle {
-     @apply !border-emerald-500 focus-within:!ring-1 focus-within:!ring-emerald-500 dark:!border-green-500 dark:focus-within:!ring-green-500;
-}
-*/
 </style>
