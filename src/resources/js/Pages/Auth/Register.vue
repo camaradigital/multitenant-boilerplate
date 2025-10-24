@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import axios from 'axios'; // <-- ADICIONADO
 
 // Lógica (Composables)
 import { useRealtimeValidation } from '@/Composables/useRealtimeValidation';
@@ -18,7 +17,9 @@ import TermsAndPrivacy from './Partials/TermsAndPrivacy.vue';
 
 const props = defineProps({
     customFields: Array,
-    // A prop 'bairros: Array' foi REMOVIDA
+    // ADICIONADO: Recebe a lista de bairros do backend.
+    // Cada bairro deve ser um objeto com 'id' e 'nome'.
+    bairros: Array,
 });
 
 // --- LÓGICA DE ETAPAS ---
@@ -124,28 +125,6 @@ const prevStep = () => {
     }
 };
 
-// --- ADICIONADO: Lógica de Busca de Bairros ---
-const bairrosOptions = ref([]);
-
-const handleBairroSearch = (search, loading) => {
-    // O componente filho (AddressFields) já ativou o loading(true)
-    // Usamos a rota 'bairros.search' que definimos no routes/tenant.php
-    axios.get(route('bairros.search', { term: search }))
-        .then(response => {
-            // O v-select receberá a lista da API
-            bairrosOptions.value = response.data;
-        })
-        .catch(error => {
-            console.error('Erro ao buscar bairros:', error);
-            bairrosOptions.value = []; // Limpa em caso de erro
-        })
-        .finally(() => {
-            // Avisa o v-select que a busca terminou
-            loading(false);
-        });
-};
-// --- FIM DA ADIÇÃO ---
-
 // --- Lógica dos Modais ---
 const showTermsModal = ref(false);
 const showPrivacyModal = ref(false);
@@ -217,9 +196,8 @@ const tryOpenModal = (modalType) => {
                         <AddressFields
                             :form="form"
                             :realtime-errors="realtimeErrors"
-                            :bairros-options="bairrosOptions" 
+                            :bairros="props.bairros"
                             @buscar-cep="buscarCep"
-                            @search-bairros="handleBairroSearch"
                         />
                          <CustomFieldsSection :custom-fields="customFields" :form="form" />
                     </div>
