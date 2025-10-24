@@ -1,11 +1,13 @@
 <script setup>
-import { ref } from 'vue';
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { useForm, Head, Link } from '@inertiajs/vue3';
 import axios from 'axios'; // Import axios for API calls
 import { debounce } from 'lodash-es'; // Import debounce
-import vSelect from 'vue-select'; // Import vue-select
-import 'vue-select/dist/vue-select.css'; // Import vue-select CSS
 import InputError from '@/Components/InputError.vue';
 import { MapPin } from 'lucide-vue-next';
+import vSelect from 'vue-select';
+import 'vue-select/dist/vue-select.css';
 
 const props = defineProps({
     form: Object,
