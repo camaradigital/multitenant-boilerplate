@@ -135,27 +135,23 @@ watch(() => props.form.profile_data.endereco_bairro, (newBairroName) => {
                 id="bairro"
                 :options="bairroOptions"
                 label="nome"
-                :reduce="bairro => bairro.id" {{-- Ensure only the id or suggestion string is bound --}}
-                v-model="form.bairro_id" {{-- Direct binding to form.bairro_id --}}
+                :reduce="bairro => bairro.id"
+                v-model="form.bairro_id"
                 @search="fetchBairros"
-                :filterable="false" {{-- Important for server-side search --}}
+                :filterable="false"
                 :loading="isLoading"
                 placeholder="Digite para buscar ou sugerir..."
-                class="form-input p-0 border-0" {{-- Remove padding/border from wrapper --}}
+                class="form-input p-0 border-0"
                  :class="{ '!border-red-500 dark:!border-red-400': form.errors.bairro_id }"
             >
-                 {{-- Custom appearance for options --}}
                 <template #option="{ nome, isSuggestion }">
                     <span :class="{ 'italic text-emerald-600 dark:text-green-400': isSuggestion }">{{ nome }}</span>
                 </template>
-                 {{-- Message when no options match --}}
                 <template #no-options="{ search, searching, loading }">
                     <span v-if="loading || searching">Buscando...</span>
-                     {{-- This slot might not be needed if fetchBairros handles the suggestion option --}}
                     <span v-else-if="search.length >= 3">Nenhum bairro encontrado.</span>
                     <span v-else>Digite ao menos 3 caracteres.</span>
                 </template>
-                 {{-- Make selected option appearance consistent --}}
                  <template #selected-option-container="{ option }">
                      <span class="vs__selected">{{ option.label || option.nome }}</span>
                  </template>
