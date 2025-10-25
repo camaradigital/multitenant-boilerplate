@@ -67,11 +67,13 @@ const errorMessage = (field, error) => {
         'unique': `${fieldTitle(field)} já cadastrado no banco`,
         'confirmed': 'A confirmação da senha não confere',
         'city_restricted': 'Sistema não permite cadastro de cidadão de outra cidade',
+        'cpf': `${fieldTitle(field)} não é um CPF válido`,
+        'min.string': `A ${fieldTitle(field).toLowerCase()} deve ter no mínimo 8 caracteres`,
         // Adicione mais regras conforme necessário
     };
 
     if (error.startsWith('validation.')) {
-        const rule = error.split('.')[1];
+        const rule = error.split('.').slice(1).join('.');
         if (errorMaps[rule]) {
             return errorMaps[rule];
         }
