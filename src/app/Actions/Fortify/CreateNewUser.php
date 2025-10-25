@@ -42,7 +42,7 @@ class CreateNewUser implements CreatesNewUsers
             'profile_data.endereco_logradouro' => ['nullable', 'string', 'max:255'],
             'profile_data.endereco_numero' => ['nullable', 'string', 'max:20'],
             'profile_data.endereco_bairro' => ['nullable', 'string', 'max:100'],
-            'bairro_id' => ['nullable', 'integer', 'exists:tenant.bairros,id'],
+            'bairro_id' => ['required', 'integer', 'exists:tenant.bairros,id'],
             'profile_data.endereco_cidade' => ['required', 'string', 'max:100'],
             'profile_data.endereco_estado' => ['nullable', 'string', 'max:2'],
 
@@ -58,15 +58,6 @@ class CreateNewUser implements CreatesNewUsers
             }
         }
 
-        $user = User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => Hash::make($input['password']),
-            'cpf' => $input['cpf'] ?? null,
-            'profile_data' => $input['profile_data'] ?? [],
-            'terms_accepted_at' => now(),
-            'privacy_accepted_at' => now(),
-        ]);
         return DB::transaction(function () use ($input) {
             $user = User::create([
                 'name' => $input['name'],
@@ -74,22 +65,17 @@ class CreateNewUser implements CreatesNewUsers
                 'password' => Hash::make($input['password']),
                 'cpf' => $input['cpf'] ?? null,
                 'profile_data' => $input['profile_data'] ?? [],
-                'bairro_id' => $input['bairro_id'] ?? null,
+                'bairro_id' => $input['bairro_id'], // Removido `?? null` pois agora é obrigatório
                 'terms_accepted_at' => now(),
                 'privacy_accepted_at' => now(),
             ]);
 
-        // Atribui o papel de Cidadão ao novo usuário
-        $role = Role::where('name', 'Cidadao')->where('guard_name', 'tenant')->first();
-        if ($role) {
-            $user->assignRole($role);
-        }
+            // Atribui o papel de Cidadão ao novo usuário
             $role = Role::where('name', 'Cidadao')->where('guard_name', 'tenant')->first();
             if ($role) {
                 $user->assignRole($role);
             }
 
-        return $user;
             return $user;
         });
     }
