@@ -368,15 +368,14 @@ html {
 }
 
 .dark:root {
-    --vs-border-color: #2a413d;
-    --vs-controls-color: #9CA3AF;
-    --vs-search-input-color: #FFFFFF;
-    --vs-search-input-placeholder-color: #6B7280;
-    --vs-dropdown-bg: #102523;
-    --vs-dropdown-option-color: #D1D5DB;
-    --vs-dropdown-option--active-bg: #10B981;
-    --vs-dropdown-option--active-color: #FFFFFF;
-    --vs-dropdown-bg: #102523;
+     --vs-border-color: #2a413d;
+     --vs-controls-color: #9CA3AF;
+     --vs-search-input-color: #FFFFFF;
+     --vs-search-input-placeholder-color: #6B7280;
+     --vs-dropdown-option-color: #D1D5DB;
+     --vs-dropdown-option--active-bg: #10B981;
+     --vs-dropdown-option--active-color: #FFFFFF;
+     --vs-dropdown-bg: #102523;
 }
 
 .vs__dropdown-toggle {
