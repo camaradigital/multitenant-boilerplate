@@ -11,7 +11,7 @@
                     <div class="ml-3">
                         <h3 class="text-sm font-bold text-red-800">{{ fieldTitle(field) }}</h3>
                         <div class="mt-2 text-sm text-red-700">
-                            <p v-for="error in errors" :key="error">{{ error }}</p>
+                            <p v-for="error in (Array.isArray(errors) ? errors : [errors])" :key="error">{{ errorMessage(field, error) }}</p>
                         </div>
                     </div>
                 </div>
@@ -55,9 +55,30 @@ const fieldTitle = (field) => {
         'password': 'Senha',
         'name': 'Nome',
         'password_confirmation': 'Confirmação de senha',
+        'cpf': 'CPF',
+        'cidade': 'Cidade',
         ...props.fieldsMap
     };
     return map[field] || field;
+};
+
+const errorMessage = (field, error) => {
+    const errorMaps = {
+        'unique': `${fieldTitle(field)} já cadastrado no banco`,
+        'confirmed': 'A confirmação da senha não confere',
+        'city_restricted': 'Sistema não permite cadastro de cidadão de outra cidade',
+        // Adicione mais regras conforme necessário
+    };
+
+    if (error.startsWith('validation.')) {
+        const rule = error.split('.')[1];
+        if (errorMaps[rule]) {
+            return errorMaps[rule];
+        }
+    }
+
+    // Fallback: substitui chaves de validação por mensagens legíveis
+    return error.replace(/validation\./g, '').replace(/\./g, ' ').replace(/_/g, ' ');
 };
 
 watch(errorBag, (newErrors) => {
