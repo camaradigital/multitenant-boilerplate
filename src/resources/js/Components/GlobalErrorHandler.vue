@@ -1,7 +1,12 @@
 <template>
     <div v-if="hasErrors" class="fixed top-20 right-4 z-50 max-w-sm">
-        <div v-for="(errors, field) in errorBag" :key="field" class="mb-4">
-            <div class="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg animate-slide-in-right">
+        <div v-for="(errors, field) in displayedErrorBag" :key="field" class="mb-4">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg animate-slide-in-right relative">
+                <button @click="closeError(field)" class="absolute top-2 right-2 text-red-400 hover:text-red-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
                 <div class="flex">
                     <div class="flex-shrink-0">
                         <svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
@@ -21,7 +26,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -47,7 +52,9 @@ const errorBag = computed(() => {
     return {};
 });
 
-const hasErrors = computed(() => Object.keys(errorBag.value).length > 0);
+const displayedErrorBag = ref({});
+
+const hasErrors = computed(() => Object.keys(displayedErrorBag.value).length > 0);
 
 const fieldTitle = (field) => {
     const map = {
@@ -83,14 +90,21 @@ const errorMessage = (field, error) => {
     return error.replace(/validation\./g, '').replace(/\./g, ' ').replace(/_/g, ' ');
 };
 
+const closeError = (field) => {
+    delete displayedErrorBag.value[field];
+    if (Object.keys(displayedErrorBag.value).length === 0) {
+        displayedErrorBag.value = {};
+    }
+};
+
 watch(errorBag, (newErrors) => {
     if (Object.keys(newErrors).length > 0) {
-        // Auto-limpar após 8 segundos
+        displayedErrorBag.value = { ...newErrors };
         setTimeout(() => {
-            // Não limpa aqui, deixa o Inertia limpar na próxima navegação
-        }, 8000);
+            displayedErrorBag.value = {};
+        }, 10000);
     }
-});
+}, { deep: true });
 </script>
 
 <style scoped>
