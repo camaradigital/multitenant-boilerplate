@@ -52,20 +52,14 @@ use Inertia\Inertia;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
-// Remova os 'use' dos middlewares que não são mais necessários AQUI no topo
-// use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession; // REMOVIDO
-// use Spatie\Multitenancy\Http\Middleware\NeedsTenant; // REMOVIDO
+use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession;
+use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Spatie\Multitenancy\Models\Tenant;
 
 /*
 |--------------------------------------------------------------------------
 | Rotas do Tenant
 |--------------------------------------------------------------------------
-|
-| Estas rotas são carregadas automaticamente pelo bootstrap/app.php
-| quando um domínio de tenant é detectado e já estão dentro
-| do grupo de middleware 'tenant'.
-|
 */
 
 // --- ROTAS PÚBLICAS DO PORTAL ---
@@ -76,37 +70,35 @@ Route::get('/memoria-legislativa', [MemoriaLegislativaController::class, 'show']
 Route::get('/vagas', [VagaController::class, 'indexPublic'])->name('portal.vagas.index');
 Route::get('/vagas/{vaga}', [VagaController::class, 'showPublic'])->name('portal.vagas.show');
 
+// ROTA DA API PÚBLICA DE BAIRROS*
 Route::get('/api/bairros/search', [BairroController::class, 'search'])->name('public.bairros.search');
 
-    // --- Rota para a página de registro ---
-    Route::get('/register', function () {
-        $customFields = CustomField::all();
-        // **CORREÇÃO 2: REMOÇÃO DA BUSCA DE BAIRROS**
-        // A lista de bairros não é mais passada aqui, pois o frontend
-        // irá buscá-la dinamicamente através da API acima.
-        return Inertia::render('Auth/Register', [
-            'customFields' => $customFields,
-        ]);
-    })->name('register');
+// --- Rota para a página de registro ---
+Route::get('/register', function () {
+    $customFields = CustomField::all();
+    // irá buscá-la dinamicamente através da API acima.
+    return Inertia::render('Auth/Register', [
+        'customFields' => $customFields,
+    ]);
+})->name('register');
 
-    // --- ROTA DE VALIDAÇÃO DE DADOS (LOCAL CORRETO) ---
-    Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
+// --- ROTA DE VALIDAÇÃO DE DADOS (LOCAL CORRETO) ---
+Route::post('/validate-field', [RealtimeValidationController::class, 'validateField'])->name('realtime.validate');
 
-// --- ROTAS DE REDEFINIÇÃO DE SENHA E VERIFICAÇÃO DE E-MAIL ---
+// --- ROTAS DE REDEFINIÇÃO DE SENHA E VERIFICAÇÃO DE E-MAIL |  NÃO PODE EXCLUIR ---
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
 Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
 Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 
-// Middleware 'auth:tenant' aqui porque precisa saber quem está logado para verificar
 Route::get('/email/verify', [VerificationController::class, 'show'])->middleware('auth:tenant')->name('verification.notice');
-// Middleware 'signed' e 'throttle' são específicos da rota, devem permanecer
 Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
 Route::post('/email/verification-notification', [VerificationController::class, 'send'])->middleware(['auth:tenant', 'throttle:6,1'])->name('verification.send');
 
-// --- ROTAS PARA TERMOS E POLÍTICA DE PRIVACIDADE ---
+// --- ROTAS PARA TERMOS E POLÍTICA DE PRIVACIDADE (VERSÃO FINAL) ---
 Route::get('/terms-of-service', function () {
     $tenant = Tenant::current();
+
     return Inertia::render('Policy', [
         'tenantName' => $tenant?->name,
         'lastUpdated' => $tenant?->updated_at->translatedFormat('d \d\e F \d\e Y'),
@@ -117,6 +109,7 @@ Route::get('/terms-of-service', function () {
 
 Route::get('/privacy-policy', function () {
     $tenant = Tenant::current();
+
     return Inertia::render('Policy', [
         'tenantName' => $tenant?->name,
         'lastUpdated' => $tenant?->updated_at->translatedFormat('d \d\e F \d\e Y'),
@@ -125,17 +118,17 @@ Route::get('/privacy-policy', function () {
     ]);
 })->name('policy.show');
 
-// Se você usa broadcasting para canais autenticados, mantenha isso
-Broadcast::routes(['middleware' => ['auth:tenant']]); // Adicionado middleware auth:tenant aqui
+Broadcast::routes();
 
 // --- ROTAS AUTENTICADAS ---
-// Este grupo interno permanece, pois adiciona a verificação de 'auth' e 'verified'
 Route::middleware([
-    'auth:tenant', // Garante que o usuário está logado no guard 'tenant'
-    config('jetstream.auth_session'), // Middleware do Jetstream/Fortify
-    'verified', // Garante que o e-mail foi verificado
+    'auth:tenant',
+    config('jetstream.auth_session'),
+    'verified',
 ])->group(function () {
 
+    // A rota do dashboard agora aponta diretamente para o DashboardController.
+    // O próprio controller tem a lógica para decidir qual view mostrar (Cidadão ou Admin),
     Route::get('/dashboard', DashboardController::class)->name('tenant.dashboard');
 
     // --- ROTAS DO CIDADÃO ---
@@ -154,9 +147,9 @@ Route::middleware([
         Route::post('/profile/anonymize-account', [ProfileController::class, 'anonymizeAccount'])->name('profile.anonymize-account');
         Route::delete('/user', [ProfileController::class, 'destroy'])->name('profile.destroy');
         Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
-            Route::get('/', [GabineteVirtualController::class, 'citizenIndex'])->name('index');
-            Route::post('/', [GabineteVirtualController::class, 'storeMensagem'])->name('store');
-            Route::get('/{mensagem}', [GabineteVirtualController::class, 'citizenShow'])->name('show');
+        Route::get('/', [GabineteVirtualController::class, 'citizenIndex'])->name('index');
+        Route::post('/', [GabineteVirtualController::class, 'storeMensagem'])->name('store');
+        Route::get('/{mensagem}', [GabineteVirtualController::class, 'citizenShow'])->name('show');
         });
     });
 
@@ -165,8 +158,6 @@ Route::middleware([
     Route::patch('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     // --- ROTAS DO PAINEL ADMINISTRATIVO ---
-    // O prefixo 'admin' e o nome 'admin.' já restringem o acesso,
-    // mas as permissões dentro dos controllers farão a verificação final.
     Route::prefix('admin')->as('admin.')->group(function () {
 
         // MÓDULO DE ATENDIMENTO
@@ -180,8 +171,8 @@ Route::middleware([
         Route::prefix('gabinete-virtual')->as('gabinete-virtual.')->group(function () {
             Route::get('/', [GabineteVirtualController::class, 'adminIndex'])->name('index');
             Route::get('/{mensagem}', [GabineteVirtualController::class, 'adminShow'])->name('show');
-            Route::patch('/{mensagem}/status', [GabineteVirtualController::class, 'updateStatus'])->name('updateStatus');
-            Route::post('/{mensagem}/responder', [GabineteVirtualController::class, 'storeResposta'])->name('storeResposta');
+            Route::patch('/{mensagem}/status', [GabineteVirtualController::class, 'updateStatus'])->name('updateStatus'); // Changed
+            Route::post('/{mensagem}/responder', [GabineteVirtualController::class, 'storeResposta'])->name('storeResposta'); // Changed
         });
 
         // CAMPANHAS (ADMIN)
@@ -206,17 +197,20 @@ Route::middleware([
         Route::post('/cidadaos/{cidadao}/anonymize', [CidadaoController::class, 'anonymize'])->name('cidadaos.anonymize');
         Route::get('/cidadaos/{cidadao}/exportar-dados', [CidadaoController::class, 'exportData'])->name('cidadaos.export-data');
 
+        // Rotas do Dossiê/Relacionamento agora apontam para o CidadaoRelacionamentoController
         Route::get('/cidadaos/{cidadao}', [CidadaoRelacionamentoController::class, 'show'])->name('cidadaos.show');
         Route::post('/cidadaos/{cidadao}/notas', [CidadaoRelacionamentoController::class, 'storeNota'])->name('cidadaos.notas.store');
         Route::post('/cidadaos/{cidadao}/tags', [CidadaoRelacionamentoController::class, 'attachTag'])->name('cidadaos.tags.attach');
         Route::delete('/cidadaos/{cidadao}/tags/{tag}', [CidadaoRelacionamentoController::class, 'detachTag'])->name('cidadaos.tags.detach');
 
         // MÓDULO DE GESTÃO DE SERVIÇOS
+        // Rotas para 'Serviços' (definidas manualmente para garantir funcionamento)
         Route::get('servicos', [ServicoController::class, 'index'])->name('servicos.index');
         Route::post('servicos', [ServicoController::class, 'store'])->name('servicos.store');
         Route::get('servicos/{servico}', [ServicoController::class, 'show'])->name('servicos.show');
         Route::put('servicos/{servico}', [ServicoController::class, 'update'])->name('servicos.update');
         Route::delete('servicos/{servico}', [ServicoController::class, 'destroy'])->name('servicos.destroy');
+        // Rotas para 'Tipos de Serviço' (definidas manualmente para garantir funcionamento)
         Route::get('tipos-servico', [TipoServicoController::class, 'index'])->name('tipos-servico.index');
         Route::post('tipos-servico', [TipoServicoController::class, 'store'])->name('tipos-servico.store');
         Route::get('tipos-servico/{tipoServico}', [TipoServicoController::class, 'show'])->name('tipos-servico.show');
@@ -243,6 +237,7 @@ Route::middleware([
         Route::resource('legislaturas', LegislaturaController::class);
         Route::post('legislaturas/{legislatura}/mandatos', [MandatoController::class, 'store'])->name('mandatos.store');
         Route::delete('mandatos/{mandato}', [MandatoController::class, 'destroy'])->name('mandatos.destroy');
+        // Rotas para Comissões
         Route::resource('comissoes', ComissaoController::class)->except(['create', 'edit', 'show'])->parameters(['comissoes' => 'comissao']);
         Route::post('comissoes/{comissao}/membros', [ComissaoController::class, 'adicionarMembro'])->name('comissoes.membros.store');
         Route::delete('comissoes/{comissao}/membros/{membroId}', [ComissaoController::class, 'removerMembro'])->name('comissoes.membros.destroy');
@@ -256,6 +251,7 @@ Route::middleware([
             Route::get('/cidadaos', [RelatorioController::class, 'cidadaos'])->name('cidadaos');
             Route::get('/cidadaos/exportar', [RelatorioController::class, 'exportarCidadaos'])->name('cidadaos.exportar');
             Route::get('/cidadaos/exportar-pdf', [RelatorioController::class, 'exportarCidadaosPDF'])->name('cidadaos.exportarPDF');
+            // --- NOVAS ROTAS ESTRATÉGICAS ---
             Route::get('/demandas-por-bairro', [RelatorioController::class, 'demandasPorBairro'])->name('demandas-por-bairro');
             Route::get('/analise-de-tendencias', [RelatorioController::class, 'analiseDeTendencias'])->name('analise-de-tendencias');
             Route::get('/mapeamento-politico', [MapeamentoPoliticoController::class, 'index'])->name('mapeamento-politico.index');
@@ -270,7 +266,6 @@ Route::middleware([
         Route::resource('roles-permissions', RolePermissionController::class)->except(['show', 'create', 'edit'])->parameters(['roles-permissions' => 'rolesPermission']);
         Route::resource('permissions', PermissionController::class)->except(['show', 'create', 'edit']);
         Route::resource('bairros', BairroController::class);
-        Route::patch('bairros/{bairro}/approve', [BairroController::class, 'approve'])->name('bairros.approve'); // <-- Rota de aprovação (correta)
         Route::resource('tags', TagController::class);
 
         // Rotas para Sugestões de Projetos de Lei (ADMIN)
@@ -286,29 +281,24 @@ Route::middleware([
             ->name('dashboard.customize.edit');
         Route::put('/dashboard/customize', [DashboardCustomizationController::class, 'update'])
             ->name('dashboard.customize.update');
-    }); // Fim do grupo Route::prefix('admin')
+    });
 
-    // --- ROTAS DE PERFIL DE UTILIZADOR --- (Ainda dentro do middleware 'auth:tenant', 'verified')
+    // --- ROTAS DE PERFIL DE UTILIZADOR ---
     Route::get('/user/profile', function () {
         return Inertia::render('Profile/Show', [
-            // --- CORRIGIDO: Adicionado where('aprovado', true) ---
-            'bairros' => Bairro::where('aprovado', true)->orderBy('nome')->get(['id', 'nome']),
+            'bairros' => Bairro::orderBy('nome')->get(['id', 'nome']),
             'customFields' => CustomField::all(),
         ]);
     })->name('profile.show');
 
     Route::put('/user/profile-information', function (Request $request) {
-        // ATENÇÃO: Se o perfil do usuário puder sugerir bairros,
-        // a lógica de 'is_numeric' também precisará ser aplicada aqui.
         app(UpdatesUserProfileInformation::class)->update(Auth::user(), $request->all());
+
         return back()->with('success', 'Perfil atualizado com sucesso.');
     })->name('user-profile-information.update');
+});
 
-}); // Fim do grupo Route::middleware(['auth:tenant', ...])
-
-
-// Rota explícita de logout (FORA do grupo autenticado)
-// O middleware 'tenant' já foi aplicado pelo bootstrap/app.php
+// Rota explícita de logout para garantir middleware tenant
 Route::post('/logout', function (Request $request) {
     return app(\Laravel\Fortify\Contracts\LogoutResponse::class)->toResponse($request);
 })->name('logout');
