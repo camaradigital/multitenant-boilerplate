@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
-use App\Models\Central\Tenant; // Importa o modelo Tenant da área central
-use App\Models\Tenant\SolicitacaoServico; // Alias para o modelo User do tenant
-use App\Models\Tenant\User as TenantUser; // Importa o modelo SolicitacaoServico do contexto do tenant
-use Carbon\Carbon; // Importa o modelo Activity do Spatie Activity Log
-use Inertia\Inertia; // Para renderizar componentes Vue com Inertia.js
-use Spatie\Activitylog\Models\Activity; // Para trabalhar com datas (ex: "hoje")
+use App\Models\Central\Tenant; // Modelo Tenant (central)
+use App\Models\Central\Lead;   // Novo: Modelo Lead (central)
+use App\Models\Tenant\User as TenantUser; // Modelo User (tenant)
+use App\Models\Tenant\SolicitacaoServico; // Modelo SolicitacaoServico (tenant)
+use App\Models\Tenant\CampanhaComunicacao; // Novo: Modelo Campanha (tenant)
+use Carbon\Carbon; // Para datas
+use Inertia\Inertia; // Para renderizar Vue
+use Spatie\Activitylog\Models\Activity; // Para logs
+use Illuminate\Support\Facades\Cache; // Novo: Para performance
+use Illuminate\Support\Facades\DB;     // Novo: Para checagem de saúde
+use Illuminate\Support\Facades\Redis;  // Novo: Para checagem de saúde
 
 class DashboardController extends Controller
 {
@@ -19,65 +24,150 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // 1. Contagem total de tenants (já centralizada)
-        $totalTenants = Tenant::count();
+        // Cache de 10 minutos (600 segundos) para todos os dados do dashboard.
+        // Isso resolve o problema de performance (N+1) e evita sobrecarga.
+        $data = Cache::remember('central_dashboard_data', 600, function () {
 
-        // 2. Inicializa contadores para dados agregados de todos os tenants
-        $totalUsers = 0;
-        $pendingRequests = 0;
-        $completedRequestsToday = 0;
-        $failedLoginsToday = 0;
+            // --- 1. Dados Centrais e Saúde Inicial ---
+            $totalLeads = Lead::count(); // Novo requisito
+            $health = [
+                'app' => 'up',
+                'central_database' => 'down',
+                'redis' => 'down',
+                'tenants_databases' => [],
+                'overall_status' => 'error', // 'up', 'partial', 'error'
+            ];
+            $allTenantsUp = true;
 
-        // Define a data de início do dia atual para filtros (UTC)
-        $startOfToday = Carbon::today()->startOfDay();
+            // 1a. Saúde Banco Central (assumindo 'mysql' como conexão central)
+            try {
+                DB::connection('mysql')->getPdo();
+                $health['central_database'] = 'up';
+            } catch (\Exception $e) {
+                report($e); // Loga o erro
+                $health['overall_status'] = 'error';
+                // Se o BD central falhar, não podemos continuar
+                return ['stats' => [], 'health' => $health];
+            }
 
-        // 3. Itera sobre cada tenant para buscar dados específicos
-        $allTenants = Tenant::all(); // Obtém todos os tenants registrados
+            // 1b. Saúde Redis
+            try {
+                Redis::ping();
+                $health['redis'] = 'up';
+            } catch (\Exception $e) {
+                report($e);
+                $health['redis'] = 'down';
+                $allTenantsUp = false; // Saúde parcial
+            }
 
-        foreach ($allTenants as $tenant) {
-            // Define o tenant atual para que as consultas usem o banco de dados correto
-            // Isso é crucial para o spatie/laravel-multitenancy
-            // CONFORME DOCUMENTAÇÃO: Usando o método makeCurrent() na instância do Tenant
-            $tenant->makeCurrent();
+            // --- 2. Inicializa Contadores Agregados ---
+            // Novos requisitos
+            $totalUsers = 0;
+            $failedLoginsToday = 0;
+            $campaignsSentToday = 0;
+            $activeTenantsCount = 0;
+            
+            // Requisitos originais (mantidos caso o frontend os use)
+            $pendingRequests = 0;
+            $completedRequestsToday = 0;
 
-            // Conta usuários do tenant atual
-            // NOTA: O erro "Class 'App\Models\Tenant\User' not found" indica que
-            // o arquivo App\Models\Tenant\User.php não está sendo carregado corretamente.
-            // Verifique o caminho do arquivo (src/app/Models/Tenant/User.php),
-            // o namespace dentro do arquivo (namespace App\Models\Tenant;),
-            // e execute 'composer dump-autoload' e 'php artisan optimize:clear'.
-            $totalUsers += TenantUser::count(); // Usar TenantUser para o modelo do tenant
+            $startOfToday = Carbon::today()->startOfDay();
+            $allTenants = Tenant::all();
 
-            // Conta solicitações pendentes do tenant atual
-            $pendingRequests += SolicitacaoServico::where('status', 'pendente')->count();
+            // --- 3. Itera sobre cada tenant (UMA ÚNICA VEZ) ---
+            foreach ($allTenants as $tenant) {
+                try {
+                    $tenant->makeCurrent();
 
-            // Conta solicitações concluídas HOJE no tenant atual
-            $completedRequestsToday += SolicitacaoServico::where('status', 'concluido')
-                ->whereDate('updated_at', $startOfToday)
-                ->count();
+                    // 3a. Verifica a saúde do BD do tenant
+                    DB::connection('tenant')->getPdo();
+                    $health['tenants_databases'][$tenant->id] = [
+                        'name' => $tenant->name,
+                        'subdomain' => $tenant->subdomain,
+                        'status' => 'up'
+                    ];
+                    $activeTenantsCount++;
 
-            // Conta tentativas de login falhas HOJE no tenant atual
-            // Assumindo que o spatie/laravel-activitylog está configurado para logar logins falhos
-            // e que o 'log_name' ou 'description' indica um login falho.
-            // Você pode precisar ajustar a condição 'description' ou 'event'
-            // baseando-se em como os logins falhos são registrados no seu activity log.
-            $failedLoginsToday += Activity::where('log_name', 'default') // Ou outro log_name específico para autenticação
-                ->where('description', 'failed_login') // Exemplo: se você loga 'failed_login'
-                ->whereDate('created_at', $startOfToday)
-                ->count();
+                    // 3b. Agrega estatísticas (só executa se a conexão 3a funcionar)
+                    
+                    // Total de Usuários
+                    $totalUsers += TenantUser::count();
 
-            // Volta para o contexto do banco de dados central antes de ir para o próximo tenant
-            // CONFORME DOCUMENTAÇÃO: Usando o método forgetCurrent() na instância do Tenant
-            $tenant->forgetCurrent();
-        }
+                    // Logins Falhos Hoje (com correção de data)
+                    $failedLoginsToday += Activity::where('description', 'failed_login')
+                        ->where('created_at', '>=', $startOfToday)
+                        ->count();
 
-        // 4. Passa os dados agregados para o componente Vue
+                    // Campanhas Enviadas Hoje (com correção de data)
+                    $campaignsSentToday += CampanhaComunicacao::where('created_at', '>=', $startOfToday)
+                        ->count();
+
+                    // Dados do controller original (mantidos)
+                    $pendingRequests += SolicitacaoServico::where('status', 'pendente')->count();
+                    $completedRequestsToday += SolicitacaoServico::where('status', 'concluido')
+                        ->where('updated_at', '>=', $startOfToday) // Correção de data
+                        ->count();
+
+                    $tenant->forgetCurrent();
+                } catch (\Exception $e) {
+                    // Se falhar (ex: BD não existe), loga e continua
+                    report($e);
+                    tenancy()->end(); // Garante que saiu do contexto do tenant
+                    $health['tenants_databases'][$tenant->id] = [
+                        'name' => $tenant->name,
+                        'subdomain' => $tenant->subdomain,
+                        'status' => 'down'
+                    ];
+                    $allTenantsUp = false; // Saúde parcial
+                }
+            }
+
+            // --- 4. Define Saúde Geral ---
+            if ($health['central_database'] === 'up' && $health['redis'] === 'up' && $allTenantsUp) {
+                $health['overall_status'] = 'up';
+            } elseif ($health['central_database'] === 'up') {
+                $health['overall_status'] = 'partial';
+            }
+            
+            $health['active_tenants'] = $activeTenantsCount;
+            $health['total_tenants'] = $allTenants->count();
+
+            // --- 5. Monta o pacote de estatísticas ---
+            $stats = [
+                'totalTenants' => $allTenants->count(), // Total registrado
+                'tenantsAtivos' => $activeTenantsCount,  // Total com BD ok
+                'totalLeads' => $totalLeads,
+                'totalUsuarios' => $totalUsers,
+                'loginsFalhosHoje' => $failedLoginsToday,
+                'campanhasEnviadasHoje' => $campaignsSentToday,
+                
+                // Dados do controller original (opcional)
+                'pendingRequests' => $pendingRequests,
+                'completedRequestsToday' => $completedRequestsToday,
+            ];
+
+            return ['stats' => $stats, 'health' => $health];
+        });
+
+        // 6. Passa os dados para o componente Vue
         return Inertia::render('Central/Dashboard', [
-            'totalTenants' => $totalTenants,
-            'totalUsers' => $totalUsers,
-            'pendingRequests' => $pendingRequests,
-            'completedRequestsToday' => $completedRequestsToday,
-            'failedLoginsToday' => $failedLoginsToday,
+            // Dados da nova lista solicitada:
+            'tenantsAtivos' => $data['stats']['tenantsAtivos'],
+            'totalLeads' => $data['stats']['totalLeads'],
+            'campanhasEnviadasHoje' => $data['stats']['campanhasEnviadasHoje'],
+            'totalUsuarios' => $data['stats']['totalUsuarios'],
+            'loginsFalhosHoje' => $data['stats']['loginsFalhosHoje'],
+            'saudeSistema' => $data['health'],
+
+            // Bônus (pode ser útil no frontend)
+            'totalTenants' => $data['stats']['totalTenants'],
+
+            // Dados do controller antigo (mantidos caso o frontend já os use)
+            'pendingRequests' => $data['stats']['pendingRequests'],
+            'completedRequestsToday' => $data['stats']['completedRequestsToday'],
+
+            // (O frontend pode acessar os nomes antigos 'totalUsers' e 'failedLoginsToday'
+            // pelos novos nomes 'totalUsuarios' e 'loginsFalhosHoje')
         ]);
     }
 }
