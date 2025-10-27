@@ -1,67 +1,19 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
 
 // Importa os ícones Lucide que serão usados
-import { Home, Users, Settings, Target, Send, BarChart2, CheckCircle, XCircle, HeartPulse, Database, Server } from 'lucide-vue-next';
+import { Home, Users, Settings, Target, Send, BarChart2, CheckCircle, XCircle } from 'lucide-vue-next';
 
-// Define as propriedades que vêm do controller (novas e antigas)
-// Removidas as props que não serão mais exibidas diretamente nos cards, mas mantidas caso outra parte do app as use
+// Define as propriedades que vêm do controller, incluindo as que você tinha no original
 const props = defineProps({
-    // Props usadas nos cards restantes e na saúde
-    tenantsAtivos: { type: Number, default: 0 },
-    totalTenants: { type: Number, default: 0 }, // Usado junto com tenantsAtivos
-    totalLeads: { type: Number, default: 0 },
-    totalUsuarios: { type: Number, default: 0 },
-    loginsFalhosHoje: { type: Number, default: 0 },
-    saudeSistema: { type: Object, default: () => ({}) },
-
-    // Props dos cards removidos (mantidas caso sejam usadas em outro lugar)
-    campanhasEnviadasHoje: { type: Number, default: 0 },
+    totalTenants: Number,
+    totalLeads: Number,
+    totalUsers: { type: Number, default: 0 },
     pendingRequests: { type: Number, default: 0 },
-
-    // Props antigas (mantidas para compatibilidade ou uso futuro)
     completedRequestsToday: { type: Number, default: 0 },
-
-    // Mapeamentos para nomes antigos (se o frontend ainda usar)
-    totalUsers: { type: Number, default: 0 }, // Deprecated: use totalUsuarios
-    failedLoginsToday: { type: Number, default: 0 } // Deprecated: use loginsFalhosHoje
+    failedLoginsToday: { type: Number, default: 0 }
 });
-
-// Helper para classes de status de saúde
-const healthStatusClass = (status) => {
-    switch (status) {
-        case 'up': return 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400';
-        case 'partial': return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400';
-        case 'disabled': return 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400'; // Estilo para Redis desabilitado
-        case 'unknown': return 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400';
-        case 'down':
-        case 'error':
-        default: return 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400';
-    }
-};
-
-// Texto para o status geral
-const overallStatusText = computed(() => {
-    switch (props.saudeSistema?.overall_status) {
-        case 'up': return 'Operacional';
-        case 'partial': return 'Parcialmente Operacional';
-        case 'error':
-        default: return 'Fora de Operação';
-    }
-});
-
-// Texto para status individuais (BD, Redis)
-const componentStatusText = (status) => {
-     switch (status) {
-        case 'up': return 'Online';
-        case 'down': return 'Offline';
-        case 'disabled': return 'Desabilitado';
-        case 'unknown':
-        default: return 'Indeterminado';
-    }
-}
 </script>
 
 <template>
@@ -76,11 +28,13 @@ const componentStatusText = (status) => {
 
         <div class="py-12 px-4">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <!-- Seção de Boas-Vindas -->
                 <div class="p-6 md:px-8 text-left mb-8">
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Bem-vindo(a) de volta! 👋</h2>
                     <p class="text-base mt-2 text-gray-500 dark:text-gray-400">Visão geral do seu painel de controle central do CACSystem.</p>
                 </div>
 
+                <!-- Grid de Ações Principais -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 px-6 md:px-8">
                     <Link :href="route('central.tenants.index')" class="action-card group bg-emerald-50 dark:bg-emerald-900/50 border-emerald-200 dark:border-emerald-500/30">
                         <div class="action-icon bg-emerald-600 dark:bg-emerald-500">
@@ -116,14 +70,15 @@ const componentStatusText = (status) => {
                     </Link>
                 </div>
 
+                <!-- Grid de Métricas -->
                 <h3 class="px-6 md:px-8 text-xl font-bold text-gray-800 dark:text-gray-200 mb-5">Métricas do Sistema</h3>
-                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-6 md:px-8 mb-10">
+                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 px-6 md:px-8">
                     <div class="stat-card">
                         <div class="flex items-center">
                             <div class="stat-icon bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"><Home class="h-5 w-5" /></div>
                             <p class="stat-title">Tenants Ativos</p>
                         </div>
-                        <p class="stat-value">{{ props.tenantsAtivos }} / {{ props.totalTenants }}</p>
+                        <p class="stat-value">{{ props.totalTenants }}</p>
                     </div>
                      <div class="stat-card">
                         <div class="flex items-center">
@@ -137,77 +92,30 @@ const componentStatusText = (status) => {
                             <div class="stat-icon bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"><Users class="h-5 w-5" /></div>
                             <p class="stat-title">Total de Usuários</p>
                         </div>
-                        <p class="stat-value">{{ props.totalUsuarios }}</p> </div>
-                    <div class="stat-card">
+                        <p class="stat-value">{{ props.totalUsers }}</p>
+                    </div>
+                     <div class="stat-card">
+                        <div class="flex items-center">
+                            <div class="stat-icon bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"><BarChart2 class="h-5 w-5" /></div>
+                            <p class="stat-title">Pendentes</p>
+                        </div>
+                        <p class="stat-value">{{ props.pendingRequests }}</p>
+                    </div>
+                     <div class="stat-card">
+                        <div class="flex items-center">
+                            <div class="stat-icon bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400"><CheckCircle class="h-5 w-5" /></div>
+                            <p class="stat-title">Concluídas Hoje</p>
+                        </div>
+                        <p class="stat-value">{{ props.completedRequestsToday }}</p>
+                    </div>
+                     <div class="stat-card">
                         <div class="flex items-center">
                             <div class="stat-icon bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400"><XCircle class="h-5 w-5" /></div>
-                            <p class="stat-title">Logins Falhos Hoje</p>
+                            <p class="stat-title">Logins Falhos</p>
                         </div>
-                        <p class="stat-value">{{ props.loginsFalhosHoje }}</p> </div>
-
+                        <p class="stat-value">{{ props.failedLoginsToday }}</p>
                     </div>
-
-                 <h3 class="px-6 md:px-8 text-xl font-bold text-gray-800 dark:text-gray-200 mb-5">Saúde do Sistema</h3>
-                 <div class="px-6 md:px-8">
-                     <div class="bg-white dark:bg-[#102C26]/60 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-green-400/10 mb-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center">
-                                <div :class="healthStatusClass(props.saudeSistema?.overall_status)" class="w-10 h-10 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                                    <HeartPulse class="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p class="text-lg font-semibold text-gray-900 dark:text-white">Status Geral</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">Verificação dos principais componentes.</p>
-                                </div>
-                            </div>
-                            <span :class="healthStatusClass(props.saudeSistema?.overall_status)" class="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap">
-                                {{ overallStatusText }}
-                            </span>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-200 dark:border-green-400/10 pt-4">
-                            <div class="flex items-center space-x-2">
-                                <Database :class="props.saudeSistema?.central_database === 'up' ? 'text-green-500' : 'text-red-500'" class="h-5 w-5 flex-shrink-0" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Banco Central:</span>
-                                <span :class="healthStatusClass(props.saudeSistema?.central_database)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                     {{ componentStatusText(props.saudeSistema?.central_database) }}
-                                </span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <Server :class="props.saudeSistema?.redis === 'up' ? 'text-green-500' : (props.saudeSistema?.redis === 'disabled' || props.saudeSistema?.redis === 'unknown' ? 'text-gray-500' : 'text-red-500')" class="h-5 w-5 flex-shrink-0" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Redis:</span>
-                                <span :class="healthStatusClass(props.saudeSistema?.redis)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                    {{ componentStatusText(props.saudeSistema?.redis) }}
-                                </span>
-                            </div>
-                             <div class="flex items-center space-x-2">
-                                <Database :class="(props.saudeSistema?.active_tenants === props.saudeSistema?.total_tenants && props.saudeSistema?.total_tenants > 0) ? 'text-green-500' : (props.saudeSistema?.active_tenants > 0 ? 'text-yellow-500' : 'text-red-500')" class="h-5 w-5 flex-shrink-0" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Bancos Tenants:</span>
-                                <span :class="healthStatusClass(props.saudeSistema?.overall_status)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                    {{ props.saudeSistema?.active_tenants ?? 0 }} / {{ props.saudeSistema?.total_tenants ?? 0 }} Online
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="props.saudeSistema?.tenants_databases && Object.keys(props.saudeSistema.tenants_databases).length > 0" class="bg-white dark:bg-[#102C26]/60 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-green-400/10">
-                         <h4 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4">Status dos Bancos de Dados dos Tenants</h4>
-                         <ul class="divide-y divide-gray-200 dark:divide-green-400/10 max-h-60 overflow-y-auto">
-                            <li v-for="(tenant, id) in props.saudeSistema.tenants_databases" :key="id" class="py-3 flex justify-between items-center">
-                                <div class="flex items-center space-x-3">
-                                     <Database :class="tenant.status === 'up' ? 'text-green-500' : 'text-red-500'" class="h-5 w-5 flex-shrink-0" />
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ tenant.name }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ tenant.subdomain }}</p>
-                                    </div>
-                                </div>
-                                <span :class="healthStatusClass(tenant.status)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                    {{ componentStatusText(tenant.status) }}
-                                </span>
-                            </li>
-                         </ul>
-                    </div>
-                </div>
+                 </div>
 
             </div>
         </div>
@@ -235,28 +143,12 @@ const componentStatusText = (status) => {
     @apply bg-white dark:bg-[#102C26]/60 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-green-400/10;
 }
 .stat-icon {
-    @apply w-10 h-10 rounded-full flex items-center justify-center mr-4 flex-shrink-0; /* Garante que o ícone não encolha */
+    @apply w-10 h-10 rounded-full flex items-center justify-center mr-4;
 }
 .stat-title {
-    @apply text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap; /* Evita quebra de linha */
+    @apply text-sm font-medium text-gray-600 dark:text-gray-400;
 }
 .stat-value {
     @apply text-3xl font-extrabold text-gray-900 dark:text-white mt-2 text-left;
-}
-
-/* Estilos adicionais para a lista de tenants */
-ul::-webkit-scrollbar {
-    width: 6px;
-}
-ul::-webkit-scrollbar-track {
-    background: transparent;
-}
-ul::-webkit-scrollbar-thumb {
-    background-color: rgba(16, 185, 129, 0.3); /* Cor verde claro com transparência */
-    border-radius: 20px;
-    border: transparent;
-}
-html.dark ul::-webkit-scrollbar-thumb {
-     background-color: rgba(52, 211, 153, 0.4); /* Cor verde um pouco mais clara para dark mode */
 }
 </style>
