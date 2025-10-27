@@ -3,171 +3,240 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
-use App\Models\Central\Tenant; // Modelo Tenant (central)
-use App\Models\Central\Lead;   // Novo: Modelo Lead (central)
-use App\Models\Tenant\User as TenantUser; // Modelo User (tenant)
-use App\Models\Tenant\SolicitacaoServico; // Modelo SolicitacaoServico (tenant)
-use App\Models\Tenant\CampanhaComunicacao; // Novo: Modelo Campanha (tenant)
-use Carbon\Carbon; // Para datas
-use Inertia\Inertia; // Para renderizar Vue
-use Spatie\Activitylog\Models\Activity; // Para logs
-use Illuminate\Support\Facades\Cache; // Novo: Para performance
-use Illuminate\Support\Facades\DB;     // Novo: Para checagem de saúde
-use Illuminate\Support\Facades\Redis;  // Novo: Para checagem de saúde
+use App\Models\Central\Tenant;
+use App\Models\Central\Lead;
+use App\Models\Tenant\User as TenantUser;
+use App\Models\Tenant\SolicitacaoServico;
+use App\Models\Tenant\CampanhaComunicacao;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
+use Inertia\Inertia;
+use Spatie\Activitylog\Models\Activity;
 
 class DashboardController extends Controller
 {
-    /**
-     * Exibe a dashboard do Super Admin com dados agregados de todos os tenants.
-     *
-     * @return \Inertia\Response
-     */
     public function index()
     {
-        // Cache de 10 minutos (600 segundos) para todos os dados do dashboard.
-        // Isso resolve o problema de performance (N+1) e evita sobrecarga.
-        $data = Cache::remember('central_dashboard_data', 600, function () {
+        Log::info('DashboardController: Iniciando carregamento de dados.');
 
-            // --- 1. Dados Centrais e Saúde Inicial ---
-            $totalLeads = Lead::count(); // Novo requisito
-            $health = [
-                'app' => 'up',
-                'central_database' => 'down',
-                'redis' => 'down',
-                'tenants_databases' => [],
-                'overall_status' => 'error', // 'up', 'partial', 'error'
-            ];
-            $allTenantsUp = true;
+        $cacheKey = 'central_dashboard_data';
+        $cacheDuration = 600;
 
-            // 1a. Saúde Banco Central (assumindo 'mysql' como conexão central)
-            try {
-                DB::connection('mysql')->getPdo();
-                $health['central_database'] = 'up';
-            } catch (\Exception $e) {
-                report($e); // Loga o erro
-                $health['overall_status'] = 'error';
-                // Se o BD central falhar, não podemos continuar
-                return ['stats' => [], 'health' => $health];
-            }
+        try {
+            $data = Cache::remember($cacheKey, $cacheDuration, function () {
+                Log::info("DashboardController: Cache '{$cacheKey}' não encontrado ou expirado. Calculando...");
 
-            // 1b. Saúde Redis
-            try {
-                Redis::ping();
-                $health['redis'] = 'up';
-            } catch (\Exception $e) {
-                report($e);
-                $health['redis'] = 'down';
-                $allTenantsUp = false; // Saúde parcial
-            }
+                $centralConnection = config('database.default');
+                $tenantConnection = config('multitenancy.tenant_database_connection_name') ?? 'tenant';
+                Log::info("DashboardController: Conexão Central='{$centralConnection}', Conexão Tenant='{$tenantConnection}'");
 
-            // --- 2. Inicializa Contadores Agregados ---
-            // Novos requisitos
-            $totalUsers = 0;
-            $failedLoginsToday = 0;
-            $campaignsSentToday = 0;
-            $activeTenantsCount = 0;
-            
-            // Requisitos originais (mantidos caso o frontend os use)
-            $pendingRequests = 0;
-            $completedRequestsToday = 0;
+                $totalLeads = 0;
+                $health = [
+                    'app' => 'up',
+                    'central_database' => 'down',
+                    'redis' => 'unknown',
+                    'tenants_databases' => [],
+                    'overall_status' => 'error',
+                    'active_tenants' => 0,
+                    'total_tenants' => 0,
+                ];
+                $allTenantsUp = true; 
 
-            $startOfToday = Carbon::today()->startOfDay();
-            $allTenants = Tenant::all();
-
-            // --- 3. Itera sobre cada tenant (UMA ÚNICA VEZ) ---
-            foreach ($allTenants as $tenant) {
                 try {
-                    $tenant->makeCurrent();
+                    DB::connection($centralConnection)->getPdo();
+                    $health['central_database'] = 'up';
+                    Log::info("DashboardController: Conexão com BD Central ({$centralConnection}) OK.");
+                    try {
+                        $totalLeads = Lead::count();
+                        Log::info("DashboardController: Total de Leads = {$totalLeads}");
+                    } catch (\Exception $e) {
+                        Log::error("DashboardController: Erro ao contar Leads: ".$e->getMessage());
+                        $totalLeads = -1;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("DashboardController: ERRO FATAL ao conectar ao BD Central ({$centralConnection}): ".$e->getMessage());
+                    return ['stats' => ['error' => true], 'health' => $health];
+                }
 
-                    // 3a. Verifica a saúde do BD do tenant
-                    DB::connection('tenant')->getPdo();
-                    $health['tenants_databases'][$tenant->id] = [
-                        'name' => $tenant->name,
-                        'subdomain' => $tenant->subdomain,
-                        'status' => 'up'
-                    ];
-                    $activeTenantsCount++;
+                try {
+                    $redisClient = config('database.redis.client', 'none');
+                    if ($redisClient === 'none' || !in_array($redisClient, ['phpredis', 'predis'])) {
+                        $health['redis'] = 'disabled';
+                        Log::info("DashboardController: Redis está desabilitado na configuração.");
+                    } else {
+                        Redis::ping();
+                        $health['redis'] = 'up';
+                        Log::info("DashboardController: Conexão com Redis OK.");
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("DashboardController: Erro ao conectar ao Redis: ".$e->getMessage());
+                    $health['redis'] = 'down';
+                }
 
-                    // 3b. Agrega estatísticas (só executa se a conexão 3a funcionar)
-                    
-                    // Total de Usuários
-                    $totalUsers += TenantUser::count();
+                $totalUsers = 0;
+                $failedLoginsToday = 0;
+                $campaignsSentToday = 0;
+                $activeTenantsCount = 0;
+                $pendingRequests = 0;
+                $completedRequestsToday = 0;
 
-                    // Logins Falhos Hoje (com correção de data)
-                    $failedLoginsToday += Activity::where('description', 'failed_login')
+                $startOfToday = Carbon::today()->startOfDay();
+
+                try {
+                    $failedLoginsToday = Activity::on($centralConnection)
+                        ->where('description', 'failed_login') 
                         ->where('created_at', '>=', $startOfToday)
                         ->count();
-
-                    // Campanhas Enviadas Hoje (com correção de data)
-                    $campaignsSentToday += CampanhaComunicacao::where('created_at', '>=', $startOfToday)
-                        ->count();
-
-                    // Dados do controller original (mantidos)
-                    $pendingRequests += SolicitacaoServico::where('status', 'pendente')->count();
-                    $completedRequestsToday += SolicitacaoServico::where('status', 'concluido')
-                        ->where('updated_at', '>=', $startOfToday) // Correção de data
-                        ->count();
-
-                    $tenant->forgetCurrent();
+                    Log::info("DashboardController: Logins Falhos Hoje (Central) = {$failedLoginsToday}");
                 } catch (\Exception $e) {
-                    // Se falhar (ex: BD não existe), loga e continua
-                    report($e);
-                    tenancy()->end(); // Garante que saiu do contexto do tenant
-                    $health['tenants_databases'][$tenant->id] = [
-                        'name' => $tenant->name,
-                        'subdomain' => $tenant->subdomain,
-                        'status' => 'down'
-                    ];
-                    $allTenantsUp = false; // Saúde parcial
+                    Log::error("DashboardController: Erro ao buscar ActivityLog central: ".$e->getMessage());
+                    $failedLoginsToday = -1; 
                 }
+
+                $allTenants = Tenant::all();
+                $health['total_tenants'] = $allTenants->count();
+                Log::info("DashboardController: Encontrados {$health['total_tenants']} tenants para processar.");
+
+                foreach ($allTenants as $tenant) {
+                    $tenantIdForLogging = $tenant->id ?? 'ID desconhecido';
+                    $tenantNameForLogging = $tenant->name ?? 'Nome desconhecido';
+                    Log::info("DashboardController: Processando Tenant ID {$tenantIdForLogging} ({$tenantNameForLogging})...");
+
+                    try {
+                        tenancy()->initialize($tenant);
+                        DB::connection($tenantConnection)->getPdo();
+                        Log::info("DashboardController: Conexão com BD Tenant ID {$tenantIdForLogging} OK.");
+
+                        $health['tenants_databases'][$tenant->id] = [
+                            'name' => $tenant->name,
+                            'subdomain' => $tenant->subdomain,
+                            'status' => 'up'
+                        ];
+                        $activeTenantsCount++;
+
+                        // 3b. Agrega estatísticas do tenant atual
+                        $usersInTenant = TenantUser::count();
+                        $totalUsers += $usersInTenant;
+
+                        $campaignsInTenant = CampanhaComunicacao::where('created_at', '>=', $startOfToday)->count();
+                        $campaignsSentToday += $campaignsInTenant;
+
+                        $pendingInTenant = SolicitacaoServico::where('status', 'pendente')->count();
+                        $pendingRequests += $pendingInTenant;
+
+                        $completedInTenant = SolicitacaoServico::where('status', 'concluido')
+                            ->where('updated_at', '>=', $startOfToday)
+                            ->count();
+                        $completedRequestsToday += $completedInTenant;
+
+                        Log::info("DashboardController: Tenant ID {$tenantIdForLogging} - Users:{$usersInTenant}, Campaigns:{$campaignsInTenant}, Pending:{$pendingInTenant}, Completed:{$completedInTenant}");
+
+                        tenancy()->end();
+
+                    } catch (\Exception $e) {
+                        Log::error("DashboardController: ERRO ao processar tenant ID {$tenantIdForLogging}: ".$e->getMessage());
+                        if (tenancy()->initialized) {
+                            tenancy()->end();
+                            Log::info("DashboardController: Contexto do tenant {$tenantIdForLogging} finalizado após erro.");
+                        }
+                        $health['tenants_databases'][$tenant->id] = [
+                            'name' => $tenant->name ?? "Tenant ID {$tenantIdForLogging}",
+                            'subdomain' => $tenant->subdomain ?? 'N/A',
+                            'status' => 'down'
+                        ];
+                        $allTenantsUp = false;
+                    }
+                }
+
+                $health['active_tenants'] = $activeTenantsCount;
+                Log::info("DashboardController: Processamento de tenants concluído. Ativos: {$activeTenantsCount}/{$health['total_tenants']}");
+
+                if ($health['central_database'] === 'down') {
+                    $health['overall_status'] = 'error';
+                } elseif ($health['redis'] === 'down' || !$allTenantsUp) {
+                    $health['overall_status'] = 'partial';
+                } else {
+                    $health['overall_status'] = 'up';
+                }
+                Log::info("DashboardController: Status Geral da Saúde definido como '{$health['overall_status']}'.");
+
+
+                $stats = [
+                    'totalTenants' => $health['total_tenants'],
+                    'tenantsAtivos' => $activeTenantsCount,
+                    'totalLeads' => $totalLeads,
+                    'totalUsuarios' => $totalUsers,
+                    'loginsFalhosHoje' => $failedLoginsToday,
+                    'pendingRequests' => $pendingRequests,
+                    'completedRequestsToday' => $completedRequestsToday,
+                    'error' => false
+                ];
+
+                Log::info("DashboardController: Dados calculados:", $stats);
+                Log::info("DashboardController: Saúde calculada:", $health);
+
+                return ['stats' => $stats, 'health' => $health];
+            });
+
+            if (empty($data) || !isset($data['stats']) || !isset($data['health']) || ($data['stats']['error'] ?? false)) {
+                Log::error("DashboardController: Falha ao obter dados do cache ou erro durante o cálculo.");
+                $defaultData = [
+                    'stats' => [
+                        'totalTenants' => 0, 'tenantsAtivos' => 0, 'totalLeads' => 0,
+                        'totalUsuarios' => 0, 'loginsFalhosHoje' => 0, 'campanhasEnviadasHoje' => 0,
+                        'pendingRequests' => 0, 'completedRequestsToday' => 0, 'error' => true
+                    ],
+                    'health' => [
+                        'app' => 'up', 'central_database' => 'down', 'redis' => 'unknown',
+                        'tenants_databases' => [], 'overall_status' => 'error',
+                        'active_tenants' => 0, 'total_tenants' => 0,
+                    ]
+                ];
+                $data = $defaultData;
+            } else {
+                Log::info("DashboardController: Dados obtidos do cache '{$cacheKey}' com sucesso.");
             }
 
-            // --- 4. Define Saúde Geral ---
-            if ($health['central_database'] === 'up' && $health['redis'] === 'up' && $allTenantsUp) {
-                $health['overall_status'] = 'up';
-            } elseif ($health['central_database'] === 'up') {
-                $health['overall_status'] = 'partial';
-            }
+        } catch (\Exception $e) {
+            Log::emergency("DashboardController: Exceção não capturada no método index: " . $e->getMessage(), ['exception' => $e]);
             
-            $health['active_tenants'] = $activeTenantsCount;
-            $health['total_tenants'] = $allTenants->count();
-
-            // --- 5. Monta o pacote de estatísticas ---
-            $stats = [
-                'totalTenants' => $allTenants->count(), // Total registrado
-                'tenantsAtivos' => $activeTenantsCount,  // Total com BD ok
-                'totalLeads' => $totalLeads,
-                'totalUsuarios' => $totalUsers,
-                'loginsFalhosHoje' => $failedLoginsToday,
-                'campanhasEnviadasHoje' => $campaignsSentToday,
-                
-                // Dados do controller original (opcional)
-                'pendingRequests' => $pendingRequests,
-                'completedRequestsToday' => $completedRequestsToday,
+            $defaultData = [
+                'stats' => [
+                    'totalTenants' => 0, 'tenantsAtivos' => 0, 'totalLeads' => -1,
+                    'totalUsuarios' => 0, 'loginsFalhosHoje' => -1, 'campanhasEnviadasHoje' => 0,
+                    'pendingRequests' => 0, 'completedRequestsToday' => 0, 'error' => true
+                ],
+                'health' => [
+                    'app' => 'up', 'central_database' => 'down', 'redis' => 'unknown',
+                    'tenants_databases' => [], 'overall_status' => 'error',
+                    'active_tenants' => 0, 'total_tenants' => 0,
+                ]
             ];
+            $data = $defaultData;
+        }
 
-            return ['stats' => $stats, 'health' => $health];
-        });
-
-        // 6. Passa os dados para o componente Vue
         return Inertia::render('Central/Dashboard', [
-            // Dados da nova lista solicitada:
-            'tenantsAtivos' => $data['stats']['tenantsAtivos'],
-            'totalLeads' => $data['stats']['totalLeads'],
-            'campanhasEnviadasHoje' => $data['stats']['campanhasEnviadasHoje'],
-            'totalUsuarios' => $data['stats']['totalUsuarios'],
-            'loginsFalhosHoje' => $data['stats']['loginsFalhosHoje'],
-            'saudeSistema' => $data['health'],
+            'tenantsAtivos' => $data['stats']['tenantsAtivos'] ?? 0,
+            'totalLeads' => $data['stats']['totalLeads'] ?? 0,
+            'totalUsuarios' => $data['stats']['totalUsuarios'] ?? 0,
+            'loginsFalhosHoje' => $data['stats']['loginsFalhosHoje'] ?? 0,
+            'saudeSistema' => $data['health'] ?? [
+                'overall_status' => 'error', 
+                'central_database' => 'down', 
+                'redis' => 'unknown',
+                'tenants_databases' => [],
+                'active_tenants' => 0,
+                'total_tenants' => 0
+            ],
 
-            // Bônus (pode ser útil no frontend)
-            'totalTenants' => $data['stats']['totalTenants'],
+            'totalTenants' => $data['stats']['totalTenants'] ?? 0,
+            'completedRequestsToday' => $data['stats']['completedRequestsToday'] ?? 0,
 
-            // Dados do controller antigo (mantidos caso o frontend já os use)
-            'pendingRequests' => $data['stats']['pendingRequests'],
-            'completedRequestsToday' => $data['stats']['completedRequestsToday'],
-
-            // (O frontend pode acessar os nomes antigos 'totalUsers' e 'failedLoginsToday'
-            // pelos novos nomes 'totalUsuarios' e 'loginsFalhosHoje')
+            'totalUsers' => $data['stats']['totalUsuarios'] ?? 0,
+            'failedLoginsToday' => $data['stats']['loginsFalhosHoje'] ?? 0,
         ]);
     }
 }
