@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 use App\Models\Central\Tenant; // Importa o modelo Tenant da área central
-use App\Models\Tenant\SolicitacaoServico; // Alias para o modelo User do tenant
-use App\Models\Tenant\User as TenantUser; // Importa o modelo SolicitacaoServico do contexto do tenant
-use Carbon\Carbon; // Importa o modelo Activity do Spatie Activity Log
-use Inertia\Inertia; // Para renderizar componentes Vue com Inertia.js
-use Spatie\Activitylog\Models\Activity; // Para trabalhar com datas (ex: "hoje")
+use App\Models\Central\Lead;   // Importa o modelo Lead da área central
+use App\Models\Tenant\User as TenantUser; // Alias para o modelo User do tenant
+// Removido: App\Models\Tenant\SolicitacaoServico;
+use Carbon\Carbon;
+use Inertia\Inertia;
+use Spatie\Activitylog\Models\Activity;
+use Illuminate\Support\Facades\DB;   // Necessário para checagem de saúde
+use Illuminate\Support\Facades\Log;  // Necessário para logging
+use Illuminate\Support\Facades\Redis; // Necessário para checagem de saúde
 
 class DashboardController extends Controller
 {
@@ -19,65 +23,143 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // 1. Contagem total de tenants (já centralizada)
-        $totalTenants = Tenant::count();
+        Log::info('DashboardController: Iniciando carregamento de dados.');
 
-        // 2. Inicializa contadores para dados agregados de todos os tenants
-        $totalUsers = 0;
-        $pendingRequests = 0;
-        $completedRequestsToday = 0;
-        $failedLoginsToday = 0;
+        // --- 1. Saúde, Conexões e Contadores Centrais ---
+        $centralConnection = config('database.default');
+        $tenantConnection = config('multitenancy.tenant_database_connection_name') ?? 'tenant';
+        
+        $health = [
+            'app' => 'up',
+            'central_database' => 'down',
+            'redis' => 'unknown',
+            'tenants_databases' => [],
+            'overall_status' => 'error',
+            'active_tenants' => 0,
+            'total_tenants' => 0,
+        ];
+        $allTenantsUp = true;
+        $totalLeads = 0;
 
-        // Define a data de início do dia atual para filtros (UTC)
-        $startOfToday = Carbon::today()->startOfDay();
+        // 1a. Saúde Banco Central e Leads
+        try {
+            DB::connection($centralConnection)->getPdo();
+            $health['central_database'] = 'up';
+            Log::info("DashboardController: Conexão com BD Central ({$centralConnection}) OK.");
 
-        // 3. Itera sobre cada tenant para buscar dados específicos
-        $allTenants = Tenant::all(); // Obtém todos os tenants registrados
+            // Adicionado: contagem de Leads (necessário para o Vue)
+            $totalLeads = Lead::count();
+            Log::info("DashboardController: Total de Leads = {$totalLeads}");
 
-        foreach ($allTenants as $tenant) {
-            // Define o tenant atual para que as consultas usem o banco de dados correto
-            // Isso é crucial para o spatie/laravel-multitenancy
-            // CONFORME DOCUMENTAÇÃO: Usando o método makeCurrent() na instância do Tenant
-            $tenant->makeCurrent();
-
-            // Conta usuários do tenant atual
-            // NOTA: O erro "Class 'App\Models\Tenant\User' not found" indica que
-            // o arquivo App\Models\Tenant\User.php não está sendo carregado corretamente.
-            // Verifique o caminho do arquivo (src/app/Models/Tenant/User.php),
-            // o namespace dentro do arquivo (namespace App\Models\Tenant;),
-            // e execute 'composer dump-autoload' e 'php artisan optimize:clear'.
-            $totalUsers += TenantUser::count(); // Usar TenantUser para o modelo do tenant
-
-            // Conta solicitações pendentes do tenant atual
-            $pendingRequests += SolicitacaoServico::where('status', 'pendente')->count();
-
-            // Conta solicitações concluídas HOJE no tenant atual
-            $completedRequestsToday += SolicitacaoServico::where('status', 'concluido')
-                ->whereDate('updated_at', $startOfToday)
-                ->count();
-
-            // Conta tentativas de login falhas HOJE no tenant atual
-            // Assumindo que o spatie/laravel-activitylog está configurado para logar logins falhos
-            // e que o 'log_name' ou 'description' indica um login falho.
-            // Você pode precisar ajustar a condição 'description' ou 'event'
-            // baseando-se em como os logins falhos são registrados no seu activity log.
-            $failedLoginsToday += Activity::where('log_name', 'default') // Ou outro log_name específico para autenticação
-                ->where('description', 'failed_login') // Exemplo: se você loga 'failed_login'
-                ->whereDate('created_at', $startOfToday)
-                ->count();
-
-            // Volta para o contexto do banco de dados central antes de ir para o próximo tenant
-            // CONFORME DOCUMENTAÇÃO: Usando o método forgetCurrent() na instância do Tenant
-            $tenant->forgetCurrent();
+        } catch (\Exception $e) {
+            Log::error("DashboardController: ERRO FATAL ao conectar ao BD Central ({$centralConnection}): ".$e->getMessage());
+            $allTenantsUp = false; // Se central está down, tudo está down
+            $totalLeads = -1; // Indicar erro
         }
 
-        // 4. Passa os dados agregados para o componente Vue
+        // 1b. Saúde Redis
+        try {
+            $redisClient = config('database.redis.client', 'none');
+            if ($redisClient === 'none' || !in_array($redisClient, ['phpredis', 'predis'])) {
+                $health['redis'] = 'disabled';
+                Log::info("DashboardController: Redis está desabilitado na configuração.");
+            } else {
+                Redis::ping();
+                $health['redis'] = 'up';
+                Log::info("DashboardController: Conexão com Redis OK.");
+            }
+        } catch (\Exception $e) {
+            Log::warning("DashboardController: Erro ao conectar ao Redis: ".$e->getMessage());
+            $health['redis'] = 'down';
+        }
+
+        // --- 2. Inicializa contadores agregados ---
+        $totalUsuarios = 0;
+        $loginsFalhosHoje = 0;
+        // $pendingRequests = 0; // Removido conforme solicitado
+        // $completedRequestsToday = 0; // Removido
+
+        $startOfToday = Carbon::today()->startOfDay();
+
+        // --- 3. Itera sobre cada tenant ---
+        $allTenants = Tenant::all();
+        $health['total_tenants'] = $allTenants->count();
+
+        foreach ($allTenants as $tenant) {
+            $tenantStatus = 'down'; // Assume 'down' até que a conexão seja provada
+
+            try {
+                // Define o tenant atual (método que você confirmou que funciona)
+                $tenant->makeCurrent();
+
+                // Tenta conectar ao banco de dados do tenant
+                DB::connection($tenantConnection)->getPdo();
+                $tenantStatus = 'up';
+                $health['active_tenants']++;
+                
+                Log::info("DashboardController: Conexão com BD Tenant ID {$tenant->id} OK.");
+
+                // --- Se a conexão for OK, busca os dados ---
+                
+                // Conta usuários
+                $totalUsuarios += TenantUser::count();
+
+                // Conta logins falhos (lógica do seu arquivo anterior)
+                $loginsFalhosHoje += Activity::where('description', 'failed_login') 
+                    ->whereDate('created_at', $startOfToday)
+                    ->count();
+
+                // Lógica de 'pendingRequests' e 'completedRequestsToday' removida
+
+            } catch (\Exception $e) {
+                Log::error("DashboardController: ERRO ao processar tenant ID {$tenant->id}: ".$e->getMessage());
+                $allTenantsUp = false; // Marca a saúde geral como 'partial'
+            
+            } finally {
+                // **CORREÇÃO CRÍTICA DE BUG**
+                // Garante que o contexto do tenant seja limpo, mesmo se o 'try' falhar.
+                // Sem isso, uma falha travaria o loop nesse tenant.
+                $tenant->forgetCurrent();
+            }
+
+            // Adiciona o status deste tenant ao array de saúde
+            $health['tenants_databases'][$tenant->id] = [
+                'name' => $tenant->name,
+                // Assumindo que seu model Tenant tem a coluna 'subdomain' como no Vue
+                'subdomain' => $tenant->subdomain ?? ($tenant->domain ?? 'N/A'), 
+                'status' => $tenantStatus
+            ];
+        }
+
+        // --- 4. Define Saúde Geral ---
+        if ($health['central_database'] === 'down') {
+            $health['overall_status'] = 'error';
+        } elseif ($health['redis'] === 'down' || !$allTenantsUp) {
+            $health['overall_status'] = 'partial'; // Se BD central ok, mas Redis ou Tenants com problema
+        } else {
+            $health['overall_status'] = 'up'; // Tudo OK (ou 0 tenants)
+        }
+        Log::info("DashboardController: Status Geral da Saúde definido como '{$health['overall_status']}'.");
+
+        // --- 5. Passa os dados para o componente Vue ---
         return Inertia::render('Central/Dashboard', [
-            'totalTenants' => $totalTenants,
-            'totalUsers' => $totalUsers,
-            'pendingRequests' => $pendingRequests,
-            'completedRequestsToday' => $completedRequestsToday,
-            'failedLoginsToday' => $failedLoginsToday,
+            
+            // Props principais que o Vue está usando
+            'tenantsAtivos' => $health['active_tenants'],
+            'totalTenants' => $health['total_tenants'],
+            'totalLeads' => $totalLeads,
+            'totalUsuarios' => $totalUsuarios,
+            'loginsFalhosHoje' => $loginsFalhosHoje,
+            'saudeSistema' => $health,
+
+            // Props de compatibilidade (definidas no Vue, mas não usadas nos cards)
+            'campanhasEnviadasHoje' => 0, // A prop existe no Vue
+            'pendingRequests' => 0, // A prop existe no Vue
+            'completedRequestsToday' => 0, // A prop existe no Vue
+
+            // Props de Mapeamento Antigo (definidas no Vue)
+            'totalUsers' => $totalUsuarios,
+            'failedLoginsToday' => $loginsFalhosHoje
         ]);
     }
 }
