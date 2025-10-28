@@ -38,7 +38,7 @@ class PermissionsSeeder extends Seeder
             // Módulos Principais de Gestão
             'dashboard' => ['visualizar'],
             'solicitacoes' => ['visualizar_todos', 'visualizar', 'criar', 'atualizar', 'excluir', 'gerenciar_status', 'atribuir', 'supervisionar_juridico'],
-            'cidadaos' => ['visualizar_todos', 'visualizar', 'criar', 'atualizar', 'excluir', 'gerenciar_tags', 'gerenciar_notas'],
+            'cidadaos' => ['visualizar_todos', 'visualizar', 'criar', 'atualizar', 'excluir', 'gerenciar_tags', 'gerenciar_notas', 'exportar_dados', 'anonimizar'],
             'funcionarios' => ['visualizar_todos', 'visualizar', 'criar', 'atualizar', 'excluir', 'gerenciar_perfis'],
             'documentos' => ['visualizar', 'criar', 'excluir'],
 
