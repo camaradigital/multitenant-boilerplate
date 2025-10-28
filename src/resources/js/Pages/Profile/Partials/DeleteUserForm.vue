@@ -26,7 +26,7 @@ const confirmUserDeletion = () => {
 };
 
 const deleteUser = () => {
-    form.delete(route('profile.destroy'), {
+    form.delete(route('portalcidadao.profile.destroy'), {
         preserveScroll: true,
         onError: () => passwordInput.value.focus(),
         onFinish: () => form.reset(),
@@ -41,7 +41,7 @@ const closeModal = () => {
 
 // Esta função não deve mais ser uma função interna do formulário
 const anonymizeAccount = () => {
-    router.post(route('profile.anonymize-account'), {}, {
+    router.post(route('portalcidadao.profile.anonymize-account'), {}, {
         preserveScroll: true,
         onSuccess: () => closeModal(),
     });
