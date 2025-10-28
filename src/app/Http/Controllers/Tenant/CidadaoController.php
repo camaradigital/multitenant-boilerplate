@@ -194,7 +194,6 @@ class CidadaoController extends Controller
             'name' => 'Usuário Anônimo #'.$cidadao->id,
             'email' => 'anonymized_'.$cidadao->id.'@'.request()->getHost(),
             'cpf' => null,
-            'bairro_id' => null,
             'profile_data' => null,
             'is_active' => false,
         ]);
