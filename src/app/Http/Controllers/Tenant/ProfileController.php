@@ -103,6 +103,10 @@ class ProfileController extends Controller
         $user = $request->user();
         $this->authorize('anonymizeProfile', $user);
 
+        if ($user->profile_photo_path) {
+            $user->deleteProfilePhoto();
+        }
+        
         $user->update([
             'name' => 'Usuário Anônimo #'.$user->id,
             'email' => 'anonymized_'.$user->id.'@'.request()->getHost(),
@@ -144,7 +148,6 @@ class ProfileController extends Controller
         // Se não houver registros, a exclusão total é permitida.
         $user->delete();
 
-        // Faz o logout do usuário após a exclusão
         Auth::guard('tenant')->logout();
 
         $request->session()->invalidate();
