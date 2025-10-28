@@ -19,13 +19,11 @@ import {
     TransitionRoot,
     TransitionChild,
 } from '@headlessui/vue';
-
 // --- INTERFACES PARA TIPAGEM ---
 interface Bairro {
     id: number;
     nome: string;
 }
-
 interface User {
     id: number;
     name: string;
@@ -34,32 +32,28 @@ interface User {
     profile_photo_url?: string;
     profile_data: Record<string, any>;
 }
-
 interface CustomField {
     id: number;
     name: string;
     label: string;
     type: string;
 }
-
 interface Props {
     confirmsTwoFactorAuthentication?: boolean;
     sessions?: any[];
     customFields?: CustomField[];
     bairros?: Bairro[]; // ADICIONADO: para receber a lista de bairros
 }
-
 // --- PROPS ---
 const props = withDefaults(defineProps<Props>(), {
+    confirmsTwoFactorAuthentication: false, // ADICIONADO: default false para evitar requisição se não passado
     sessions: () => [],
     customFields: () => [],
     bairros: () => [], // ADICIONADO
 });
-
 // --- ESTADO DO COMPONENTE ---
 const page = usePage();
 const user = page.props.auth.user as User;
-
 const getCustomFieldsInitialState = () => {
     const initialState: Record<string, any> = {};
     if (props.customFields && user.profile_data) {
@@ -69,7 +63,6 @@ const getCustomFieldsInitialState = () => {
     }
     return initialState;
 };
-
 // --- FORMULÁRIO DE INFORMAÇÕES DE PERFIL ---
 const formInfo = useForm({
     _method: 'PUT',
@@ -93,53 +86,50 @@ const formInfo = useForm({
     // Adiciona os campos personalizados dinamicamente ao formulário
     ...getCustomFieldsInitialState(),
 });
-
 const photoPreview = ref<string | null>(null);
 const photoInput = ref<HTMLInputElement | null>(null);
-
+const isSuccessModalOpen = ref(false);
 const updateProfileInformation = () => {
     if (photoInput.value?.files?.[0]) {
         formInfo.photo = photoInput.value.files[0];
     }
-
     formInfo.post(route('user-profile-information.update'), {
         errorBag: 'updateProfileInformation',
         preserveScroll: true,
         onSuccess: () => {
             photoPreview.value = null;
             clearPhotoFileInput();
+            isSuccessModalOpen.value = true;
         },
     });
 };
-
 const selectNewPhoto = () => {
     photoInput.value?.click();
 };
-
 const updatePhotoPreview = () => {
     const photo = photoInput.value?.files?.[0];
     if (!photo) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
         photoPreview.value = e.target?.result as string;
     };
     reader.readAsDataURL(photo);
 };
-
 const clearPhotoFileInput = () => {
     if (photoInput.value) {
         photoInput.value.value = '';
     }
 };
-
+const closeSuccessModal = () => {
+    isSuccessModalOpen.value = false;
+    router.reload();
+};
 // --- FORMULÁRIO DE ATUALIZAÇÃO DE SENHA ---
 const formPassword = useForm({
     current_password: '',
     password: '',
     password_confirmation: '',
 });
-
 const updatePassword = () => {
     formPassword.put(route('user-password.update'), {
         errorBag: 'updatePassword',
@@ -155,7 +145,6 @@ const updatePassword = () => {
         },
     });
 };
-
 // --- MODAL DE ANONIMIZAÇÃO ---
 const isAnonymizeModalOpen = ref(false);
 const openAnonymizeModal = () => isAnonymizeModalOpen.value = true;
@@ -166,19 +155,15 @@ const anonymizeAccount = () => {
         preserveScroll: true,
     });
 };
-
 // --- CONTROLE DE ABAS ---
 const activeTab = ref('profile');
 const selectTab = (tab: string) => activeTab.value = tab;
-
 const tabs = {
     profile: { name: 'Perfil', icon: User },
     security: { name: 'Segurança', icon: Lock },
     data: { name: 'Gestão de Dados', icon: DatabaseZap },
 };
-
 </script>
-
 <template>
     <TenantLayout title="Meu Perfil">
         <template #header>
@@ -186,7 +171,6 @@ const tabs = {
                 Configurações da Conta
             </h2>
         </template>
-
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
             <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                 <aside class="py-6 px-2 sm:px-6 lg:py-0 lg:px-0 lg:col-span-3">
@@ -206,7 +190,6 @@ const tabs = {
                         </button>
                     </nav>
                 </aside>
-
                 <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-9">
                     <!-- Aba de Perfil -->
                     <div v-if="activeTab === 'profile'">
@@ -217,7 +200,6 @@ const tabs = {
                                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">Informações do Perfil</h3>
                                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Atualize as informações de perfil e o endereço de e-mail da sua conta.</p>
                                     </div>
-
                                     <!-- Profile Photo: Apenas mostra esta seção se a feature estiver habilitada no Jetstream -->
                                     <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
                                         <InputLabel for="photo" value="Foto" />
@@ -228,107 +210,91 @@ const tabs = {
                                             </span>
                                             <span v-show="photoPreview" class="block w-20 h-20 rounded-full"
                                                   :style="'background-size: cover; background-repeat: no-repeat; background-position: center center; background-image: url(\'' + photoPreview + '\');'" />
-
                                             <SecondaryButton class="ms-5" type="button" @click.prevent="selectNewPhoto">
                                                 Selecionar Nova Foto
                                             </SecondaryButton>
                                             <InputError :message="formInfo.errors.photo" class="mt-2" />
                                         </div>
                                     </div>
-
                                     <div class="grid grid-cols-6 gap-6">
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="name" value="Nome" />
                                             <TextInput id="name" v-model="formInfo.name" type="text" class="mt-1 block w-full" required autocomplete="name" />
                                             <InputError :message="formInfo.errors.name" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="email" value="E-mail" />
                                             <TextInput id="email" v-model="formInfo.email" type="email" class="mt-1 block w-full" required autocomplete="username" />
                                             <InputError :message="formInfo.errors.email" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="telefone" value="Telefone" />
                                             <TextInput id="telefone" v-model="formInfo.telefone" type="text" class="mt-1 block w-full" autocomplete="tel" />
                                             <InputError :message="formInfo.errors.telefone" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="data_nascimento" value="Data de Nascimento" />
                                             <TextInput id="data_nascimento" v-model="formInfo.data_nascimento" type="date" class="mt-1 block w-full" />
                                             <InputError :message="formInfo.errors.data_nascimento" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="genero" value="Gênero" />
                                             <TextInput id="genero" v-model="formInfo.genero" type="text" class="mt-1 block w-full" />
                                             <InputError :message="formInfo.errors.genero" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="nome_mae" value="Nome da Mãe" />
                                             <TextInput id="nome_mae" v-model="formInfo.nome_mae" type="text" class="mt-1 block w-full" />
                                             <InputError :message="formInfo.errors.nome_mae" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="nome_pai" value="Nome do Pai" />
                                             <TextInput id="nome_pai" v-model="formInfo.nome_pai" type="text" class="mt-1 block w-full" />
                                             <InputError :message="formInfo.errors.nome_pai" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6"><hr class="dark:border-gray-700"/></div>
-
                                         <div class="col-span-6 sm:col-span-2">
                                             <InputLabel for="endereco_cep" value="CEP" />
                                             <TextInput id="endereco_cep" v-model="formInfo.endereco_cep" type="text" class="mt-1 block w-full" autocomplete="postal-code" />
                                             <InputError :message="formInfo.errors.endereco_cep" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-4">
                                             <InputLabel for="endereco_logradouro" value="Logradouro" />
                                             <TextInput id="endereco_logradouro" v-model="formInfo.endereco_logradouro" type="text" class="mt-1 block w-full" autocomplete="street-address" />
                                             <InputError :message="formInfo.errors.endereco_logradouro" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-2">
                                             <InputLabel for="endereco_numero" value="Número" />
                                             <TextInput id="endereco_numero" v-model="formInfo.endereco_numero" type="text" class="mt-1 block w-full" />
                                             <InputError :message="formInfo.errors.endereco_numero" class="mt-2" />
                                         </div>
-
                                         <!-- MODIFICADO: Campo de bairro agora é um select -->
                                         <div class="col-span-6 sm:col-span-4">
                                             <InputLabel for="bairro_id" value="Bairro" />
                                             <select id="bairro_id" v-model="formInfo.bairro_id" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-emerald-500 dark:focus:border-emerald-600 focus:ring-emerald-500 dark:focus:ring-emerald-600 rounded-md shadow-sm">
                                                 <option :value="null">Selecione um bairro</option>
-                                                <option v-for="bairro in bairros" :key="bairro.id" :value="bairro.id">
+                                                <option v-for="bairro in props.bairros" :key="bairro.id" :value="bairro.id">
                                                     {{ bairro.nome }}
                                                 </option>
                                             </select>
                                             <InputError :message="formInfo.errors.bairro_id" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="endereco_cidade" value="Cidade" />
                                             <TextInput id="endereco_cidade" v-model="formInfo.endereco_cidade" type="text" class="mt-1 block w-full" autocomplete="address-level2" />
                                             <InputError :message="formInfo.errors.endereco_cidade" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-3">
                                             <InputLabel for="endereco_estado" value="Estado" />
                                             <TextInput id="endereco_estado" v-model="formInfo.endereco_estado" type="text" class="mt-1 block w-full" autocomplete="address-level1" />
                                             <InputError :message="formInfo.errors.endereco_estado" class="mt-2" />
                                         </div>
-
                                         <!-- Campos Personalizados -->
-                                        <template v-if="customFields.length">
+                                        <template v-if="props.customFields.length">
                                             <div class="col-span-6"><hr class="dark:border-gray-700"/></div>
-                                            <div v-for="field in customFields" :key="field.id" class="col-span-6 sm:col-span-3">
+                                            <div v-for="field in props.customFields" :key="field.id" class="col-span-6 sm:col-span-3">
                                                 <InputLabel :for="field.name" :value="field.label" />
-                                                <TextInput :id="field.name" v-model="formInfo[field.name as keyof typeof formInfo]" :type="field.type" class="mt-1 block w-full" />
+                                                <TextInput :id="field.name" v-model="formInfo[field.name]" :type="field.type" class="mt-1 block w-full" />
                                                 <InputError :message="formInfo.errors[field.name]" class="mt-2" />
                                             </div>
                                         </template>
@@ -345,7 +311,6 @@ const tabs = {
                             </div>
                         </form>
                     </div>
-
                     <!-- Aba de Segurança -->
                     <div v-if="activeTab === 'security'" class="space-y-6">
                          <form @submit.prevent="updatePassword">
@@ -361,13 +326,11 @@ const tabs = {
                                             <TextInput id="current_password" v-model="formPassword.current_password" type="password" class="mt-1 block w-full" required autocomplete="current-password" />
                                             <InputError :message="formPassword.errors.current_password" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-4">
                                             <InputLabel for="password" value="Nova Senha" />
                                             <TextInput id="password" v-model="formPassword.password" type="password" class="mt-1 block w-full" required autocomplete="new-password" />
                                             <InputError :message="formPassword.errors.password" class="mt-2" />
                                         </div>
-
                                         <div class="col-span-6 sm:col-span-4">
                                             <InputLabel for="password_confirmation" value="Confirmar Nova Senha" />
                                             <TextInput id="password_confirmation" v-model="formPassword.password_confirmation" type="password" class="mt-1 block w-full" required autocomplete="new-password" />
@@ -385,14 +348,11 @@ const tabs = {
                                 </div>
                             </div>
                          </form>
-
                         <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication">
-                            <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
+                            <TwoFactorAuthenticationForm :requires-confirmation="props.confirmsTwoFactorAuthentication" />
                         </div>
-
-                        <LogoutOtherBrowserSessionsForm :sessions="sessions" />
+                        <LogoutOtherBrowserSessionsForm :sessions="props.sessions" />
                     </div>
-
                     <!-- Aba de Gestão de Dados -->
                     <div v-if="activeTab === 'data'" class="space-y-6">
                         <div class="shadow sm:rounded-md bg-white dark:bg-gray-800">
@@ -415,7 +375,6 @@ const tabs = {
                                 </div>
                             </div>
                         </div>
-
                         <template v-if="$page.props.jetstream.hasAccountDeletionFeatures">
                             <DeleteUserForm />
                         </template>
@@ -423,7 +382,6 @@ const tabs = {
                 </div>
             </div>
         </div>
-
         <!-- Modal de Confirmação de Anonimização -->
         <TransitionRoot appear :show="isAnonymizeModalOpen" as="template">
             <Dialog as="div" @close="closeAnonymizeModal" class="relative z-50">
@@ -453,9 +411,36 @@ const tabs = {
                 </div>
             </Dialog>
         </TransitionRoot>
+        <!-- Modal de Sucesso -->
+        <TransitionRoot appear :show="isSuccessModalOpen" as="template">
+            <Dialog as="div" @close="closeSuccessModal" class="relative z-50">
+                <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0" enter-to="opacity-100" leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0">
+                    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+                </TransitionChild>
+                <div class="fixed inset-0 overflow-y-auto">
+                    <div class="flex min-h-full items-center justify-center p-4 text-center">
+                        <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0 scale-95" enter-to="opacity-100 scale-100" leave="duration-200 ease-in" leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
+                            <DialogPanel class="modal-confirmation-panel">
+                                <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 flex justify-between items-center">
+                                    <span>Sucesso</span>
+                                    <button @click="closeSuccessModal" type="button" class="table-action-btn"><X class="w-5 h-5" /></button>
+                                </DialogTitle>
+                                <div class="mt-4">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        O seu perfil foi atualizado com sucesso.
+                                    </p>
+                                </div>
+                                <div class="mt-6 flex justify-end space-x-3">
+                                    <PrimaryButton @click="closeSuccessModal">OK</PrimaryButton>
+                                </div>
+                            </DialogPanel>
+                        </TransitionChild>
+                    </div>
+                </div>
+            </Dialog>
+        </TransitionRoot>
     </TenantLayout>
 </template>
-
 <style scoped>
 .modal-confirmation-panel { @apply w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all; }
 .btn-danger { @apply inline-flex items-center justify-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150; }
