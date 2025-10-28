@@ -190,11 +190,11 @@ onUnmounted(() => {
                             <div class="relative user-menu">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
-                                        <button class="flex items-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-gray-900">
-                                            <span :style="{ backgroundColor: 'var(--color-primary)' }" class="inline-flex items-center justify-center h-9 w-9 rounded-full text-sm font-semibold text-white">
-                                                {{ $page.props.auth.user.name.charAt(0) }}
-                                            </span>
-                                        </button>
+                                            <button class="flex items-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-gray-900">
+                                                <img class="h-9 w-9 rounded-full object-cover" 
+                                                     :src="$page.props.auth.user.profile_photo_url" 
+                                                     :alt="$page.props.auth.user.name">
+                                            </button>
                                     </template>
 
                                     <template #content>
