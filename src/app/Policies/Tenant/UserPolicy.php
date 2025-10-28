@@ -93,6 +93,16 @@ class UserPolicy
         return $user->can('cidadaos.gerenciar_notas');
     }
 
+    public function anonymizeCidadao(User $user, User $cidadao): bool
+    {
+        return $user->can('cidadaos.anonimizar');
+    }
+
+    public function exportDataCidadao(User $user, User $cidadao): bool
+    {
+        return $user->can('cidadaos.exportar_dados');
+    }
+
     // --- Habilidades para Funcionários ---
 
     public function viewAnyFuncionario(User $user): bool
