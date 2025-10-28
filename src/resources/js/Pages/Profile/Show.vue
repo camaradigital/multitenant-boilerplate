@@ -161,7 +161,7 @@ const isAnonymizeModalOpen = ref(false);
 const openAnonymizeModal = () => isAnonymizeModalOpen.value = true;
 const closeAnonymizeModal = () => isAnonymizeModalOpen.value = false;
 const anonymizeAccount = () => {
-    router.post(route('profile.anonymize-account'), {}, {
+    router.post(route('portalcidadao.profile.anonymize-account'), {}, {
         onSuccess: () => closeAnonymizeModal(),
         preserveScroll: true,
     });
@@ -404,7 +404,7 @@ const tabs = {
                                     Exerça os seus direitos sobre os seus dados pessoais, conforme a Lei Geral de Proteção de Dados (LGPD).
                                 </p>
                                 <div class="mt-5 flex items-center space-x-4">
-                                    <a :href="route('profile.export-data')" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                                    <a :href="route('portalcidadao.profile.export-data')" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
                                         <Download class="w-5 h-5 mr-2" />
                                         Exportar Meus Dados
                                     </a>
