@@ -190,6 +190,10 @@ class CidadaoController extends Controller
     {
         $this->authorize('anonymizeCidadao', $cidadao);
 
+        if ($cidadao->profile_photo_path) {
+            $cidadao->deleteProfilePhoto();
+        }
+        
         $cidadao->update([
             'name' => 'Usuário Anônimo #'.$cidadao->id,
             'email' => 'anonymized_'.$cidadao->id.'@'.request()->getHost(),
