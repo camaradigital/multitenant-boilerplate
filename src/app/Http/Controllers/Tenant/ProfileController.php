@@ -107,7 +107,6 @@ class ProfileController extends Controller
             'name' => 'Usuário Anônimo #'.$user->id,
             'email' => 'anonymized_'.$user->id.'@'.request()->getHost(),
             'cpf' => null,
-            'bairro_id' => null,
             'profile_data' => null,
             'is_active' => false,
         ]);
