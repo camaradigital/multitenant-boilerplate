@@ -25,8 +25,12 @@ class UserPolicy
      */
     public function exportProfileData(User $user, User $profileOwner): bool
     {
-        // Um usuário só pode exportar seus próprios dados.
-        return $user->id === $profileOwner->id;
+    // 1. O próprio usuário sempre pode
+        if ($user->id === $profileOwner->id) {
+            return true;
+        }
+    // 2. OU um usuário com permissão para exportar dados de cidadãos
+        return $user->can('cidadaos.exportar_dados'); // <-- Crie e use uma permissão
     }
 
     /**
@@ -34,8 +38,13 @@ class UserPolicy
      */
     public function anonymizeProfile(User $user, User $profileOwner): bool
     {
-        // Apenas o próprio usuário e que tenha o papel 'Cidadao' pode anonimizar a conta.
-        return ($user->id === $profileOwner->id) && $user->hasRole('Cidadao');
+    // 1. O próprio usuário (Cidadão) pode
+        if ($user->id === $profileOwner->id && $user->hasRole('Cidadao')) {
+            return true;
+        }
+
+    // 2. OU um usuário com permissão para anonimizar cidadãos
+        return $user->can('cidadaos.anonimizar'); // <-- Crie e use uma permissão
     }
 
     /**
